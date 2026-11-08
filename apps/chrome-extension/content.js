@@ -9,11 +9,12 @@
     const fileName = window.location.pathname.split("/").pop() || "document.bwjm";
     document.title = "BWJM: " + decodeURIComponent(fileName);
 
-    document.body.innerHTML = "";
     const mainRoot = document.createElement("main");
     mainRoot.id = "mathmd-root";
     mainRoot.setAttribute("aria-live", "polite");
-    document.body.appendChild(mainRoot);
+    document.body.replaceChildren(mainRoot);
+
+    const targetOrigin = window.location.origin === "null" ? "*" : window.location.origin;
 
     function dispatchUpdate() {
       window.postMessage(
@@ -22,7 +23,7 @@
           source: rawText,
           documentUri: window.location.href,
         },
-        "*",
+        targetOrigin,
       );
     }
 
@@ -37,4 +38,3 @@
     initBwjmViewer();
   }
 })();
-

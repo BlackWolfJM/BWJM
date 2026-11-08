@@ -2,19 +2,20 @@
   "manifest_version": 3,
   "name": "BWJM Interactive Document Viewer",
   "version": "0.1.0",
-  "description": "Abre y visualiza documentos matemáticos interactivos .bwjm y .jm nativamente en Google Chrome con gráficas 2D/3D y animaciones, sin generar HTML.",
+  "description": "Visualizador nativo para documentos matematicos interactivos .bwjm y .jm con graficas 2D/3D y animaciones.",
   "permissions": [
     "activeTab"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
   "content_scripts": [
     {
       "matches": [
         "file://*/*.bwjm",
         "file://*/*.jm",
         "file://*/*.BWJM",
-        "file://*/*.JM",
-        "http://*/*.bwjm",
-        "https://*/*.bwjm"
+        "file://*/*.JM"
       ],
       "js": [
         "dist/viewer.bundle.js",
@@ -30,4 +31,3 @@
     "default_title": "BWJM Document Viewer"
   }
 }
-

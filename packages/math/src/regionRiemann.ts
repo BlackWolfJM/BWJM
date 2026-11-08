@@ -28,6 +28,21 @@ export interface ExactAreaResult {
   isBounded: boolean;
 }
 
+export interface SubintervalArea {
+  interval: [number, number];
+  upperFunction: "f" | "g";
+  lowerFunction: "f" | "g";
+  area: number;
+}
+
+export interface PiecewiseAreaResult {
+  subintervals: SubintervalArea[];
+  totalArea: number;
+  exactFraction?: string;
+  isBounded: boolean;
+  warnings?: string[];
+}
+
 function refineRoot(
   diffFn: (x: number) => number,
   xLeft: number,
@@ -121,12 +136,12 @@ export function findIntersections(
 function approximateFraction(val: number): string | undefined {
   const knownFractions: Array<[number, string]> = [
     [1 / 6, "1/6"],
+    [1 / 4, "1/4"],
     [1 / 3, "1/3"],
     [1 / 2, "1/2"],
     [2 / 3, "2/3"],
-    [5 / 6, "5/6"],
-    [1 / 4, "1/4"],
     [3 / 4, "3/4"],
+    [5 / 6, "5/6"],
     [1 / 5, "1/5"],
     [2 / 5, "2/5"],
     [3 / 5, "3/5"],
@@ -137,6 +152,7 @@ function approximateFraction(val: number): string | undefined {
     [11 / 12, "11/12"],
     [2 / 15, "2/15"],
     [4 / 15, "4/15"],
+    [7 / 15, "7/15"],
   ];
 
   for (const [numeric, fractionStr] of knownFractions) {
@@ -157,7 +173,7 @@ export function computeExactArea(
   const gCompiled = compileExpression(gExpr);
 
   const [a, b] = interval;
-  const n = 600; // Simpson's 1/3 rule with 600 intervals
+  const n = 600;
   const h = (b - a) / n;
 
   const heightAt = (x: number) => {
@@ -181,6 +197,62 @@ export function computeExactArea(
     value: Number(areaValue.toFixed(8)),
     exactFraction,
     isBounded: Number.isFinite(areaValue),
+  };
+}
+
+export function computePiecewiseArea(
+  fExpr: string,
+  gExpr: string,
+  domain: [number, number],
+  scope: Readonly<Record<string, number>> = {},
+): PiecewiseAreaResult {
+  const intersections = findIntersections(fExpr, gExpr, domain, scope);
+  const warnings: string[] = [];
+
+  if (intersections.length < 2) {
+    warnings.push("No se encontraron suficientes puntos de intersección para cerrar una región acotada en el dominio.");
+    const full = computeExactArea(fExpr, gExpr, domain, scope);
+    return {
+      subintervals: [],
+      totalArea: full.value,
+      exactFraction: full.exactFraction,
+      isBounded: false,
+      warnings,
+    };
+  }
+
+  const fCompiled = compileExpression(fExpr);
+  const gCompiled = compileExpression(gExpr);
+  const subintervals: SubintervalArea[] = [];
+  let totalArea = 0;
+
+  for (let i = 0; i < intersections.length - 1; i++) {
+    const a = intersections[i].x;
+    const b = intersections[i + 1].x;
+    const mid = (a + b) / 2;
+
+    const yf = evaluateExpression(fCompiled, { ...scope, x: mid });
+    const yg = evaluateExpression(gCompiled, { ...scope, x: mid });
+
+    const upper = yf >= yg ? "f" : "g";
+    const lower = yf >= yg ? "g" : "f";
+
+    const sub = computeExactArea(fExpr, gExpr, [a, b], scope);
+    subintervals.push({
+      interval: [a, b],
+      upperFunction: upper,
+      lowerFunction: lower,
+      area: sub.value,
+    });
+    totalArea += sub.value;
+  }
+
+  return {
+    subintervals,
+    totalArea: Number(totalArea.toFixed(8)),
+    exactFraction: approximateFraction(totalArea),
+    isBounded: true,
+    warnings: warnings.length > 0 ? warnings : undefined,
   };
 }
 
@@ -242,4 +314,3 @@ export function computeRiemannPartition(
     error: Number(error.toFixed(6)),
   };
 }
-

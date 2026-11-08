@@ -5,6 +5,9 @@ describe('MathMD Math Engine', () => {
   it('rejects oversized and privileged expressions from untrusted documents', () => {
     expect(() => compileExpression('x'.repeat(4097))).toThrow(/maximum length/i);
     expect(() => compileExpression('import("unsafe")')).toThrow(/not permitted/i);
+    expect(() => compileExpression('alert("hack")')).toThrow(/not permitted/i);
+    expect(() => compileExpression('window')).toThrow(/not permitted/i);
+    expect(() => compileExpression('a.constructor')).toThrow(/not permitted/i);
   });
 
   it('rejects unbounded or invalid sample counts', () => {

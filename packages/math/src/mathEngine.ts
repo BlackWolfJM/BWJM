@@ -1,15 +1,51 @@
-import { compile, EvalFunction } from "mathjs";
+import { parse, compile, EvalFunction, MathNode } from "mathjs";
 
 const MAX_EXPRESSION_LENGTH = 4096;
-const FORBIDDEN_FUNCTION_PATTERN = /\b(?:import|createUnit|evaluate|parse|simplify|derivative|resolve)\s*\(/i;
+
+const ALLOWED_FUNCTIONS = new Set([
+  "sin", "cos", "tan", "asin", "acos", "atan", "atan2",
+  "sinh", "cosh", "tanh", "asinh", "acosh", "atanh",
+  "sec", "csc", "cot", "asec", "acsc", "acot",
+  "sqrt", "cbrt", "exp", "log", "log2", "log10", "ln",
+  "abs", "sign", "round", "floor", "ceil", "fix",
+  "min", "max", "mod", "pow", "norm", "hypot"
+]);
+
+const FORBIDDEN_SYMBOLS = new Set([
+  "window", "document", "global", "globalThis", "process",
+  "Function", "eval", "require", "module", "exports",
+  "constructor", "prototype", "__proto__", "import"
+]);
 
 function assertExpressionIsSafe(expression: string): void {
   if (expression.length > MAX_EXPRESSION_LENGTH) {
     throw new Error(`Expression exceeds the maximum length of ${MAX_EXPRESSION_LENGTH} characters`);
   }
-  if (FORBIDDEN_FUNCTION_PATTERN.test(expression)) {
-    throw new Error("Expression contains a function that is not permitted in MathMD documents");
+  let parsed: MathNode;
+  try {
+    parsed = parse(expression);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Syntax error in expression "${expression}": ${message}`);
   }
+
+  parsed.traverse((node: any) => {
+    if (node.type === "FunctionNode" || node.isFunctionNode) {
+      const name = node.name;
+      if (!ALLOWED_FUNCTIONS.has(name)) {
+        throw new Error(`Function "${name}" is not permitted in MathMD documents`);
+      }
+    }
+    if (node.type === "SymbolNode" || node.isSymbolNode) {
+      const name = node.name;
+      if (FORBIDDEN_SYMBOLS.has(name)) {
+        throw new Error(`Symbol "${name}" is not permitted in MathMD documents`);
+      }
+    }
+    if (node.type === "AccessorNode" || node.isAccessorNode) {
+      throw new Error("Property accessor is not permitted in MathMD documents");
+    }
+  });
 }
 
 function assertSampleCount(name: string, value: number, maximum: number): void {
@@ -18,7 +54,6 @@ function assertSampleCount(name: string, value: number, maximum: number): void {
   }
 }
 
-// Compile a mathematical expression string into a mathjs expression
 export function compileExpression(exprStr: string): EvalFunction {
   assertExpressionIsSafe(exprStr);
   try {
@@ -29,7 +64,6 @@ export function compileExpression(exprStr: string): EvalFunction {
   }
 }
 
-// Evaluate a compiled expression with given scope
 export function evaluateExpression(compiledExpr: EvalFunction, scope: Readonly<Record<string, number>> = {}): number {
   try {
     const result = compiledExpr.evaluate(scope);
@@ -40,7 +74,6 @@ export function evaluateExpression(compiledExpr: EvalFunction, scope: Readonly<R
   }
 }
 
-// Sample a 1D function over a domain
 export function sample1D(
   exprStr: string, 
   xDomain: [number, number], 
@@ -64,7 +97,6 @@ export function sample1D(
   return { x: xValues, y: yValues };
 }
 
-// Sample a 2D function over a domain
 export function sampleSurface(
   exprStr: string, 
   xDomain: [number, number], 
@@ -108,6 +140,3 @@ export function sampleSurface(
    
   return { x: xValues, y: yValues, z: zValues };
 }
-
-// Type for compiled expressions
-export type Expression = ReturnType<typeof compileExpression>;

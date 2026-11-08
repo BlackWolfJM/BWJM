@@ -1,6 +1,7 @@
 import { compileExpression, evaluateExpression, sample1D, sampleSurface } from "./mathEngine.js";
 import {
   computeExactArea,
+  computePiecewiseArea,
   computeRiemannPartition,
   findIntersections,
 } from "./regionRiemann.js";
@@ -11,18 +12,20 @@ import {
 } from "./solidRevolution.js";
 
 export { compileExpression, evaluateExpression, sample1D, sampleSurface };
-export { computeExactArea, computeRiemannPartition, findIntersections };
+export { computeExactArea, computePiecewiseArea, computeRiemannPartition, findIntersections };
 export { computeCrossSection, computeRevolutionVolume, sampleRevolutionMesh };
 
-export type { Expression } from "./mathEngine.js";
 export type {
   ExactAreaResult,
   IntersectionPoint,
+  PiecewiseAreaResult,
   RiemannPartitionResult,
   RiemannRectangle,
+  SubintervalArea,
 } from "./regionRiemann.js";
 export type {
   CrossSectionResult,
+  RevolutionAxis,
   RevolutionMeshResult,
   RevolutionVolumeResult,
 } from "./solidRevolution.js";
@@ -34,6 +37,7 @@ export default {
   sampleSurface,
   findIntersections,
   computeExactArea,
+  computePiecewiseArea,
   computeRiemannPartition,
   computeRevolutionVolume,
   computeCrossSection,

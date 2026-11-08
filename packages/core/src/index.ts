@@ -532,3 +532,6 @@ export class MathMDCore {
 
 // Export the core class
 export default MathMDCore;
+
+export * from "./container.js";
+
