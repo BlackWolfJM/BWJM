@@ -26,6 +26,8 @@ export interface ExactAreaResult {
   value: number;
   exactFraction?: string;
   isBounded: boolean;
+  method?: string;
+  estimatedError?: number;
 }
 
 export interface SubintervalArea {
@@ -41,6 +43,8 @@ export interface PiecewiseAreaResult {
   exactFraction?: string;
   isBounded: boolean;
   warnings?: string[];
+  method?: string;
+  estimatedError?: number;
 }
 
 function refineRoot(
@@ -101,7 +105,7 @@ export function findIntersections(
   let prevX = xMin;
   let prevDiff = diff(prevX);
 
-  if (Math.abs(prevDiff) < 1e-7) {
+  if (Number.isFinite(prevDiff) && Math.abs(prevDiff) < 1e-7) {
     roots.push(prevX);
   }
 
@@ -109,14 +113,19 @@ export function findIntersections(
     const currX = xMin + i * step;
     const currDiff = diff(currX);
 
-    if (Math.abs(currDiff) < 1e-7) {
+    const prevFinite = Number.isFinite(prevDiff);
+    const currFinite = Number.isFinite(currDiff);
+
+    if (currFinite && Math.abs(currDiff) < 1e-7) {
       if (roots.length === 0 || Math.abs(roots[roots.length - 1] - currX) > 1e-4) {
         roots.push(currX);
       }
-    } else if (Math.sign(prevDiff) !== Math.sign(currDiff)) {
+    } else if (prevFinite && currFinite && Math.sign(prevDiff) !== Math.sign(currDiff)) {
       const refined = refineRoot(diff, prevX, currX);
-      if (roots.length === 0 || Math.abs(roots[roots.length - 1] - refined) > 1e-4) {
-        roots.push(refined);
+      if (Number.isFinite(refined) && Math.abs(diff(refined)) < 1e-5) {
+        if (roots.length === 0 || Math.abs(roots[roots.length - 1] - refined) > 1e-4) {
+          roots.push(refined);
+        }
       }
     }
 
@@ -134,30 +143,12 @@ export function findIntersections(
 }
 
 function approximateFraction(val: number): string | undefined {
-  const knownFractions: Array<[number, string]> = [
-    [1 / 6, "1/6"],
-    [1 / 4, "1/4"],
-    [1 / 3, "1/3"],
-    [1 / 2, "1/2"],
-    [2 / 3, "2/3"],
-    [3 / 4, "3/4"],
-    [5 / 6, "5/6"],
-    [1 / 5, "1/5"],
-    [2 / 5, "2/5"],
-    [3 / 5, "3/5"],
-    [4 / 5, "4/5"],
-    [1 / 12, "1/12"],
-    [5 / 12, "5/12"],
-    [7 / 12, "7/12"],
-    [11 / 12, "11/12"],
-    [2 / 15, "2/15"],
-    [4 / 15, "4/15"],
-    [7 / 15, "7/15"],
-  ];
+  if (!Number.isFinite(val) || val <= 0) return undefined;
 
-  for (const [numeric, fractionStr] of knownFractions) {
-    if (Math.abs(val - numeric) < 1e-5) {
-      return fractionStr;
+  for (let q = 1; q <= 60; q++) {
+    const p = Math.round(val * q);
+    if (Math.abs(val - p / q) < 1e-5) {
+      return q === 1 ? String(p) : `${p}/${q}`;
     }
   }
   return undefined;
@@ -197,6 +188,8 @@ export function computeExactArea(
     value: Number(areaValue.toFixed(8)),
     exactFraction,
     isBounded: Number.isFinite(areaValue),
+    method: "simpson",
+    estimatedError: undefined,
   };
 }
 
@@ -218,6 +211,8 @@ export function computePiecewiseArea(
       exactFraction: full.exactFraction,
       isBounded: false,
       warnings,
+      method: full.method,
+      estimatedError: full.estimatedError,
     };
   }
 
@@ -253,6 +248,8 @@ export function computePiecewiseArea(
     exactFraction: approximateFraction(totalArea),
     isBounded: true,
     warnings: warnings.length > 0 ? warnings : undefined,
+    method: "simpson",
+    estimatedError: undefined,
   };
 }
 

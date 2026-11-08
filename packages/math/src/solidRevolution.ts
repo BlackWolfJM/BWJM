@@ -13,7 +13,9 @@ export interface RevolutionVolumeResult {
   volume: number;
   effectiveAngularCoverage: number;
   angularSweepTraveled: number;
-  exactFractionOfPi?: string;
+  rationalGuessOfPi?: string;
+  method: "simpson" | "shells";
+  numericVolume: number;
   isFullTurn: boolean;
   crossesAxis?: boolean;
   warning?: string;
@@ -57,31 +59,14 @@ function parseAxis(axis: RevolutionAxis): ParsedAxis {
   return { orientation: "x", offset: 0 };
 }
 
-function approximateFractionOfPi(integralValue: number): string | undefined {
-  const knownFractions: Array<[number, string]> = [
-    [2 / 15, "2/15"],
-    [7 / 15, "7/15"],
-    [1 / 3, "1/3"],
-    [2 / 3, "2/3"],
-    [1 / 2, "1/2"],
-    [1 / 4, "1/4"],
-    [3 / 4, "3/4"],
-    [1 / 5, "1/5"],
-    [2 / 5, "2/5"],
-    [3 / 5, "3/5"],
-    [4 / 5, "4/5"],
-    [1 / 6, "1/6"],
-    [5 / 6, "5/6"],
-    [1 / 7, "1/7"],
-    [1 / 8, "1/8"],
-    [3 / 8, "3/8"],
-    [5 / 8, "5/8"],
-    [7 / 8, "7/8"],
-  ];
+function approximateFractionOfPi(volumeValue: number): string | undefined {
+  const ratio = volumeValue / Math.PI;
+  if (!Number.isFinite(ratio) || ratio <= 0) return undefined;
 
-  for (const [numeric, fractionStr] of knownFractions) {
-    if (Math.abs(integralValue - numeric) < 1e-4) {
-      return fractionStr;
+  for (let q = 1; q <= 60; q++) {
+    const p = Math.round(ratio * q);
+    if (Math.abs(ratio - p / q) < 1e-4) {
+      return q === 1 ? String(p) : `${p}/${q}`;
     }
   }
   return undefined;
@@ -104,19 +89,34 @@ export function computeRevolutionVolume(
   const h = (b - a) / n;
   let crossesAxis = false;
 
+  const isVertical = parsedAxis.orientation === "y";
+  const effectiveAngle = Math.min(angleAlpha, 2 * Math.PI);
+
   const integrandAt = (x: number) => {
     const yf = evaluateExpression(fCompiled, { ...scope, x });
     const yg = evaluateExpression(gCompiled, { ...scope, x });
+
+    if (isVertical) {
+      // Método de cascarones para eje vertical x = offset
+      const radius = Math.abs(x - parsedAxis.offset);
+      const height = Math.abs(yf - yg);
+      return radius * height;
+    }
 
     const distF = Math.abs(yf - parsedAxis.offset);
     const distG = Math.abs(yg - parsedAxis.offset);
 
     const minVal = Math.min(yf, yg);
     const maxVal = Math.max(yf, yg);
-    if (parsedAxis.offset > minVal && parsedAxis.offset < maxVal) {
+    const axisBetween = parsedAxis.offset > minVal && parsedAxis.offset < maxVal;
+    if (axisBetween) {
       crossesAxis = true;
     }
 
+    if (axisBetween) {
+      // Región contiene el eje: disco sólido, radio interior 0
+      return Math.max(distF * distF, distG * distG);
+    }
     return Math.abs(distF * distF - distG * distG);
   };
 
@@ -128,21 +128,33 @@ export function computeRevolutionVolume(
   }
 
   const rawIntegral = (h / 3) * sum;
-  const exactFraction = approximateFractionOfPi(rawIntegral);
+  const volume = isVertical
+    ? effectiveAngle * rawIntegral
+    : (effectiveAngle / 2) * rawIntegral;
 
-  const effectiveAngle = Math.min(angleAlpha, 2 * Math.PI);
-  const volume = (effectiveAngle / 2) * rawIntegral;
+  const rationalGuess = approximateFractionOfPi(volume);
+
+  const warnings: string[] = [];
+  if (crossesAxis) {
+    warnings.push("La región cruza el eje de revolución. El radio interior se fija a 0 y se usa disco sólido.");
+  }
+  if (angleAlpha > 2 * Math.PI) {
+    warnings.push(`Ángulo solicitado ${angleAlpha} rad > 2π. Se limita la cobertura efectiva a 2π para evitar solapamiento de volumen.`);
+  }
+  if (angleAlpha > 0 && angleAlpha < 2 * Math.PI && crossesAxis) {
+    warnings.push("Giro parcial con región que cruza el eje puede generar solapamiento; resultados interpretados bajo supuesto de barrido sin solapamiento.");
+  }
 
   return {
     volume: Number(volume.toFixed(8)),
+    numericVolume: Number(volume.toFixed(8)),
     effectiveAngularCoverage: effectiveAngle,
     angularSweepTraveled: angleAlpha,
-    exactFractionOfPi: exactFraction,
+    rationalGuessOfPi: rationalGuess,
+    method: isVertical ? "shells" : "simpson",
     isFullTurn: angleAlpha >= 2 * Math.PI,
     crossesAxis,
-    warning: crossesAxis
-      ? "La región cruza el eje de revolución. La integral se adapta según el método de arandelas con radios absolutos."
-      : undefined,
+    warning: warnings.length ? warnings.join(" ") : undefined,
   };
 }
 
@@ -163,13 +175,13 @@ export function computeCrossSection(
   const distF = Math.abs(yf - parsedAxis.offset);
   const distG = Math.abs(yg - parsedAxis.offset);
 
-  const outerRadius = Math.max(distF, distG);
-  const innerRadius = Math.min(distF, distG);
-  const washerArea = Math.PI * (outerRadius * outerRadius - innerRadius * innerRadius);
-
   const minVal = Math.min(yf, yg);
   const maxVal = Math.max(yf, yg);
   const crossesAxis = parsedAxis.offset > minVal && parsedAxis.offset < maxVal;
+
+  const outerRadius = Math.max(distF, distG);
+  const innerRadius = crossesAxis ? 0 : Math.min(distF, distG);
+  const washerArea = Math.PI * (outerRadius * outerRadius - innerRadius * innerRadius);
 
   return {
     slicePos,

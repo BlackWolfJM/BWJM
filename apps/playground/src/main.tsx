@@ -882,6 +882,14 @@ export function BWJMStudio() {
     sheet.appendChild(livePanel);
 
     const updateLiveScientificAnalysis = () => {
+      // Panel de análisis científico solo para lecciones demo; evitar mostrar resultados hardcodeados en documentos arbitrarios
+      const isDemo = filename === "area_riemann.bwjm" || filename === "solido_revolucion.bwjm" || filename === "onda_armonica.bwjm";
+      if (!isDemo) {
+        livePanel.style.display = "none";
+        return;
+      }
+      livePanel.style.display = "block";
+
       const vars = coreRef.current?.getVariables() || {};
       const aVal = vars["a"] ?? 1.0;
       const nVal = Math.round(vars["n"] ?? 10);
@@ -928,7 +936,7 @@ export function BWJMStudio() {
             <div class="bwjm-col-title">Sólido de Revolución (α = ${Number(alphaVal.toFixed(2))} rad)</div>
             <div class="bwjm-metric-row">
               <span>Volumen Unión Espacial:</span>
-              <strong style="color: #6366f1;">${revVol.exactFractionOfPi ? revVol.exactFractionOfPi + "π ≈ " : ""}${revVol.volume}</strong>
+              <strong style="color: #6366f1;">${revVol.rationalGuessOfPi ? revVol.rationalGuessOfPi + "π ≈ " : ""}${revVol.volume}</strong>
             </div>
             <div class="bwjm-metric-row">
               <span>Arandela en x = ${sliceX}:</span>

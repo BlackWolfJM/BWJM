@@ -45,7 +45,7 @@ describe("Casos de Prueba de la Especificación BWJM (Sección 15)", () => {
     const vol2Pi = computeRevolutionVolume("x", "x^2", [0, 1], "x", 2 * Math.PI);
     const vol3Pi = computeRevolutionVolume("x", "x^2", [0, 1], "x", 3 * Math.PI);
 
-    expect(vol2Pi.exactFractionOfPi).toBe("2/15");
+    expect(vol2Pi.rationalGuessOfPi).toBe("2/15");
     expect(vol2Pi.volume).toBeCloseTo((2 * Math.PI) / 15, 5);
     expect(vol3Pi.volume).toBeCloseTo(vol2Pi.volume, 5);
     expect(vol3Pi.isFullTurn).toBe(true);
@@ -59,7 +59,7 @@ describe("Casos de Prueba de la Especificación BWJM (Sección 15)", () => {
     expect(slice.innerRadius).toBeCloseTo(1.25, 4);
 
     const vol = computeRevolutionVolume("x", "x^2", [0, 1], "y = -1");
-    expect(vol.exactFractionOfPi).toBe("7/15");
+    expect(vol.rationalGuessOfPi).toBe("7/15");
     expect(vol.volume).toBeCloseTo((7 * Math.PI) / 15, 4);
     expect(vol.crossesAxis).toBe(false);
 

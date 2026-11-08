@@ -43,5 +43,11 @@ describe("Cálculo de Área entre Curvas y Sumas de Riemann (Especificación BWJ
     expect(intersections[0]?.x).toBeCloseTo(0, 3);
     expect(intersections[1]?.x).toBeCloseTo(2, 3);
   });
+
+  it("no detecta falsas intersecciones en discontinuidades asintóticas como f(x)=1/x y g(x)=0 (T08)", () => {
+    const intersections = findIntersections("1/x", "0", [-1, 1]);
+    expect(intersections.length).toBe(0);
+  });
 });
+
 
