@@ -1,0 +1,35 @@
+{
+  "name": "@mathmd/cli",
+  "version": "0.1.0",
+  "description": "MathMD command-line interface",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "mathmd": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "dependencies": {
+    "@mathmd/ast": "workspace:*",
+    "@mathmd/core": "workspace:*",
+    "@mathmd/parser": "workspace:*",
+    "@mathmd/math": "workspace:*",
+    "@mathmd/github": "workspace:*",
+    "commander": "^11.0.0"
+  }
+}

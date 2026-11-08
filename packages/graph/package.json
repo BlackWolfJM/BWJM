@@ -1,0 +1,28 @@
+{
+  "name": "@mathmd/graph",
+  "version": "0.1.0",
+  "description": "MathMD knowledge graph extraction and analysis",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "dependencies": {
+    "@mathmd/ast": "workspace:*",
+    "@mathmd/parser": "workspace:*"
+  }
+}

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build and packaging artifacts
+dist/
+build/
+artifacts/
+.vite/
+*.tsbuildinfo
+*.vsix
+
+# Multi-agent internal harness and orchestration
+.agent/
+.agents/
+.ai/
+.hermes/
+.vscode/
+agency-agents/
+agency-agents-clone.txt
+plantilla-multiagente/
+skills-lock.json
+scripts/agents/
+
+# Internal tracking and agent reports
+AGENCY_*.md
+TASK-*.md
+CODEX_TASKS.md
+FOUNDATION_REPAIR_REPORT.md
+GRAPHIFY_INTEGRATION.md
+IMPLEMENTATION_SUMMARY.md
+PROGRESS_SUMMARY.md
+CAPACIDADES.md
+FLUJO_DE_TRABAJO.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# Environment and logs
+*.log
+.env
+.env.*.local
+.eslintcache
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,103 @@
+{
+  "name": "mathmd-vscode",
+  "displayName": "MathMD",
+  "description": "Preview, validate, and export MathMD documents from Visual Studio Code.",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "mathmd",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "math",
+    "visualization",
+    "stem"
+  ],
+  "main": "./dist/extension.cjs",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown",
+    "onLanguage:bwjm"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "bwjm",
+        "aliases": [
+          "BlackWolfJM MathMD (.bwjm)",
+          "BWJM",
+          "MathMD"
+        ],
+        "extensions": [
+          ".bwjm",
+          ".jm"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "mathmd.openPreview",
+        "title": "Abrir vista previa",
+        "category": "MathMD"
+      },
+      {
+        "command": "mathmd.validate",
+        "title": "Validar documento",
+        "category": "MathMD"
+      },
+      {
+        "command": "mathmd.exportGithub",
+        "title": "Exportar recursos para GitHub",
+        "category": "MathMD"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "mathmd.openPreview",
+          "when": "editorLangId == markdown || editorLangId == bwjm",
+          "group": "navigation"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "mathmd.bwjmCustomEditor",
+        "displayName": "BWJM Interactive Sheet Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.bwjm"
+          },
+          {
+            "filenamePattern": "*.jm"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "test": "vitest run __tests__",
+    "package:vsix": "pnpm run build && vsce package --no-dependencies --out ../../artifacts/mathmd-vscode-0.1.0.vsix"
+  },
+  "devDependencies": {
+    "@mathmd/ast": "workspace:*",
+    "@mathmd/core": "workspace:*",
+    "@mathmd/github": "workspace:*",
+    "@mathmd/parser": "workspace:*",
+    "@mathmd/renderer-plotly": "workspace:*",
+    "@mathmd/renderer-svg": "workspace:*",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2"
+  }
+}

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="100%" height="100%" style="background:#0b1120; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <rect x="15" y="15" width="870" height="370" rx="12" fill="#131d33" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Title -->
+  <text x="450" y="48" font-size="16" font-weight="800" fill="#38bdf8" text-anchor="middle" letter-spacing="0.5">ARQUITECTURA DEL MOTOR CIENTIFICO NATIVO BWJM</text>
+  <text x="450" y="68" font-size="12" fill="#94a3b8" text-anchor="middle">Flujo de ejecucion determinista sin dependencia de archivos .html intermediarios</text>
+
+  <!-- Flow Boxes -->
+  <!-- Box 1: Documento .bwjm -->
+  <g transform="translate(45, 100)">
+    <rect x="0" y="0" width="150" height="180" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5" />
+    <rect x="0" y="0" width="150" height="36" rx="8" fill="#0284c7" fill-opacity="0.2" />
+    <text x="75" y="24" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="middle">ARCHIVO NATIVO</text>
+    <text x="75" y="65" font-size="16" font-weight="800" fill="#ffffff" text-anchor="middle">.bwjm / .jm</text>
+    <text x="75" y="90" font-size="10" fill="#94a3b8" text-anchor="middle">Markdown Cientifico</text>
+    <text x="75" y="110" font-size="10" fill="#94a3b8" text-anchor="middle">Bloques Declarativos</text>
+    <text x="75" y="130" font-size="10" fill="#94a3b8" text-anchor="middle">KaTeX Formulas</text>
+    <text x="75" y="150" font-size="10" fill="#94a3b8" text-anchor="middle">Parametros Reactivos</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="205" y1="190" x2="235" y2="190" stroke="#38bdf8" stroke-width="2" />
+  <polygon points="235,186 243,190 235,194" fill="#38bdf8" />
+
+  <!-- Box 2: Parser & AST -->
+  <g transform="translate(250, 100)">
+    <rect x="0" y="0" width="160" height="180" rx="8" fill="#0f172a" stroke="#818cf8" stroke-width="1.5" />
+    <rect x="0" y="0" width="160" height="36" rx="8" fill="#4338ca" fill-opacity="0.2" />
+    <text x="80" y="24" font-size="12" font-weight="700" fill="#a5b4fc" text-anchor="middle">PARSER Y AST</text>
+    <text x="80" y="65" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">@mathmd/parser</text>
+    <text x="80" y="85" font-size="10" fill="#818cf8" text-anchor="middle">@mathmd/ast</text>
+    <text x="80" y="115" font-size="10" fill="#94a3b8" text-anchor="middle">Span-based Slicing</text>
+    <text x="80" y="135" font-size="10" fill="#94a3b8" text-anchor="middle">Zod Safe Validation</text>
+    <text x="80" y="155" font-size="10" fill="#94a3b8" text-anchor="middle">YAML Auto-Quoting</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="420" y1="190" x2="450" y2="190" stroke="#818cf8" stroke-width="2" />
+  <polygon points="450,186 458,190 450,194" fill="#818cf8" />
+
+  <!-- Box 3: Reactivity & Calculation -->
+  <g transform="translate(465, 100)">
+    <rect x="0" y="0" width="170" height="180" rx="8" fill="#0f172a" stroke="#34d399" stroke-width="1.5" />
+    <rect x="0" y="0" width="170" height="36" rx="8" fill="#059669" fill-opacity="0.2" />
+    <text x="85" y="24" font-size="12" font-weight="700" fill="#6ee7b7" text-anchor="middle">MOTOR REACTIVO</text>
+    <text x="85" y="65" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">@mathmd/core</text>
+    <text x="85" y="85" font-size="10" fill="#34d399" text-anchor="middle">@mathmd/math</text>
+    <text x="85" y="115" font-size="10" fill="#94a3b8" text-anchor="middle">Grafo de Dependencias</text>
+    <text x="85" y="135" font-size="10" fill="#94a3b8" text-anchor="middle">Integrales Riemann</text>
+    <text x="85" y="155" font-size="10" fill="#94a3b8" text-anchor="middle">Volumen Revolucion 3π</text>
+  </g>
+
+  <!-- Arrow 3 -->
+  <line x1="645" y1="190" x2="675" y2="190" stroke="#34d399" stroke-width="2" />
+  <polygon points="675,186 683,190 675,194" fill="#34d399" />
+
+  <!-- Box 4: Viewers & Renderers -->
+  <g transform="translate(690, 100)">
+    <rect x="0" y="0" width="165" height="180" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5" />
+    <rect x="0" y="0" width="165" height="36" rx="8" fill="#d97706" fill-opacity="0.2" />
+    <text x="82" y="24" font-size="12" font-weight="700" fill="#fcd34d" text-anchor="middle">VISUALIZADORES</text>
+    <text x="82" y="65" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">BWJM Studio</text>
+    <text x="82" y="85" font-size="10" fill="#f59e0b" text-anchor="middle">VS Code &amp; Chrome Ext</text>
+    <text x="82" y="115" font-size="10" fill="#94a3b8" text-anchor="middle">SVG 2D Vector Engine</text>
+    <text x="82" y="135" font-size="10" fill="#94a3b8" text-anchor="middle">Plotly 3D Engine</text>
+    <text x="82" y="155" font-size="10" fill="#94a3b8" text-anchor="middle">Zero-HTML Output</text>
+  </g>
+
+  <!-- Bottom highlight bar -->
+  <rect x="45" y="315" width="810" height="45" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1" />
+  <text x="450" y="342" font-size="12" font-weight="600" fill="#f8fafc" text-anchor="middle">
+    Independiente de HTML: El documento vivo se ejecuta en memoria y renderiza interactivamente sin exportar archivos HTML estaticos
+  </text>
+</svg>

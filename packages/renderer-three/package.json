@@ -1,0 +1,17 @@
+{
+  "name": "@mathmd/renderer-three",
+  "version": "0.1.0",
+  "description": "MathMD Three.js renderer for advanced 3D visualizations",
+  "private": true,
+  "scripts": {
+    "build": "echo @mathmd/renderer-three placeholder - not in active build"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@mathmd/ast": "workspace:*",
+    "@mathmd/core": "workspace:*",
+    "three": "^0.150.0"
+  }
+}

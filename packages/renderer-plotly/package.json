@@ -1,0 +1,29 @@
+{
+  "name": "@mathmd/renderer-plotly",
+  "version": "0.1.0",
+  "description": "MathMD Plotly renderer for 3D visualizations",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@mathmd/ast": "workspace:*",
+    "@mathmd/core": "workspace:*",
+    "@mathmd/math": "workspace:*",
+    "plotly.js-dist-min": "^2.0.0"
+  }
+}

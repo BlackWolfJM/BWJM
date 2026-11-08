@@ -1,0 +1,113 @@
+import { compile, EvalFunction } from "mathjs";
+
+const MAX_EXPRESSION_LENGTH = 4096;
+const FORBIDDEN_FUNCTION_PATTERN = /\b(?:import|createUnit|evaluate|parse|simplify|derivative|resolve)\s*\(/i;
+
+function assertExpressionIsSafe(expression: string): void {
+  if (expression.length > MAX_EXPRESSION_LENGTH) {
+    throw new Error(`Expression exceeds the maximum length of ${MAX_EXPRESSION_LENGTH} characters`);
+  }
+  if (FORBIDDEN_FUNCTION_PATTERN.test(expression)) {
+    throw new Error("Expression contains a function that is not permitted in MathMD documents");
+  }
+}
+
+function assertSampleCount(name: string, value: number, maximum: number): void {
+  if (!Number.isInteger(value) || value < 2 || value > maximum) {
+    throw new Error(`${name} must be an integer between 2 and ${maximum}`);
+  }
+}
+
+// Compile a mathematical expression string into a mathjs expression
+export function compileExpression(exprStr: string): EvalFunction {
+  assertExpressionIsSafe(exprStr);
+  try {
+    return compile(exprStr);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to compile expression "${exprStr}": ${message}`);
+  }
+}
+
+// Evaluate a compiled expression with given scope
+export function evaluateExpression(compiledExpr: EvalFunction, scope: Readonly<Record<string, number>> = {}): number {
+  try {
+    const result = compiledExpr.evaluate(scope);
+    return Number(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to evaluate expression: ${message}`);
+  }
+}
+
+// Sample a 1D function over a domain
+export function sample1D(
+  exprStr: string, 
+  xDomain: [number, number], 
+  count: number = 100,
+  scope: Readonly<Record<string, number>> = {}
+): { x: number[]; y: number[] } {
+  assertSampleCount("count", count, 10_000);
+  const compiled = compileExpression(exprStr);
+  const [xMin, xMax] = xDomain;
+  const xValues: number[] = [];
+  const yValues: number[] = [];
+   
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    const x = xMin + t * (xMax - xMin);
+    const y = evaluateExpression(compiled, { ...scope, x });
+    xValues.push(x);
+    yValues.push(y);
+  }
+   
+  return { x: xValues, y: yValues };
+}
+
+// Sample a 2D function over a domain
+export function sampleSurface(
+  exprStr: string, 
+  xDomain: [number, number], 
+  yDomain: [number, number], 
+  xSamples: number = 50,
+  ySamples: number = 50,
+  scope: Readonly<Record<string, number>> = {}
+): { 
+  x: number[][]; 
+  y: number[][]; 
+  z: number[][] 
+} {
+  assertSampleCount("xSamples", xSamples, 200);
+  assertSampleCount("ySamples", ySamples, 200);
+  const compiled = compileExpression(exprStr);
+  const [xMin, xMax] = xDomain;
+  const [yMin, yMax] = yDomain;
+   
+  const xValues: number[][] = [];
+  const yValues: number[][] = [];
+  const zValues: number[][] = [];
+   
+  for (let i = 0; i < ySamples; i++) {
+    const y = yMin + (i / (ySamples - 1)) * (yMax - yMin);
+    const xRow: number[] = [];
+    const yRow: number[] = [];
+    const zRow: number[] = [];
+    
+    for (let j = 0; j < xSamples; j++) {
+      const x = xMin + (j / (xSamples - 1)) * (xMax - xMin);
+      const z = evaluateExpression(compiled, { ...scope, x, y });
+      xRow.push(x);
+      yRow.push(y);
+      zRow.push(z);
+    }
+    
+    xValues.push(xRow);
+    yValues.push(yRow);
+    zValues.push(zRow);
+  }
+   
+  return { x: xValues, y: yValues, z: zValues };
+}
+
+// Type for compiled expressions
+export type Expression = ReturnType<typeof compileExpression>;

@@ -1,0 +1,20 @@
+{
+  "name": "@mathmd/react",
+  "version": "0.1.0",
+  "description": "MathMD React components and hooks",
+  "private": true,
+  "scripts": {
+    "build": "echo @mathmd/react placeholder - not in active build"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0"
+  },
+  "dependencies": {
+    "@mathmd/ast": "workspace:*",
+    "@mathmd/core": "workspace:*",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}

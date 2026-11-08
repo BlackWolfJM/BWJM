@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@mathmd/*": ["packages/*/src/index.ts"]
+    }
+  },
+  "include": ["packages/**/*", "apps/**/*"],
+  "exclude": ["node_modules", "dist", "**/dist"]
+}

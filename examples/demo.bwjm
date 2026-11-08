@@ -1,0 +1,43 @@
+# Hoja Interactiva BlackWolfJM (.bwjm)
+
+Este documento `.bwjm` combina teoría en Markdown, ecuaciones LaTeX, controles reactivos con animación (`▶ Play` / `⏸ Pause`) y gráficas 2D y 3D interactivas.
+
+$$
+f(x, y) = a \cdot \sin(x) + \cos(y)
+$$
+
+Mueve el control `a` o pulsa **▶ Play** para animar en tiempo real tanto la curva 2D como el paraboloide 3D:
+
+```slider
+name: a
+min: 0.5
+max: 4
+step: 0.1
+default: 1.5
+```
+
+## 1. Oscilación armónica 2D con parámetro $a$
+
+```plot2d
+equation: a * sin(x)
+x: [-6.28, 6.28]
+y: [-4.5, 4.5]
+grid: true
+axes: true
+label: y = a * sin(x)
+```
+
+## 2. Superficie 3D interactiva
+
+$$
+z = a \cdot x^2 - y^2
+$$
+
+```surface3d
+equation: a * x^2 - y^2
+x: [-3, 3]
+y: [-3, 3]
+samples: 35
+contours: true
+```
+

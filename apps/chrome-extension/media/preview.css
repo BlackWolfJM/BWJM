@@ -1,0 +1,179 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  padding: 1.5rem 1rem;
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  font-family: var(--vscode-font-family);
+  line-height: 1.6;
+}
+
+#mathmd-root {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.bwjm-sheet {
+  padding: 2rem 2.25rem;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 10px;
+  background: var(--vscode-editor-background);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+.sheet-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.bwjm-badge {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vscode-badge-foreground);
+  background: var(--vscode-badge-background);
+}
+
+.document-uri {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--vscode-descriptionForeground);
+  overflow-wrap: anywhere;
+}
+
+.markdown-prose {
+  margin-bottom: 1.25rem;
+}
+
+.markdown-prose h1,
+.markdown-prose h2,
+.markdown-prose h3,
+.markdown-prose h4,
+.markdown-prose h5,
+.markdown-prose h6 {
+  margin: 1.25rem 0 0.6rem;
+  line-height: 1.3;
+}
+
+.markdown-prose p,
+.markdown-prose ul {
+  margin: 0.6rem 0;
+}
+
+.math-block {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--vscode-textLink-foreground);
+  border-radius: 6px;
+  background: var(--vscode-textCodeBlock-background, var(--vscode-sideBar-background));
+  font-family: "Cambria Math", "Latin Modern Math", Georgia, serif;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.math-inline {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background, var(--vscode-sideBar-background));
+  font-family: "Cambria Math", "Latin Modern Math", Georgia, serif;
+  font-style: italic;
+}
+
+.code-block {
+  margin: 0.85rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: var(--vscode-textCodeBlock-background, var(--vscode-sideBar-background));
+}
+
+.node-card,
+.diagnostics {
+  margin: 1.1rem 0;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: var(--vscode-sideBar-background);
+}
+
+.node-type-badge {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.visualization {
+  min-height: 360px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.control-container {
+  min-height: 0;
+}
+
+.control-row {
+  display: grid;
+  grid-template-columns: minmax(4rem, auto) minmax(10rem, 1fr) 3.5rem auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.control-name {
+  font-weight: 600;
+}
+
+.slider-play-btn {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 5px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.slider-play-btn:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.slider-play-btn.playing {
+  background: var(--vscode-statusBarItem-warningBackground, var(--vscode-button-secondaryBackground));
+  color: var(--vscode-statusBarItem-warningForeground, var(--vscode-button-secondaryForeground));
+}
+
+.checkbox-row {
+  display: flex;
+}
+
+.error,
+.diagnostics .error {
+  color: var(--vscode-errorForeground);
+}
+
+.warning {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.empty-state {
+  color: var(--vscode-descriptionForeground);
+}
+
+pre {
+  overflow: auto;
+  white-space: pre-wrap;
+}

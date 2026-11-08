@@ -1,0 +1,31 @@
+{
+  "name": "mathmd",
+  "version": "0.1.0",
+  "description": "MathMD - Open Markdown extension for declarative and interactive mathematical/STEM visualizations",
+  "private": true,
+  "packageManager": "pnpm@11.15.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "pnpm --filter \"./packages/*\" run build && pnpm --filter @mathmd/playground run build && pnpm --filter mathmd-vscode run build && node apps/chrome-extension/build.mjs && pnpm run test:dist",
+    "dev": "pnpm --filter @mathmd/playground run dev",
+    "test:dist": "node scripts/test-dist.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "vite": "^5.0.0"
+  }
+}
