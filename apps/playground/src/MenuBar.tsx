@@ -3,6 +3,8 @@ import { IconAtom, IconChevronDown } from "./icons.js";
 
 interface MenuBarProps {
   filename: string;
+  theme: "linear" | "catppuccin" | "tokyonight";
+  onSetTheme: (theme: "linear" | "catppuccin" | "tokyonight") => void;
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
@@ -19,6 +21,8 @@ interface MenuBarProps {
 
 export const MenuBar: React.FC<MenuBarProps> = ({
   filename,
+  theme,
+  onSetTheme,
   onNew,
   onOpen,
   onSave,
@@ -245,6 +249,25 @@ export const MenuBar: React.FC<MenuBarProps> = ({
                 onClick={() => handleAction(() => onSetViewMode("reader"))}
               >
                 <span>Solo modo lector</span>
+              </button>
+              <div className="bwjm-dropdown-separator" />
+              <button
+                className={`bwjm-dropdown-item ${theme === "linear" ? "active" : ""}`}
+                onClick={() => handleAction(() => onSetTheme("linear"))}
+              >
+                <span>Tema: Linear Obsidian</span>
+              </button>
+              <button
+                className={`bwjm-dropdown-item ${theme === "catppuccin" ? "active" : ""}`}
+                onClick={() => handleAction(() => onSetTheme("catppuccin"))}
+              >
+                <span>Tema: Catppuccin Mocha</span>
+              </button>
+              <button
+                className={`bwjm-dropdown-item ${theme === "tokyonight" ? "active" : ""}`}
+                onClick={() => handleAction(() => onSetTheme("tokyonight"))}
+              >
+                <span>Tema: Tokyo Night</span>
               </button>
               <div className="bwjm-dropdown-separator" />
               <button

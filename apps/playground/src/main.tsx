@@ -417,6 +417,7 @@ export function BWJMStudio() {
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("riemann");
   const [sliceX] = useState<number>(0.5);
+  const [theme, setTheme] = useState<"linear" | "catppuccin" | "tokyonight">("linear");
 
   const [isSidebarLeftOpen, setIsSidebarLeftOpen] = useState<boolean>(true);
   const [isSidebarRightOpen, setIsSidebarRightOpen] = useState<boolean>(true);
@@ -638,6 +639,24 @@ export function BWJMStudio() {
       title: "Alternar Panel Derecho (Propiedades)",
       category: "Paneles",
       action: () => setIsSidebarRightOpen((prev) => !prev),
+    },
+    {
+      id: "theme-linear",
+      title: "Cambiar Tema a Linear Obsidian",
+      category: "Tema",
+      action: () => setTheme("linear"),
+    },
+    {
+      id: "theme-catppuccin",
+      title: "Cambiar Tema a Catppuccin Mocha",
+      category: "Tema",
+      action: () => setTheme("catppuccin"),
+    },
+    {
+      id: "theme-tokyonight",
+      title: "Cambiar Tema a Tokyo Night",
+      category: "Tema",
+      action: () => setTheme("tokyonight"),
     },
     {
       id: "load-lesson-1",
@@ -953,7 +972,7 @@ export function BWJMStudio() {
   const currentVariables = coreRef.current ? coreRef.current.getVariables() : {};
 
   return (
-    <div className={`bwjm-app-container mode-${viewMode}`}>
+    <div className={`bwjm-app-container mode-${viewMode} theme-${theme}`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -964,6 +983,8 @@ export function BWJMStudio() {
 
       <MenuBar
         filename={filename}
+        theme={theme}
+        onSetTheme={setTheme}
         onNew={handleNewDocument}
         onOpen={() => fileInputRef.current?.click()}
         onSave={handleSaveFile}

@@ -115,3 +115,4 @@ export function deserializePackageFromJSON(jsonStr: string): BWJMPackage {
 
   return pkg;
 }
+

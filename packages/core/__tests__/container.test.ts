@@ -51,3 +51,4 @@ describe("Contenedor y Paquete BWJM (.bwjmz)", () => {
     expect(() => deserializePackageFromJSON("{}")).toThrow();
   });
 });
+

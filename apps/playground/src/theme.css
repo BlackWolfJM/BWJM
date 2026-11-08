@@ -1,18 +1,72 @@
 :root {
-  --bg-app: #0b1120;
-  --bg-surface: #131d33;
-  --bg-panel: #0d1527;
-  --bg-sheet: #ffffff;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
+  --bg-app: #08090a;
+  --bg-surface: #0f1011;
+  --bg-panel: #141517;
+  --bg-card: #191b1f;
+  --bg-elevated: #22242a;
+  --border: #23252a;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-focus: #5e6ad2;
+  --text-main: #f7f8f8;
+  --text-secondary: #8a8f98;
+  --text-muted: #565a63;
   --text-dark: #0f172a;
-  --primary: #38bdf8;
-  --primary-hover: #0284c7;
-  --accent: #6366f1;
-  --border: #1e293b;
+  --primary: #5e6ad2;
+  --primary-hover: #7170ff;
+  --primary-glow: rgba(94, 106, 210, 0.25);
+  --accent-math: #818cf8;
+  --accent-chart: #38bdf8;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-error: #f43f5e;
+  --bg-sheet: #ffffff;
   --border-sheet: #e2e8f0;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+.theme-catppuccin {
+  --bg-app: #11111b;
+  --bg-surface: #181825;
+  --bg-panel: #1e1e2e;
+  --bg-card: #262738;
+  --bg-elevated: #313244;
+  --border: #313244;
+  --border-subtle: rgba(205, 214, 244, 0.08);
+  --border-focus: #cba6f7;
+  --text-main: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-muted: #6c7086;
+  --primary: #cba6f7;
+  --primary-hover: #f5c2e7;
+  --primary-glow: rgba(203, 166, 247, 0.25);
+  --accent-math: #cba6f7;
+  --accent-chart: #89dceb;
+  --accent-success: #a6e3a1;
+  --accent-warning: #fab387;
+  --accent-error: #f38ba8;
+}
+
+.theme-tokyonight {
+  --bg-app: #16161e;
+  --bg-surface: #1a1b26;
+  --bg-panel: #1f2335;
+  --bg-card: #24283b;
+  --bg-elevated: #292e42;
+  --border: #292e42;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-focus: #7aa2f7;
+  --text-main: #c0caf5;
+  --text-secondary: #9aa5ce;
+  --text-muted: #565f89;
+  --primary: #7aa2f7;
+  --primary-hover: #bb9af7;
+  --primary-glow: rgba(122, 162, 247, 0.25);
+  --accent-math: #bb9af7;
+  --accent-chart: #7dcfff;
+  --accent-success: #9ece6a;
+  --accent-warning: #ff9e64;
+  --accent-error: #f7768e;
 }
 
 * {
@@ -41,6 +95,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-color: var(--bg-app);
 }
 
 .bwjm-menubar-root {
@@ -65,29 +120,30 @@ body {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%);
+  background: var(--primary);
   color: #ffffff;
   font-weight: 800;
   font-size: 0.75rem;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   letter-spacing: 0.04em;
+  box-shadow: 0 0 12px var(--primary-glow);
 }
 
 .bwjm-brand-name {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-main);
 }
 
 .bwjm-filename-tag {
   font-family: var(--font-mono);
   font-size: 0.72rem;
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 .bwjm-menubar-nav {
@@ -106,7 +162,7 @@ body {
   gap: 0.3rem;
   background: transparent;
   border: 1px solid transparent;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: 500;
   padding: 0.25rem 0.6rem;
@@ -117,8 +173,8 @@ body {
 
 .bwjm-menu-btn:hover,
 .bwjm-menu-btn.active {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  background-color: var(--bg-card);
+  color: var(--text-main);
 }
 
 .bwjm-dropdown-menu {
@@ -126,11 +182,11 @@ body {
   top: 100%;
   left: 0;
   margin-top: 4px;
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.35rem;
-  min-width: 220px;
+  min-width: 230px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   z-index: 50;
   display: flex;
@@ -144,25 +200,30 @@ body {
   justify-content: space-between;
   background: transparent;
   border: none;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-size: 0.78rem;
   padding: 0.4rem 0.65rem;
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
   width: 100%;
-  transition: background-color 0.1s ease;
+  transition: all 0.1s ease;
 }
 
 .bwjm-dropdown-item:hover {
-  background-color: #1e293b;
-  color: #ffffff;
+  background-color: var(--bg-card);
+  color: var(--text-main);
+}
+
+.bwjm-dropdown-item.active {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .bwjm-dropdown-item kbd {
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  color: #64748b;
+  color: var(--text-muted);
   background: rgba(255, 255, 255, 0.05);
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
@@ -170,7 +231,7 @@ body {
 
 .bwjm-dropdown-separator {
   height: 1px;
-  background-color: #1e293b;
+  background-color: var(--border);
   margin: 0.3rem 0;
 }
 
@@ -195,9 +256,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background-color: rgba(255, 255, 255, 0.04);
-  color: #cbd5e1;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
   padding: 0.3rem 0.55rem;
   font-size: 0.78rem;
   font-weight: 500;
@@ -208,37 +269,38 @@ body {
 }
 
 .bwjm-toolbar-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.18);
+  background-color: var(--bg-elevated);
+  color: var(--text-main);
+  border-color: var(--border);
 }
 
 .bwjm-toolbar-btn.active {
-  background-color: #0284c7;
+  background-color: var(--primary);
   color: #ffffff;
-  border-color: #38bdf8;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px var(--primary-glow);
 }
 
 .bwjm-toolbar-btn.highlight-math {
-  background: rgba(2, 132, 199, 0.2);
-  color: #38bdf8;
-  border-color: rgba(2, 132, 199, 0.4);
+  background: rgba(94, 106, 210, 0.15);
+  color: var(--accent-math);
+  border-color: rgba(94, 106, 210, 0.35);
 }
 
 .bwjm-toolbar-btn.highlight-math:hover {
-  background: #0284c7;
+  background: var(--primary);
   color: #ffffff;
 }
 
 .bwjm-toolbar-btn.highlight-chart {
-  background: rgba(99, 102, 241, 0.2);
-  color: #a5b4fc;
-  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--accent-chart);
+  border-color: rgba(56, 189, 248, 0.3);
 }
 
 .bwjm-toolbar-btn.highlight-chart:hover {
-  background: #6366f1;
-  color: #ffffff;
+  background: var(--accent-chart);
+  color: #0f172a;
 }
 
 .bwjm-btn-badge {
@@ -253,7 +315,7 @@ body {
 .bwjm-toolbar-divider {
   width: 1px;
   height: 18px;
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--border);
   margin: 0 0.2rem;
 }
 
@@ -293,7 +355,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.6rem;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border);
 }
 
@@ -309,7 +371,7 @@ body {
   gap: 0.3rem;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 600;
   padding: 0.25rem 0.45rem;
@@ -319,12 +381,12 @@ body {
 }
 
 .bwjm-sidebar-tab:hover {
-  color: #f1f5f9;
+  color: var(--text-main);
 }
 
 .bwjm-sidebar-tab.active {
-  background-color: #1e293b;
-  color: #38bdf8;
+  background-color: var(--bg-elevated);
+  color: var(--primary);
 }
 
 .bwjm-sidebar-title {
@@ -333,13 +395,13 @@ body {
   gap: 0.4rem;
   font-size: 0.78rem;
   font-weight: 700;
-  color: #cbd5e1;
+  color: var(--text-secondary);
 }
 
 .bwjm-sidebar-close {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   display: inline-flex;
   padding: 0.2rem;
@@ -347,8 +409,8 @@ body {
 }
 
 .bwjm-sidebar-close:hover {
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  background: var(--bg-elevated);
 }
 
 .bwjm-sidebar-content {
@@ -359,7 +421,7 @@ body {
 
 .bwjm-sidebar-empty {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   text-align: center;
   padding: 1.5rem 0.5rem;
 }
@@ -376,20 +438,21 @@ body {
   gap: 0.4rem;
   padding: 0.35rem 0.5rem;
   font-size: 0.76rem;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.1s ease;
+  transition: all 0.1s ease;
 }
 
 .bwjm-outline-item:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #38bdf8;
+  background-color: var(--bg-card);
+  color: var(--primary);
 }
 
 .bwjm-outline-item.level-1 {
   font-weight: 700;
   padding-left: 0.35rem;
+  color: var(--text-main);
 }
 
 .bwjm-outline-item.level-2 {
@@ -398,11 +461,11 @@ body {
 
 .bwjm-outline-item.level-3 {
   padding-left: 1.5rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .bwjm-outline-hash {
-  color: #0284c7;
+  color: var(--primary);
   font-family: var(--font-mono);
   font-size: 0.7rem;
 }
@@ -418,7 +481,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.6rem;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 4px;
 }
@@ -427,13 +490,13 @@ body {
   font-family: var(--font-mono);
   font-size: 0.76rem;
   font-weight: 600;
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .bwjm-variable-value {
   font-family: var(--font-mono);
   font-size: 0.76rem;
-  color: #f1f5f9;
+  color: var(--text-main);
 }
 
 .bwjm-lessons-list {
@@ -446,7 +509,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border);
   padding: 0.55rem;
   border-radius: 6px;
@@ -456,25 +519,25 @@ body {
 }
 
 .bwjm-lesson-button:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: #38bdf8;
+  background-color: var(--bg-card);
+  border-color: var(--border-focus);
 }
 
 .bwjm-lesson-button.active {
-  background-color: rgba(2, 132, 199, 0.15);
-  border-color: #0284c7;
+  background-color: rgba(94, 106, 210, 0.12);
+  border-color: var(--primary);
 }
 
 .bwjm-lesson-title {
   font-size: 0.76rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-main);
 }
 
 .bwjm-lesson-file {
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .bwjm-inspector-section {
@@ -486,7 +549,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.5rem;
 }
 
@@ -500,7 +563,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   padding: 0.5rem 0.2rem;
   border-radius: 4px;
@@ -510,12 +573,12 @@ body {
   font-family: var(--font-mono);
   font-size: 0.9rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--text-main);
 }
 
 .bwjm-stat-label {
   font-size: 0.65rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .bwjm-blocks-summary {
@@ -529,9 +592,10 @@ body {
   align-items: center;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   padding: 0.3rem 0.5rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
 }
 
@@ -539,8 +603,8 @@ body {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 700;
-  color: #38bdf8;
-  background: rgba(2, 132, 199, 0.2);
+  color: var(--primary);
+  background: rgba(94, 106, 210, 0.15);
   padding: 0.1rem 0.4rem;
   border-radius: 3px;
 }
@@ -550,7 +614,7 @@ body {
   align-items: center;
   gap: 0.4rem;
   font-size: 0.76rem;
-  color: #10b981;
+  color: var(--accent-success);
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.25);
   padding: 0.45rem 0.6rem;
@@ -567,8 +631,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.3);
   padding: 0.4rem 0.55rem;
   border-radius: 4px;
 }
@@ -576,7 +640,7 @@ body {
 .bwjm-diag-sev {
   font-size: 0.65rem;
   font-weight: 700;
-  color: #ef4444;
+  color: var(--accent-error);
   text-transform: uppercase;
 }
 
@@ -589,23 +653,23 @@ body {
   display: flex;
   gap: 0.6rem;
   padding: 0.6rem;
-  background: rgba(2, 132, 199, 0.08);
-  border: 1px solid rgba(2, 132, 199, 0.25);
+  background: rgba(94, 106, 210, 0.08);
+  border: 1px solid rgba(94, 106, 210, 0.25);
   border-radius: 6px;
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .bwjm-security-info strong {
   display: block;
   font-size: 0.76rem;
-  color: #f8fafc;
+  color: var(--text-main);
   margin-bottom: 0.2rem;
 }
 
 .bwjm-security-info p {
   font-size: 0.7rem;
   line-height: 1.4;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 .bwjm-main-split {
@@ -637,13 +701,13 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .bwjm-char-count {
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .bwjm-code-textarea {
@@ -651,7 +715,7 @@ body {
   width: 100%;
   padding: 1.25rem;
   background-color: var(--bg-app);
-  color: #e2e8f0;
+  color: var(--text-main);
   font-family: var(--font-mono);
   font-size: 0.9rem;
   line-height: 1.65;
@@ -662,7 +726,7 @@ body {
 
 .bwjm-preview-panel {
   flex: 1.35;
-  background-color: #060a12;
+  background-color: var(--bg-surface);
   overflow-y: auto;
   display: flex;
   justify-content: center;
@@ -679,7 +743,7 @@ body {
   color: var(--text-dark);
   padding: 3.5rem 4rem;
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
   min-height: 100%;
 }
 
@@ -696,7 +760,7 @@ body {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #0284c7;
+  color: var(--primary);
 }
 
 .bwjm-sheet-filename {
@@ -758,7 +822,7 @@ body {
   margin: 1.75rem 0;
   padding: 1.25rem 1.5rem;
   background-color: #f8fafc;
-  border-left: 3px solid #0284c7;
+  border-left: 3px solid var(--primary);
   border-radius: 0 6px 6px 0;
   display: flex;
   justify-content: center;
@@ -827,19 +891,20 @@ body {
   height: 36px;
   border-radius: 50%;
   border: none;
-  background: #0284c7;
+  background: var(--primary);
   color: #ffffff;
   cursor: pointer;
   transition: all 0.15s ease;
+  box-shadow: 0 2px 8px var(--primary-glow);
 }
 
 .bwjm-play-btn:hover {
-  background: #0369a1;
+  background: var(--primary-hover);
   transform: scale(1.05);
 }
 
 .bwjm-play-btn.playing {
-  background: #ef4444;
+  background: var(--accent-error);
 }
 
 .bwjm-range-input {
@@ -875,7 +940,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #0284c7;
+  color: var(--primary);
   font-size: 0.85rem;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
@@ -947,7 +1012,7 @@ body {
   border-top: 1px solid var(--border);
   height: 28px;
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   z-index: 20;
 }
 
@@ -964,7 +1029,7 @@ body {
   gap: 0.35rem;
   background: transparent;
   border: none;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-size: 0.72rem;
   cursor: pointer;
   padding: 0.1rem 0.3rem;
@@ -972,22 +1037,22 @@ body {
 }
 
 .bwjm-statusbar-cmd-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #38bdf8;
+  background: var(--bg-card);
+  color: var(--primary);
 }
 
 .bwjm-cmd-kbd {
   font-family: var(--font-mono);
   font-size: 0.65rem;
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
   padding: 0.05rem 0.3rem;
   border-radius: 3px;
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .bwjm-statusbar-separator {
-  color: #334155;
+  color: var(--border);
 }
 
 .bwjm-status-badge {
@@ -1001,26 +1066,26 @@ body {
 
 .bwjm-status-badge.ok {
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  color: var(--accent-success);
 }
 
 .bwjm-status-badge.error {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--accent-error);
 }
 
 .bwjm-engine-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .bwjm-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(3px);
+  background-color: rgba(5, 7, 10, 0.8);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1028,12 +1093,12 @@ body {
 }
 
 .bwjm-modal-container {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   width: 90%;
   max-width: 600px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1044,8 +1109,8 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
-  background-color: #1e293b;
-  border-bottom: 1px solid #334155;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
 }
 
 .bwjm-modal-title {
@@ -1054,20 +1119,20 @@ body {
   gap: 0.5rem;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-main);
 }
 
 .bwjm-modal-close {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--text-muted);
   cursor: pointer;
   display: inline-flex;
   padding: 0.25rem;
 }
 
 .bwjm-modal-close:hover {
-  color: #ffffff;
+  color: var(--text-main);
 }
 
 .bwjm-modal-body {
@@ -1088,7 +1153,7 @@ body {
 .bwjm-modal-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #cbd5e1;
+  color: var(--text-secondary);
 }
 
 .bwjm-template-palette {
@@ -1098,9 +1163,9 @@ body {
 }
 
 .bwjm-template-chip {
-  background: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid #334155;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
@@ -1110,16 +1175,16 @@ body {
 }
 
 .bwjm-template-chip:hover {
-  background: #0284c7;
+  background: var(--primary);
   color: #ffffff;
-  border-color: #38bdf8;
+  border-color: var(--primary);
 }
 
 .bwjm-modal-textarea,
 .bwjm-modal-input {
-  background-color: #0b1120;
-  color: #ffffff;
-  border: 1px solid #334155;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  border: 1px solid var(--border);
   padding: 0.5rem 0.75rem;
   font-family: var(--font-mono);
   font-size: 0.85rem;
@@ -1129,11 +1194,11 @@ body {
 
 .bwjm-modal-textarea:focus,
 .bwjm-modal-input:focus {
-  border-color: #0284c7;
+  border-color: var(--border-focus);
 }
 
 .bwjm-modal-textarea.has-error {
-  border-color: #ef4444;
+  border-color: var(--accent-error);
 }
 
 .bwjm-modal-radios {
@@ -1149,7 +1214,7 @@ body {
   align-items: center;
   gap: 0.4rem;
   font-size: 0.8rem;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
@@ -1171,15 +1236,15 @@ body {
   justify-content: flex-end;
   gap: 0.6rem;
   padding: 0.75rem 1.25rem;
-  background-color: #1e293b;
-  border-top: 1px solid #334155;
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border);
 }
 
 .bwjm-btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background-color: #0284c7;
+  background-color: var(--primary);
   color: #ffffff;
   border: none;
   padding: 0.45rem 1rem;
@@ -1187,11 +1252,12 @@ body {
   font-weight: 600;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: all 0.15s ease;
+  box-shadow: 0 0 12px var(--primary-glow);
 }
 
 .bwjm-btn-primary:hover:not(:disabled) {
-  background-color: #0369a1;
+  background-color: var(--primary-hover);
 }
 
 .bwjm-btn-primary:disabled {
@@ -1201,8 +1267,8 @@ body {
 
 .bwjm-btn-secondary {
   background-color: transparent;
-  color: #cbd5e1;
-  border: 1px solid #334155;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
   padding: 0.45rem 0.9rem;
   font-size: 0.82rem;
   border-radius: 4px;
@@ -1210,12 +1276,13 @@ body {
 }
 
 .bwjm-btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--bg-card);
+  color: var(--text-main);
 }
 
 .bwjm-palette-container {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   width: 90%;
   max-width: 550px;
@@ -1229,12 +1296,12 @@ body {
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--border);
   gap: 0.6rem;
 }
 
 .bwjm-palette-icon {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .bwjm-palette-input {
@@ -1242,7 +1309,7 @@ body {
   background: transparent;
   border: none;
   outline: none;
-  color: #ffffff;
+  color: var(--text-main);
   font-size: 0.92rem;
 }
 
@@ -1266,7 +1333,7 @@ body {
 
 .bwjm-palette-item:hover,
 .bwjm-palette-item.selected {
-  background-color: #1e293b;
+  background-color: var(--bg-card);
 }
 
 .bwjm-palette-item-left {
@@ -1279,26 +1346,26 @@ body {
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .bwjm-palette-title {
   font-size: 0.82rem;
-  color: #f1f5f9;
+  color: var(--text-main);
 }
 
 .bwjm-palette-kbd {
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  color: #38bdf8;
-  background: rgba(2, 132, 199, 0.15);
+  color: var(--primary);
+  background: rgba(94, 106, 210, 0.15);
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
 }
 
 .bwjm-tabs-bar {
   display: flex;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--border);
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
@@ -1307,7 +1374,7 @@ body {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 600;
   padding: 0.45rem 0.75rem;
@@ -1315,8 +1382,8 @@ body {
 }
 
 .bwjm-tab-item.active {
-  color: #38bdf8;
-  border-bottom-color: #0284c7;
+  color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
 .bwjm-modal-grid {
@@ -1341,15 +1408,15 @@ body {
 }
 
 .bwjm-code-preview {
-  background-color: #0b1120;
+  background-color: var(--bg-app);
   padding: 0.65rem;
   border-radius: 4px;
-  border: 1px solid #334155;
+  border: 1px solid var(--border);
   overflow-x: auto;
 }
 
 .bwjm-code-preview code {
   font-family: var(--font-mono);
   font-size: 0.78rem;
-  color: #a5b4fc;
+  color: var(--primary);
 }
