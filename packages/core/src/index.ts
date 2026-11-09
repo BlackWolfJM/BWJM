@@ -11,7 +11,8 @@ import {
   fitLinearRegression,
   sampleParametric2D,
   sampleFlow2D,
-  computeCalculusViz
+  computeCalculusViz,
+  extractFreeParameters
 } from "@mathmd/math";
 import type { Vector3D } from "@mathmd/math";
 
@@ -45,10 +46,35 @@ export class MathMDCore {
         this.variables.set(node.name, node.default ?? node.domain[0]);
       }
     });
-    
+    // Legacy graphs can contain free symbols without slider blocks.
+    // Display them with explicitly documented provisional value 1 rather than crashing
+    // the entire scientific editor; activating graph controls persists the real defaults.
+    this.document.children.forEach(node => {
+      if ("paramControls" in node && node.paramControls?.enabled) return;
+      let expressions: string[] = [];
+      switch (node.type) {
+        case "plot2d": case "surface3d": expressions=[node.equation]; break;
+        case "curve3d": expressions=[node.x,node.y,node.z]; break;
+        case "parametric2d": expressions=[node.x,node.y]; break;
+        case "vectorfield2d": case "flow2d": expressions=[...node.field]; break;
+        case "calculusviz": expressions=[
+          node.f,node.g,node.integrand,node.paramX,node.paramY,
+          node.fieldP,node.fieldQ,node.reverseLower,node.reverseUpper,
+        ].filter((value):value is string=>typeof value==="string"); break;
+        default: break;
+      }
+      if (!expressions.length) return;
+      try {
+        const unknowns=extractFreeParameters(expressions)
+          .filter(name => !this.variables.has(name));
+        if (unknowns.length) this.localParameters.set(node.id,
+          new Map(unknowns.map(name => [name,1])));
+      } catch { /* invalid expressions are reported by their own graph renderer */ }
+    });
+
     this.buildDependencyGraph();
   }
-  
+
   private buildDependencyGraph() {
     this.dependencyMap.clear();
     this.reverseDependencyMap.clear();
