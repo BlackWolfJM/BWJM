@@ -2,6 +2,34 @@ import { describe, it, expect } from "vitest";
 import { parseMathMD } from "../src/index.js";
 
 describe("MathMD Parser", () => {
+  it("parses persisted time markers and moving-curve display options", () => {
+    const fence = String.fromCharCode(96).repeat(3);
+    const source = [
+      fence + "timeline", "name: t", "domain: [0, 6.28]",
+      "markers:", "  - at: 1.57", '    label: "Cuarto de vuelta"', fence,
+      fence + "parametric2d", "x: cos(t)", "y: sin(t)",
+      "tDomain: [0, 6.28]", "trailLength: 40", "followParticle: true", fence,
+    ].join("\n");
+    const doc = parseMathMD(source);
+    expect(doc.diagnostics).toHaveLength(0);
+    expect(doc.children.map(item => item.type)).toEqual(["timeline", "parametric2d"]);
+    const clock = doc.children[0], curve = doc.children[1];
+    if (clock.type !== "timeline" || curve.type !== "parametric2d") throw new Error("Node mismatch");
+    expect(clock.markers?.[0].label).toBe("Cuarto de vuelta");
+    expect(curve.trailLength).toBe(40);
+    expect(curve.followParticle).toBe(true);
+  });
+
+  it("rejects markers that fall outside the declared time domain", () => {
+    const fence = String.fromCharCode(96).repeat(3);
+    const doc = parseMathMD([
+      fence + "timeline", "name: t", "domain: [0, 1]",
+      "markers:", "  - at: 3", "    label: Fuera", fence,
+    ].join("\n"));
+    expect(doc.children).toHaveLength(0);
+    expect(doc.diagnostics.some(item => item.code === "MATHMD_SCHEMA_INVALID")).toBe(true);
+  });
+
   it("parses a 2D vector-field flow scene with seeds", () => {
     const markdown = [
       "```flow2d", "field: [\"-y\", \"x\"]", "seeds: [[1, 0], [0, 1]]",
