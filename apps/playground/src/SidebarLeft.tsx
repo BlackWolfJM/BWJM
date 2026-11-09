@@ -1,5 +1,7 @@
-import React, { useState } from "react";
-import { IconList, IconSliders, IconBookOpen, IconX } from "./icons.js";
+import React from "react";
+import { IconList, IconSliders, IconBookOpen, IconLayers, IconX } from "./icons.js";
+import { SidebarRight } from "./SidebarRight.js";
+import type { MathMDDiagnostic, MathMDNode } from "@mathmd/ast";
 
 export interface OutlineItem {
   level: number;
@@ -7,7 +9,15 @@ export interface OutlineItem {
   lineNumber: number;
 }
 
+export type SidebarTab = "outline" | "variables" | "lessons" | "inspector";
 interface SidebarLeftProps {
+  tab: SidebarTab;
+  onTabChange: (tab: SidebarTab) => void;
+  wordCount: number;
+  charCount: number;
+  lineCount: number;
+  nodes: MathMDNode[];
+  diagnostics: MathMDDiagnostic[];
   isOpen: boolean;
   onClose: () => void;
   outline: OutlineItem[];
@@ -19,6 +29,13 @@ interface SidebarLeftProps {
 }
 
 export const SidebarLeft: React.FC<SidebarLeftProps> = ({
+  tab,
+  onTabChange,
+  wordCount,
+  charCount,
+  lineCount,
+  nodes,
+  diagnostics,
   isOpen,
   onClose,
   outline,
@@ -28,8 +45,6 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
   onSelectLesson,
   onNavigateOutline,
 }) => {
-  const [tab, setTab] = useState<"outline" | "variables" | "lessons">("outline");
-
   if (!isOpen) return null;
 
   return (
@@ -38,7 +53,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
         <div className="bwjm-sidebar-tabs">
           <button
             className={`bwjm-sidebar-tab ${tab === "outline" ? "active" : ""}`}
-            onClick={() => setTab("outline")}
+            onClick={() => onTabChange("outline")}
             title="Esquema del Documento"
           >
             <IconList size={14} />
@@ -46,7 +61,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
           </button>
           <button
             className={`bwjm-sidebar-tab ${tab === "variables" ? "active" : ""}`}
-            onClick={() => setTab("variables")}
+            onClick={() => onTabChange("variables")}
             title="Variables y Parámetros"
           >
             <IconSliders size={14} />
@@ -54,11 +69,16 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
           </button>
           <button
             className={`bwjm-sidebar-tab ${tab === "lessons" ? "active" : ""}`}
-            onClick={() => setTab("lessons")}
+            onClick={() => onTabChange("lessons")}
             title="Lecciones de Ejemplo"
           >
             <IconBookOpen size={14} />
             <span>Lecciones</span>
+          </button>
+          <button className={"bwjm-sidebar-tab " + (tab === "inspector" ? "active" : "")}
+            onClick={() => onTabChange("inspector")} title="Inspector científico">
+            <IconLayers size={14} />
+            <span>Inspector</span>
           </button>
         </div>
         <button className="bwjm-sidebar-close" onClick={onClose} aria-label="Cerrar panel">
@@ -101,6 +121,11 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
           </div>
         )}
 
+        {tab === "inspector" && (
+          <SidebarRight isOpen={true} onClose={() => onTabChange("outline")}
+            wordCount={wordCount} charCount={charCount} lineCount={lineCount}
+            nodes={nodes} diagnostics={diagnostics}/>
+        )}
         {tab === "lessons" && (
           <div className="bwjm-lessons-list">
             {Object.entries(lessons).map(([key, data]) => (

@@ -16,11 +16,12 @@ import {
   serializeScientificTable,
 } from "@mathmd/math";
 import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode, Parametric2DNode } from "@mathmd/ast";
-import { MenuBar } from "./MenuBar.js";
-import { ToolBar } from "./ToolBar.js";
-import { StatusBar } from "./StatusBar.js";
-import { SidebarLeft, OutlineItem } from "./SidebarLeft.js";
-import { SidebarRight } from "./SidebarRight.js";
+import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
+import { Ribbon, type RibbonAction } from "./Ribbon.js";
+import { DocumentTabs } from "./DocumentTabs.js";
+import { DocumentSearch, type TextMatch } from "./DocumentSearch.js";
+import { useDocumentWorkspace } from "./workspaceDocuments.js";
+import { IconAtom, IconCheck } from "./icons.js";
 import { FormulaModal } from "./FormulaModal.js";
 import { ChartModal } from "./ChartModal.js";
 import { CommandPalette, CommandItem } from "./CommandPalette.js";
@@ -510,20 +511,24 @@ function renderProseText(content: string, container: HTMLElement): void {
 }
 
 export function BWJMStudio() {
-  const [markdown, setMarkdown] = useState<string>(SAMPLE_LESSONS.riemann.content);
-  const [filename, setFilename] = useState<string>(SAMPLE_LESSONS.riemann.filename);
+  const {
+    documents, activeId, markdown, filename, selectedTemplate, setMarkdown,
+    openDocument, createDocument, selectDocument, closeDocument, markSaved,
+  } = useDocumentWorkspace(SAMPLE_LESSONS.riemann.filename, SAMPLE_LESSONS.riemann.content, "riemann");
   const [viewMode, setViewMode] = useState<ViewMode>("split");
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("riemann");
+
   const [sliceX] = useState<number>(0.5);
   const [theme, setTheme] = useState<"linear" | "catppuccin" | "tokyonight">("linear");
 
   const [isSidebarLeftOpen, setIsSidebarLeftOpen] = useState<boolean>(true);
-  const [isSidebarRightOpen, setIsSidebarRightOpen] = useState<boolean>(true);
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("outline");
+  const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(false);
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState<boolean>(false);
   const [isChartModalOpen, setIsChartModalOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const coreRef = useRef<MathMDCore | null>(null);
   const activeTimersRef = useRef<Map<string, number>>(new Map());
@@ -586,7 +591,14 @@ export function BWJMStudio() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "F1") {
+        e.preventDefault();
+        setIsRibbonCollapsed(value => !value);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
       } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "m") {
@@ -613,6 +625,7 @@ export function BWJMStudio() {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+    markSaved();
   };
 
   const handleOpenFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -621,17 +634,13 @@ export function BWJMStudio() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      setMarkdown(content);
-      setFilename(file.name);
+      openDocument(file.name, content);
     };
     reader.readAsText(file);
     e.target.value = "";
   };
 
-  const handleNewDocument = () => {
-    setMarkdown("# Nuevo Documento BWJM\n\nComienza a escribir texto, fórmulas y gráficas matemáticas.\n");
-    setFilename("sin_titulo.bwjm");
-  };
+  const handleNewDocument = () => createDocument();
 
   const handleExportHtml = () => {
     const renderedBody = sheetRef.current ? sheetRef.current.innerHTML : "";
@@ -676,6 +685,81 @@ export function BWJMStudio() {
       }
       textarea.focus();
       textarea.setSelectionRange(charIndex, charIndex + (lines[item.lineNumber - 1]?.length || 0));
+    }
+  };
+
+  const handleCloseDocument = (id: string) => {
+    const target = documents.find(item => item.id === id);
+    if (target?.content !== target?.savedContent &&
+      !window.confirm("El documento tiene cambios sin guardar. ¿Cerrar esta pestaña?")) return;
+    closeDocument(id);
+  };
+
+  const handleSearchLocate = ({ start, end }: TextMatch) => {
+    if (viewMode === "reader") setViewMode("split");
+    window.requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      textarea.setSelectionRange(start, end);
+      const row = markdown.slice(0, start).split("\n").length - 1;
+      const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight) || 23;
+      textarea.scrollTop = Math.max(0, row * lineHeight - textarea.clientHeight / 3);
+    });
+  };
+
+  /** Central handler for all actions registered in Ribbon.tsx. */
+  const handleRibbonAction = (id: RibbonAction): void => {
+    const fence = String.fromCharCode(96).repeat(3);
+    switch (id) {
+      case "open": fileInputRef.current?.click(); break;
+      case "save": handleSaveFile(); break;
+      case "export-html": handleExportHtml(); break;
+      case "h1": insertAtCursor("# "); break;
+      case "h2": insertAtCursor("## "); break;
+      case "h3": insertAtCursor("### "); break;
+      case "bold": insertAtCursor("**", "**"); break;
+      case "italic": insertAtCursor("*", "*"); break;
+      case "code": insertAtCursor(String.fromCharCode(96), String.fromCharCode(96)); break;
+      case "quote": insertAtCursor("> "); break;
+      case "list": insertAtCursor("- "); break;
+      case "rule": insertAtCursor("\n---\n"); break;
+      case "formula": setIsFormulaModalOpen(true); break;
+      case "graph": setIsChartModalOpen(true); break;
+      case "table":
+        insertAtCursor("\n| Columna 1 | Columna 2 |\n|---|---|\n| Dato 1 | Dato 2 |\n");
+        break;
+      case "picture": insertAtCursor("\n![Descripción de la imagen](ruta-a-la-imagen.png)\n"); break;
+      case "plot2d":
+        insertAtCursor("\n" + fence + "plot2d\nequation: sin(x)\nx: [-5, 5]\n" + fence + "\n");
+        break;
+      case "surface3d":
+        insertAtCursor("\n" + fence + "surface3d\nequation: sin(sqrt(x^2 + y^2))\nx: [-4, 4]\ny: [-4, 4]\n" + fence + "\n");
+        break;
+      case "equation": insertAtCursor("\n$\n\\int_0^1 f(x)\\,dx\n$\n"); break;
+      case "inline-math": insertAtCursor("$", "$"); break;
+      case "matrix": insertAtCursor("\n$\n\\begin{bmatrix}a & b \\\\ c & d\\end{bmatrix}\n$\n"); break;
+      case "integral": insertAtCursor("\\int_{a}^{b} f(x)\\,dx"); break;
+      case "slider": insertAtCursor("\n" + fence +
+        "slider\nname: a\nmin: 0.1\nmax: 5\nstep: 0.1\ndefault: 1\n" + fence + "\n"); break;
+      case "data-table":
+        insertAtCursor("\n| t (s) | x (m) | v (m/s) |\n|---:|---:|---:|\n| 0 | 0 | 0 |\n| 1 | 1 | 2 |\n");
+        break;
+      case "vectorfield":
+        insertAtCursor("\n" + fence +
+          'vectorfield2d\nfield: ["-y", "x"]\nxDomain: [-3, 3]\nyDomain: [-3, 3]\ndensity: 12\n' + fence + "\n");
+        break;
+      case "riemann":
+        openDocument(SAMPLE_LESSONS.riemann.filename, SAMPLE_LESSONS.riemann.content, "riemann"); break;
+      case "view-editor": setViewMode("editor"); break;
+      case "view-split": setViewMode("split"); break;
+      case "view-reader": setViewMode("reader"); break;
+      case "outline": setSidebarTab("outline"); setIsSidebarLeftOpen(true); break;
+      case "inspector": setSidebarTab("inspector"); setIsSidebarLeftOpen(true); break;
+      case "theme-linear": setTheme("linear"); break;
+      case "theme-catppuccin": setTheme("catppuccin"); break;
+      case "theme-tokyonight": setTheme("tokyonight"); break;
+      case "commands": setIsCommandPaletteOpen(true); break;
     }
   };
 
@@ -747,7 +831,7 @@ export function BWJMStudio() {
       id: "toggle-props",
       title: "Alternar Panel Derecho (Propiedades)",
       category: "Paneles",
-      action: () => setIsSidebarRightOpen((prev) => !prev),
+      action: () => { setIsSidebarLeftOpen(true); setSidebarTab("inspector"); },
     },
     {
       id: "theme-linear",
@@ -772,9 +856,7 @@ export function BWJMStudio() {
       title: "Cargar Lección: Área entre Curvas & Riemann",
       category: "Lecciones",
       action: () => {
-        setSelectedTemplate("riemann");
-        setMarkdown(SAMPLE_LESSONS.riemann.content);
-        setFilename(SAMPLE_LESSONS.riemann.filename);
+        openDocument(SAMPLE_LESSONS.riemann.filename, SAMPLE_LESSONS.riemann.content, "riemann");
       },
     },
     {
@@ -782,9 +864,7 @@ export function BWJMStudio() {
       title: "Cargar Lección: Sólidos de Revolución (3π)",
       category: "Lecciones",
       action: () => {
-        setSelectedTemplate("revolution");
-        setMarkdown(SAMPLE_LESSONS.revolution.content);
-        setFilename(SAMPLE_LESSONS.revolution.filename);
+        openDocument(SAMPLE_LESSONS.revolution.filename, SAMPLE_LESSONS.revolution.content, "revolution");
       },
     },
     {
@@ -792,9 +872,7 @@ export function BWJMStudio() {
       title: "Cargar Lección: Superficie 3D y Oscilador Armónico",
       category: "Lecciones",
       action: () => {
-        setSelectedTemplate("surface");
-        setMarkdown(SAMPLE_LESSONS.surface.content);
-        setFilename(SAMPLE_LESSONS.surface.filename);
+        openDocument(SAMPLE_LESSONS.surface.filename, SAMPLE_LESSONS.surface.content, "surface");
       },
     },
     {
@@ -802,9 +880,7 @@ export function BWJMStudio() {
       title: "Cargar Lección: Cinemática Espacial & Marco Frenet (TNB)",
       category: "Lecciones",
       action: () => {
-        setSelectedTemplate("vector_calculus");
-        setMarkdown(SAMPLE_LESSONS.vector_calculus.content);
-        setFilename(SAMPLE_LESSONS.vector_calculus.filename);
+        openDocument(SAMPLE_LESSONS.vector_calculus.filename, SAMPLE_LESSONS.vector_calculus.content, "vector_calculus");
       },
     },
     {
@@ -812,9 +888,7 @@ export function BWJMStudio() {
       title: "Cargar Lección: Campos Vectoriales 2D & Teorema de Green",
       category: "Lecciones",
       action: () => {
-        setSelectedTemplate("vector_field");
-        setMarkdown(SAMPLE_LESSONS.vector_field.content);
-        setFilename(SAMPLE_LESSONS.vector_field.filename);
+        openDocument(SAMPLE_LESSONS.vector_field.filename, SAMPLE_LESSONS.vector_field.content, "vector_field");
       },
     },
   ];
@@ -1729,41 +1803,36 @@ export function BWJMStudio() {
         onChange={handleOpenFile}
       />
 
-      <MenuBar
-        filename={filename}
-        theme={theme}
-        onSetTheme={setTheme}
-        onNew={handleNewDocument}
-        onOpen={() => fileInputRef.current?.click()}
-        onSave={handleSaveFile}
-        onExportHtml={handleExportHtml}
-        onOpenFormulaModal={() => setIsFormulaModalOpen(true)}
-        onOpenChartModal={() => setIsChartModalOpen(true)}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-        onInsertMarkdown={insertAtCursor}
-        onSetViewMode={setViewMode}
-        onToggleSidebarLeft={() => setIsSidebarLeftOpen((prev) => !prev)}
-        onToggleSidebarRight={() => setIsSidebarRightOpen((prev) => !prev)}
-        onShowHelp={() => alert("BWJM Studio v1.0.0\nFormato científico interactivo y verificable.\nAtajos principales:\n- Ctrl+K: Paleta de Comandos\n- Ctrl+Shift+M: Insertar Fórmula\n- Ctrl+S: Guardar Documento\n- Ctrl+O: Abrir Archivo")}
-      />
-
-      <ToolBar
-        onOpen={() => fileInputRef.current?.click()}
-        onSave={handleSaveFile}
-        onExportHtml={handleExportHtml}
-        onOpenFormulaModal={() => setIsFormulaModalOpen(true)}
-        onOpenChartModal={() => setIsChartModalOpen(true)}
-        onInsertMarkdown={insertAtCursor}
-        viewMode={viewMode}
-        onSetViewMode={setViewMode}
-        isSidebarLeftOpen={isSidebarLeftOpen}
-        onToggleSidebarLeft={() => setIsSidebarLeftOpen((prev) => !prev)}
-        isSidebarRightOpen={isSidebarRightOpen}
-        onToggleSidebarRight={() => setIsSidebarRightOpen((prev) => !prev)}
-      />
+      <header className="bwjm-studio-header">
+        <div className="bwjm-studio-brand">
+          <span className="bwjm-studio-mark"><IconAtom size={17}/></span>
+          <span className="bwjm-studio-name">BWJM <strong>Studio</strong></span>
+          <span className="bwjm-studio-subtitle">Editor científico</span>
+        </div>
+        <DocumentSearch ref={searchRef} text={markdown} onLocate={handleSearchLocate}/>
+        <div className="bwjm-studio-header-meta">
+          <span className="bwjm-studio-active-name" title={filename}>{filename}</span>
+          <span className={"bwjm-studio-diagnostics " + (doc.diagnostics.some(d => d.severity === "error") ? "has-errors" : "")}
+            title={doc.diagnostics.length ? "Revisa los diagnósticos en Inspector" : "Sin errores de sintaxis"}>
+            <IconCheck size={13}/>
+            {doc.diagnostics.filter(d => d.severity === "error").length} errores
+          </span>
+        </div>
+      </header>
+      <DocumentTabs documents={documents} activeId={activeId}
+        onSelect={selectDocument} onClose={handleCloseDocument} onNew={handleNewDocument}/>
+      <Ribbon activeView={viewMode} onAction={handleRibbonAction}
+        collapsed={isRibbonCollapsed} onCollapseChange={setIsRibbonCollapsed}/>
 
       <div className="bwjm-workspace-layout">
         <SidebarLeft
+          tab={sidebarTab}
+          onTabChange={setSidebarTab}
+          wordCount={wordCount}
+          charCount={charCount}
+          lineCount={lineCount}
+          nodes={doc.children}
+          diagnostics={doc.diagnostics}
           isOpen={isSidebarLeftOpen}
           onClose={() => setIsSidebarLeftOpen(false)}
           outline={outline}
@@ -1771,14 +1840,12 @@ export function BWJMStudio() {
           lessons={SAMPLE_LESSONS}
           currentLessonKey={selectedTemplate}
           onSelectLesson={(key: string) => {
-            setSelectedTemplate(key);
-            setMarkdown(SAMPLE_LESSONS[key].content);
-            setFilename(SAMPLE_LESSONS[key].filename);
+            openDocument(SAMPLE_LESSONS[key].filename, SAMPLE_LESSONS[key].content, key);
           }}
           onNavigateOutline={handleNavigateOutline}
         />
 
-        <main className="bwjm-main-split">
+        <main id="bwjm-workspace-active" className="bwjm-main-split" role="tabpanel" aria-labelledby={"tab-" + activeId}>
           <section
             className="bwjm-editor-panel"
             style={{ display: viewMode === "reader" ? "none" : undefined }}
@@ -1806,25 +1873,9 @@ export function BWJMStudio() {
           </section>
         </main>
 
-        <SidebarRight
-          isOpen={isSidebarRightOpen}
-          onClose={() => setIsSidebarRightOpen(false)}
-          wordCount={wordCount}
-          charCount={charCount}
-          lineCount={lineCount}
-          nodes={doc.children}
-          diagnostics={doc.diagnostics}
-        />
+
       </div>
 
-      <StatusBar
-        filename={filename}
-        wordCount={wordCount}
-        charCount={charCount}
-        diagnostics={doc.diagnostics}
-        viewMode={viewMode}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-      />
 
       {timelines.length > 0 && (
         <ScientificTimeline
