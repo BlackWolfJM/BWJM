@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" width="100%" height="100%" style="background:#0b1120; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="curlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+  </defs>
+
+  <rect x="15" y="15" width="870" height="390" rx="12" fill="#131e33" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Header -->
+  <rect x="15" y="15" width="870" height="52" rx="12" fill="#0b1120" />
+  <line x1="15" y1="67" x2="885" y2="67" stroke="#334155" stroke-width="1" />
+  <text x="35" y="47" font-size="15" font-weight="700" fill="#38bdf8" letter-spacing="0.5">BWJM STUDIO | CAMPOS VECTORIALES, CIRCULACION Y TEOREMA DE GREEN (2D)</text>
+  <rect x="670" y="28" width="195" height="26" rx="13" fill="#0369a1" fill-opacity="0.25" stroke="#0284c7" stroke-width="1" />
+  <text x="767" y="45" font-size="11" font-weight="600" fill="#7dd3fc" text-anchor="middle">MODULO VECTORFIELD2D &amp; SVG</text>
+
+  <!-- Left Column: Math Formulations & Physical Properties -->
+  <g transform="translate(35, 87)">
+    <rect x="0" y="0" width="370" height="300" rx="8" fill="#090e1a" stroke="#1e293b" stroke-width="1" />
+
+    <text x="20" y="26" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.5">DEFINICION DEL CAMPO VECTORIAL</text>
+    <rect x="20" y="38" width="330" height="42" rx="6" fill="#131e33" stroke="#334155" stroke-width="1" />
+    <text x="185" y="64" font-size="14" font-weight="700" fill="#38bdf8" text-anchor="middle" font-family="'JetBrains Mono', monospace">
+      F(x, y) = (-y · i + x · j)
+    </text>
+
+    <text x="20" y="105" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.5">PROPIEDADES DIFERENCIALES LOCALES</text>
+    <g transform="translate(20, 115)">
+      <rect x="0" y="0" width="158" height="52" rx="6" fill="#131e33" stroke="#1e293b" stroke-width="1" />
+      <text x="12" y="20" font-size="11" font-weight="600" fill="#64748b">Divergencia ∇ · F:</text>
+      <text x="12" y="38" font-size="12" font-weight="700" fill="#10b981" font-family="'JetBrains Mono', monospace">∂P/∂x + ∂Q/∂y = 0</text>
+      <text x="12" y="48" font-size="9" font-weight="600" fill="#10b981">Flujo Incompresible</text>
+
+      <rect x="172" y="0" width="158" height="52" rx="6" fill="#131e33" stroke="#1e293b" stroke-width="1" />
+      <text x="184" y="20" font-size="11" font-weight="600" fill="#64748b">Rotacional (∇ x F)_z:</text>
+      <text x="184" y="38" font-size="12" font-weight="700" fill="#f59e0b" font-family="'JetBrains Mono', monospace">∂Q/∂x - ∂P/∂y = 2</text>
+      <text x="184" y="48" font-size="9" font-weight="600" fill="#f59e0b">Vortice no conservativo</text>
+    </g>
+
+    <text x="20" y="192" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.5">VERIFICACION DEL TEOREMA DE GREEN</text>
+    <rect x="20" y="202" width="330" height="78" rx="6" fill="#131e33" stroke="#1e293b" stroke-width="1" />
+    <text x="32" y="224" font-size="11" font-weight="600" fill="#64748b">Circulacion cerrada: ∮_C F · dr</text>
+    <text x="32" y="242" font-size="13" font-weight="700" fill="#38bdf8" font-family="'JetBrains Mono', monospace">∮_C (-y dx + x dy) = 2π ≈ 6.28318</text>
+    <text x="32" y="266" font-size="11" font-weight="600" fill="#10b981">
+      = ∬_D (rot F) dA = 2 · Area(Disco) = 2π
+    </text>
+  </g>
+
+  <!-- Right Column: 2D Quiver Field & Circulation Path -->
+  <g transform="translate(425, 87)">
+    <rect x="0" y="0" width="440" height="300" rx="8" fill="#090e1a" stroke="#1e293b" stroke-width="1" />
+    <text x="220" y="26" font-size="12" font-weight="700" fill="#f8fafc" text-anchor="middle">REJILLA VECTORIAL 2D Y CURVA DE CIRCULACION C</text>
+
+    <!-- Quiver Coordinate Center -->
+    <g transform="translate(220, 160)">
+      <!-- Axes -->
+      <line x1="-180" y1="0" x2="180" y2="0" stroke="#334155" stroke-width="1" />
+      <line x1="0" y1="-110" x2="0" y2="110" stroke="#334155" stroke-width="1" />
+      <text x="170" y="-8" font-size="10" font-weight="600" fill="#64748b">X</text>
+      <text x="8" y="-100" font-size="10" font-weight="600" fill="#64748b">Y</text>
+
+      <!-- Circular Circulation Path C -->
+      <circle cx="0" cy="0" r="75" fill="#0284c7" fill-opacity="0.08" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6,4" />
+      <text x="55" y="-55" font-size="11" font-weight="700" fill="#38bdf8">C (Frontera)</text>
+      <text x="0" y="5" font-size="11" font-weight="700" fill="#7dd3fc" text-anchor="middle">Region D</text>
+
+      <!-- Tangent circulation arrows on boundary -->
+      <polygon points="75,-5 72,5 78,5" fill="#38bdf8" transform="rotate(0)" />
+      <polygon points="0,-80 -5,-72 5,-72" fill="#38bdf8" transform="rotate(-90)" />
+      <polygon points="-75,5 -72,-5 -78,-5" fill="#38bdf8" transform="rotate(0)" />
+      <polygon points="0,80 -5,72 5,72" fill="#38bdf8" transform="rotate(90)" />
+
+      <!-- Vector Quiver Arrows: F(x, y) = (-y, x) -->
+      <!-- Rings of vectors rotating counter-clockwise -->
+      <!-- Ring 1 (r=40) -->
+      <line x1="0" y1="-40" x2="-22" y2="-40" stroke="#0284c7" stroke-width="1.8" />
+      <polygon points="-24,-40 -19,-38 -19,-42" fill="#0284c7" />
+
+      <line x1="40" y1="0" x2="40" y2="22" stroke="#0284c7" stroke-width="1.8" />
+      <polygon points="40,24 38,19 42,19" fill="#0284c7" />
+
+      <line x1="0" y1="40" x2="22" y2="40" stroke="#0284c7" stroke-width="1.8" />
+      <polygon points="24,40 19,38 19,42" fill="#0284c7" />
+
+      <line x1="-40" y1="0" x2="-40" y2="-22" stroke="#0284c7" stroke-width="1.8" />
+      <polygon points="-40,-24 -38,-19 -42,-19" fill="#0284c7" />
+
+      <!-- Diagonal Ring 1 -->
+      <line x1="28" y1="-28" x2="13" y2="-43" stroke="#0284c7" stroke-width="1.8" />
+      <polygon points="11,-45 18,-42 14,-38" fill="#0284c7" />
+
+      <line x1="28" y1="28" x2="43" y2="13" stroke="#0284c7" stroke-width="1.8" />
+      <polygon points="45,11 42,18 38,14" fill="#0284c7" />
+
+      <line x1="-28" y1="28" x2="-13" y2="43" stroke="#0284c7" stroke-width="1.8" />
+      <polygon points="-11,45 -18,42 -14,38" fill="#0284c7" />
+
+      <line x1="-28" y1="-28" x2="-43" y2="-13" stroke="#0284c7" stroke-width="1.8" />
+      <polygon points="-45,-11 -42,-18 -38,-14" fill="#0284c7" />
+
+      <!-- Ring 2 (r=120) outer field -->
+      <line x1="0" y1="-95" x2="-35" y2="-95" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="-38,-95 -31,-92 -31,-98" fill="#38bdf8" />
+
+      <line x1="120" y1="0" x2="120" y2="35" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="120,38 117,31 123,31" fill="#38bdf8" />
+
+      <line x1="0" y1="95" x2="35" y2="95" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="38,95 31,92 31,98" fill="#38bdf8" />
+
+      <line x1="-120" y1="0" x2="-120" y2="-35" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="-120,-38 -117,-31 -123,-31" fill="#38bdf8" />
+
+      <line x1="85" y1="-85" x2="60" y2="-110" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="57,-113 65,-109 61,-105" fill="#38bdf8" />
+
+      <line x1="85" y1="85" x2="110" y2="60" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="113,57 109,65 105,61" fill="#38bdf8" />
+
+      <line x1="-85" y1="85" x2="-60" y2="110" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="-57,113 -65,109 -61,105" fill="#38bdf8" />
+
+      <line x1="-85" y1="-85" x2="-110" y2="-60" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="-113,-57 -109,-65 -105,-61" fill="#38bdf8" />
+    </g>
+
+    <!-- Legend -->
+    <g transform="translate(20, 272)">
+      <line x1="0" y1="6" x2="16" y2="6" stroke="#38bdf8" stroke-width="2" />
+      <polygon points="18,6 14,4 14,8" fill="#38bdf8" />
+      <text x="26" y="10" font-size="10" font-weight="600" fill="#94a3b8">Flechas: Vector F(x, y)</text>
+
+      <circle cx="170" cy="6" r="5" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="2,2" />
+      <text x="182" y="10" font-size="10" font-weight="600" fill="#94a3b8">Linea discontinua: Trayectoria C</text>
+
+      <rect x="340" y="2" width="8" height="8" rx="2" fill="#0284c7" fill-opacity="0.3" />
+      <text x="354" y="10" font-size="10" font-weight="600" fill="#94a3b8">Area sombreada: Dominio D</text>
+    </g>
+  </g>
+</svg>

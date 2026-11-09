@@ -3,7 +3,7 @@
 Autor y Creador del Formato: BlackWolfJM
 Repositorio Oficial: https://github.com/BlackWolfJM/BWJM
 
-BWJM es un formato de documento cientifico interactivo de codigo abierto, disenado para sustituir las limitaciones estaticas del PDF tradicional y erradicar la dependencia de archivos HTML intermedios o generados. Permite que formulas matematicas, graficas 2D, superficies 3D, simulaciones parametricas y deducciones analiticas coexistan como objetos vivos, verificables y reproducibles en tiempo real.
+BWJM es un formato de documento cientifico interactivo de codigo abierto, disenado para superar las limitaciones estaticas del PDF tradicional y erradicar la dependencia de archivos HTML intermedios o dispersos. Permite que formulas matematicas, graficas 2D, superficies 3D, curvas espaciales, campos vectoriales, simulaciones parametricas y deducciones analiticas coexistan como objetos vivos, verificables y reproducibles en tiempo real.
 
 ---
 
@@ -15,33 +15,50 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
    - 2.2. Area entre Curvas y Sumas de Riemann (Fase 2)
    - 2.3. Solidos de Revolucion y Regla Geometrica de 2pi (Fase 3)
    - 2.4. Superficies 3D y Osciladores Armonicos
-   - 2.5. Arquitectura del Motor y Pipeline Zero-HTML
-3. Futuras Herramientas del Proyecto (Roadmap)
-4. Estructura del Monorepo
-5. Instalacion y Uso
-6. Comprobaciones de Calidad y Tests
+   - 2.5. Calculo Vectorial y Cinematica Espacial 3D (Marco Frenet-Serret)
+   - 2.6. Campos Vectoriales 2D, Rotacional y Teorema de Green
+   - 2.7. Arquitectura del Motor y Pipeline Zero-HTML
+3. Manual de Usuario y Guia del Formato (.bwjm / .jm)
+   - 3.1. Estructura Basica de un Documento .bwjm
+   - 3.2. Manual de Bloques Cientificos Interactivos
+     - 3.2.1. Deslizadores Continuos y Animacion (slider)
+     - 3.2.2. Interruptores Booleanos (checkbox)
+     - 3.2.3. Graficas Bidimensionales (plot2d)
+     - 3.2.4. Superficies Tridimensionales (surface3d)
+     - 3.2.5. Curvas Parametricas Espaciales y Marco TNB (curve3d)
+     - 3.2.6. Campos Vectoriales 2D y Circulacion (vectorfield2d)
+   - 3.3. Manual de Operacion de BWJM Studio
+     - 3.3.1. Modos de Vista: Editor, Split y Lector
+     - 3.3.2. Carga de Lecciones y Navegacion de Esquema
+     - 3.3.3. Asistente Visual de Graficas (ChartModal)
+     - 3.3.4. Exportacion a HTML Autonomo y Persistencia Local
+4. Futuras Herramientas del Proyecto (Roadmap)
+5. Estructura del Monorepo
+6. Instalacion y Uso
+7. Comprobaciones de Calidad y Tests
+8. Licencia
 
 ---
 
 ## 1. Finalidad del Proyecto
 
-La finalidad principal del proyecto BWJM, fundamentada en la Especificacion de Formato Cientifico Interactivo redactada por BlackWolfJM, es superar el paradigma de los documentos cientificos pasivos:
+La finalidad principal del proyecto BWJM, fundamentada en la Especificacion de Formato Cientifico Interactivo redactada por BlackWolfJM, es transformar el paradigma de publicacion cientifica y academica:
 
-- Mas alla de un PDF estatico: En un PDF tradicional o una impresion, las formulas son graficos inertes y los calculos no pueden explorarse. En BWJM, cada expresion matematica es un nodo de arbol sintactico estructurado capaz de recalcularse, animarse y someterse a variaciones de parametros.
-- Cero dependencia de archivos HTML: El formato procesa y renderiza nativamente en memoria mediante su propio nucleo reactivo y renderizadores vectoriales, evitando la dispersion de archivos `.html`, carpetas auxiliares o scripts externos inseguros.
-- Matematica rigurosa y verificable: El sistema resuelve intersecciones exactas, calcula integrales analiticas y numericas, evalua sumas de Riemann con medicion precisa de error y aplica leyes geometricas estrictas como el limite de volumen en revoluciones espaciales.
-- Autonomia y reproducibilidad: Los documentos `.bwjm` y `.jm` son completamente portables y funcionan sin depender de modelos generativos de nube ni conexiones remotas obligatorias.
+- Superacion del PDF inerte: En un documento tradicional, las ecuaciones son imagenes fijas y los calculos no pueden explorarse. En BWJM, cada formula matematica es un nodo de arbol sintactico estructurado capaz de recalcularse, animarse y someterse a variaciones continuas de parametros.
+- Cero generacion de archivos HTML secundarios: El motor procesa y renderiza directamente en memoria mediante su propio pipeline reactivo y renderizadores vectoriales, evitando la dispersion de carpetas auxiliares, scripts externos inseguros o perdida de estilos.
+- Matematica rigurosa, analitica y numerica: El nucleo resuelve intersecciones exactas, evalua integrales definidas, mide sumas de Riemann con errores residuales reales, calcula invariantes diferenciales de curvas (curvatura y torsion) y verifica formalmente teoremas integrales como el Teorema de Green.
+- Autonomia y portabilidad: Los documentos `.bwjm` y `.jm` son autocontenidos, deterministas y portables, funcionando sin depender de conexiones remotas obligatorias ni servidores externos.
 
 ---
 
 ## 2. Funcionalidades Implementadas
 
-Cada funcionalidad descrita a continuacion se encuentra desarrollada, probada y respaldada por su correspondiente captura visual.
+Cada funcionalidad se encuentra desarrollada en TypeScript estricto, cubierta por pruebas unitarias automatizadas y respaldada por su correspondiente diagrama tecnico.
 
 ### 2.1. BWJM Studio: Editor y Lector Cientifico Interactivo
 
-Entorno integrado de trabajo con interfaz profesional de publicacion cientifica. Dispone de dos modos de operacion sincronizados:
-- Modo Editor: Panel dividido con editor de codigo fuente en tiempo real, contador de caracteres, atajos de teclado y deteccion instantanea de sintaxis.
+Entorno integrado con diseno visual profesional orientado a la investigacion y ensenanza cientifica. Ofrece:
+- Modo Editor: Panel lateral con editor de codigo fuente en vivo, contador de caracteres, atajos de teclado y deteccion instantanea de diagnosticos sintacticos.
 - Modo Lector: Hoja de estudio tipo publicacion academica de alta fidelidad, con formulas renderizadas en KaTeX, tipografia optimizada y visualizaciones integradas.
 - Controles reactivos: Deslizadores de parametros continuos con boton de reproduccion automatica (Play/Pause) a 60 FPS, permitiendo observar la dinamica de cualquier ecuacion.
 
@@ -55,7 +72,7 @@ Modulo analitico y grafico integral para el calculo de regiones acotadas en el p
 - Resolucion automatica de intersecciones: Calcula analitica y numericamente los puntos de corte entre dos curvas arbitrarias $f(x)$ y $g(x)$. Para el caso base $f(x)=ax$ y $g(x)=x^2$, halla los limites $x_1 = 0$ y $x_2 = 1$.
 - Integral definida analitica: Obtiene el area exacta de la region acotada mediante integracion formal ($A = \int_0^1 (x - x^2)dx = 1/6 \approx 0.16667$).
 - Particion interactiva de Riemann: Divide la region en $n$ rectangulos parametrizables desde $n = 2$ hasta $n = 50$, con calculo en tiempo real de la suma de Riemann $S_n$ y el error de aproximacion residual.
-- Diagrama vectorial en vivo: Muestra las dos funciones con codificacion cromatica diferenciada, puntos criticos señalizados y los rectangulos de Riemann escalando dinamicamente ante cualquier cambio en los controles.
+- Diagrama vectorial en vivo: Muestra las dos funciones con codificacion cromatica diferenciada, puntos criticos senalizados y los rectangulos de Riemann escalando dinamicamente ante cualquier cambio en los controles.
 
 ![Area entre Curvas y Sumas de Riemann](docs/images/02-area-entre-curvas-riemann.svg)
 
@@ -84,48 +101,306 @@ Renderizado tridimensional avanzado de funciones multivariables $z = f(x, y)$:
 
 ---
 
-### 2.5. Arquitectura del Motor y Pipeline Zero-HTML
+### 2.5. Calculo Vectorial y Cinematica Espacial 3D (Marco Frenet-Serret)
+
+Modulo diferencial para trayectorias parametricas tridimensionales $\mathbf{r}(t) = (x(t), y(t), z(t))$:
+- Cinematica de particula: Calculo continuo del vector velocidad $\mathbf{v}(t) = \mathbf{r}'(t)$, rapidez escalar $|\mathbf{v}|$, vector aceleracion $\mathbf{a}(t) = \mathbf{r}''(t)$ y descomposicion intrinseca en aceleracion tangencial $a_T = \frac{\mathbf{v} \cdot \mathbf{a}}{|\mathbf{v}|}$ y normal $a_N = \sqrt{|\mathbf{a}|^2 - a_T^2}$.
+- Triedro ortonormal movil de Frenet-Serret $(\mathbf{T}, \mathbf{N}, \mathbf{B})$: Generacion en tiempo real del vector tangente unitario $\mathbf{T}$, la normal principal $\mathbf{N}$ y la binormal $\mathbf{B} = \mathbf{T} \times \mathbf{N}$.
+- Invariantes geometricos intrinsecos: Evaluacion exacta de la curvatura $\kappa(t) = \frac{|\mathbf{v} \times \mathbf{a}|}{|\mathbf{v}|^3}$, torsion $\tau(t) = \frac{(\mathbf{v} \times \mathbf{a}) \cdot \mathbf{r}'''}{|\mathbf{v} \times \mathbf{a}|^2}$ y radio del circulo osculador $R = 1/\kappa$. Para la helice base $\mathbf{r}(t) = (\cos t, \sin t, t/3)$, el sistema verifica analitica y numericamente $\kappa = 0.9$ y $\tau = 0.3$.
+- Particula y marco interactivo: Proyeccion visual tridimensional con marcador esferico sobre la trayectoria y vectores directores en colores diferenciados.
+
+![Cinematica Espacial y Triedro de Frenet-Serret](docs/images/06-cinematica-curvas-frenet-3d.svg)
+
+---
+
+### 2.6. Campos Vectoriales 2D, Rotacional y Teorema de Green
+
+Modulo analitico y grafico para el analisis de campos de vectores bidimensionales $\mathbf{F}(x, y) = P(x, y)\mathbf{i} + Q(x, y)\mathbf{j}$:
+- Representacion Quiver regular: Muestreo uniforme en cuadrícula 2D con flechas orientadas y coloreadas segun magnitud y direccion.
+- Operadores diferenciales locales: Calculo automatico de la divergencia $\nabla \cdot \mathbf{F} = \frac{\partial P}{\partial x} + \frac{\partial Q}{\partial y}$ (incompresibilidad) y del rotacional escalar $(\nabla \times \mathbf{F})_z = \frac{\partial Q}{\partial x} - \frac{\partial P}{\partial y}$ (vortice / tendencia de giro).
+- Cuadratura de integrales de linea: Evaluacion de trabajo y circulacion cerrada $\oint_C \mathbf{F} \cdot d\mathbf{r}$ sobre curvas arbitrarias.
+- Verificacion del Teorema de Green: Para campos como $\mathbf{F} = (-y, x)$, demuestra en vivo la equivalencia fundamental entre la circulacion cerrada $\oint_C \mathbf{F} \cdot d\mathbf{r} = 2\pi$ y la integral doble sobre el disco encerrado $\iint_D (\nabla \times \mathbf{F})_z \, dA = 2 \cdot \text{Area}(D) = 2\pi$.
+
+![Campos Vectoriales y Teorema de Green](docs/images/07-campos-vectoriales-green-2d.svg)
+
+---
+
+### 2.7. Arquitectura del Motor y Pipeline Zero-HTML
 
 Estructura modular que garantiza la ejecucion en memoria sin generacion de archivos HTML secundarios:
-- @mathmd/ast: Definicion del Arbol de Sintaxis Abstracta con tipado estricto TypeScript para bloques cientificos (`plot2d`, `surface3d`, `slider`, `checkbox`, `vectorfield2d`, `contour`).
+- @mathmd/ast: Definicion del Arbol de Sintaxis Abstracta con tipado estricto TypeScript para todos los bloques cientificos (`plot2d`, `surface3d`, `curve3d`, `vectorfield2d`, `slider`, `checkbox`, `contour`).
 - @mathmd/parser: Analizador sintactico determinista con preprocesamiento seguro de esquemas YAML, proteccion contra inyecciones y tolerancia a codigos hexadecimales sin comillas.
 - @mathmd/core: Grafo reactivo de dependencias que actualiza exclusivamente los nodos y ecuaciones afectadas por un parametro modificado.
-- @mathmd/math: Biblioteca matematica analitica (deteccion de raices, integracion simbolica, particiones de Riemann y evaluacion diferencial).
-- Renderizadores vectoriales: Renderizador SVG puro para graficos bidimensionales y renderizador Plotly/WebGL para superficies tridimensionales.
+- @mathmd/math: Biblioteca matematica analitica y diferencial (deteccion de raices, integracion simbolica, particiones de Riemann, cinematica espacial de Frenet y calculo vectorial).
+- Renderizadores vectoriales: Renderizador SVG puro para graficos bidimensionales y campos vectoriales, y renderizador Plotly/WebGL para superficies y curvas tridimensionales.
 
 ![Arquitectura del Motor Cientifico BWJM](docs/images/04-arquitectura-formato-bwjm.svg)
 
 ---
 
-## 3. Futuras Herramientas del Proyecto (Roadmap)
+## 3. Manual de Usuario y Guia del Formato (.bwjm / .jm)
 
-Conforme a la vision integral de la especificacion de BlackWolfJM, el ecosistema evolucionara a traves de las siguientes herramientas de proxima implementacion:
+Un documento `.bwjm` o `.jm` es un archivo de texto plano estructurado que combina explicacion cientifica en prosa (Markdown extendido), formulacion matematica formal en LaTeX y bloques declarativos ejecutables.
 
-1. Aplicacion de Escritorio Standalone (BWJM Desktop):
-   - Construida sobre Tauri / Rust o Electron con aislamiento seguro de procesos.
-   - Apertura nativa de archivos `.bwjm` y `.jm` con doble clic en Windows, macOS y Linux.
-   - Almacenamiento local directo sin servidor web intermediario.
+### 3.1. Estructura Basica de un Documento .bwjm
 
-2. Extension Universal de Navegador (Sustituto de Visor PDF):
-   - Extension para Google Chrome, Microsoft Edge y Firefox que intercepta la apertura de archivos `.bwjm`.
-   - Permite leer articulos cientificos e informes tecnicos interactivos directamente en el navegador conservando toda la manipulacion 2D/3D y animaciones.
+Todo documento sigue la siguiente estructura general:
 
-3. Integracion con CAS Simbolico (SymPy / WebAssembly):
-   - Integracion de un motor simbolico completo en WebAssembly para resolucion de integrales impropias, ecuaciones diferenciales ordinarias (EDO), algebra lineal y calculo tensorial.
+```markdown
+# Titulo de la Investigacion o Leccion
 
-4. Motor 3D de Alto Rendimiento WebGPU / Three.js:
-   - Capacidad para simular campos vectoriales de alta densidad, solucion de ecuaciones en derivadas parciales (EDP), dinamica de fluidos computacional y superficies de Riemann complejas con aceleracion por hardware.
+Texto introductorio con expresiones matematicas en linea $f(x) = \sin(x)$ o en bloque:
 
-5. Pasarelas de Interoperabilidad Academica:
-   - Exportadores e importadores bidireccionales con LaTeX, cuadernos de Jupyter (`.ipynb`) y Typst, permitiendo traducir apuntes existentes a documentos interactivos vivos.
+$$
+\int_a^b f(x)\,dx = F(b) - F(a)
+$$
 
-6. Sistema de Aprendizaje Activo y Evaluacion por Pasos:
-   - Modo examen con verificacion formal de procedimientos algebraicos paso a paso.
-   - Pistas graduadas, generacion de ejercicios con parametros aleatorizados y retroalimentacion pedagogica inmediata sin revelar la solucion de forma prematura.
+## Parametros de Control
+
+Definicion de variables interactivas que alimentan las graficas y ecuaciones:
+
+```slider
+name: a
+min: 0.1
+max: 5.0
+step: 0.1
+default: 1.0
+```
+
+## Graficas Interactivas
+
+Bloques cientificos que reaccionan inmediatamente a los cambios de variables:
+
+```plot2d
+equation: a * sin(x)
+x: [-6.28, 6.28]
+grid: true
+color: "#0284c7"
+```
+```
 
 ---
 
-## 4. Estructura del Monorepo
+### 3.2. Manual de Bloques Cientificos Interactivos
+
+#### 3.2.1. Deslizadores Continuos y Animacion (`slider`)
+
+Permite declarar un parametro escalar interactivo. Al incluirse en el documento, BWJM Studio genera automaticamente un control deslizante y un boton de reproduccion cinematica continua.
+
+**Sintaxis:**
+```slider
+name: <nombre_variable>
+min: <valor_minimo>
+max: <valor_maximo>
+step: <incremento>
+default: <valor_inicial>
+```
+
+**Ejemplo de uso:**
+```slider
+name: omega
+min: 0.5
+max: 4.0
+step: 0.25
+default: 1.5
+```
+
+**Como opera en BWJM Studio:**
+- Arrastrar el circulo del deslizador recalcula todas las ecuaciones dependientes en tiempo real.
+- Pulsar el boton **Play** inicia una animacion continua a 60 FPS con barrido automatico entre `min` y `max`.
+
+---
+
+#### 3.2.2. Interruptores Booleanos (`checkbox`)
+
+Permite activar o desactivar elementos visuales, curvas o terminos de una funcion.
+
+**Sintaxis:**
+```checkbox
+name: <nombre_variable>
+label: <texto_descriptivo>
+default: <true|false>
+```
+
+**Ejemplo de uso:**
+```checkbox
+name: mostrar_tangente
+label: Mostrar Vector Tangente
+default: true
+```
+
+---
+
+#### 3.2.3. Graficas Bidimensionales (`plot2d`)
+
+Renderiza graficas de funciones explicitas $y = f(x)$ en dos dimensiones utilizando trazado vectorial SVG de alta resolucion.
+
+**Sintaxis:**
+```plot2d
+equation: <expresion_matematica>
+x: [<min_x>, <max_x>]
+grid: <true|false>
+color: "<codigo_hex_o_nombre>"
+```
+
+**Ejemplo de uso:**
+```plot2d
+equation: a * x^2 + sin(x)
+x: [-3, 3]
+grid: true
+color: "#0284c7"
+```
+
+**Propiedades soportadas:**
+- `equation`: Expresion que puede contener operadores aritmeticos (`+`, `-`, `*`, `/`, `^`), funciones elementales (`sin`, `cos`, `tan`, `sqrt`, `exp`, `log`, `abs`) y variables definidas por sliders.
+- `x`: Rango de evaluacion horizontal `[min, max]`.
+- `grid`: Cuadricula ortogonal de referencia.
+- `color`: Color de trazo en formato hexadecimal o CSS.
+
+---
+
+#### 3.2.4. Superficies Tridimensionales (`surface3d`)
+
+Renderiza funciones bivariadas $z = f(x, y)$ en un espacio tridimensional interactivo con aceleracion WebGL mediante Plotly.
+
+**Sintaxis:**
+```surface3d
+equation: <expresion_en_x_y>
+x: [<min_x>, <max_x>]
+y: [<min_y>, <max_y>]
+samples: <numero_muestras>
+contours: <true|false>
+```
+
+**Ejemplo de uso:**
+```surface3d
+equation: amplitud * sin(frecuencia * sqrt(x^2 + y^2 + 0.1))
+x: [-6, 6]
+y: [-6, 6]
+samples: 50
+contours: true
+```
+
+**Interacciones tridimensionales en pantalla:**
+- Clic izquierdo + arrastre: Rotacion orbital completa del sistema coordenado.
+- Rueda del raton: Zoom continuo hacia el origen o detalle.
+- Clic derecho + arrastre: Desplazamiento transversal (panoramica).
+
+---
+
+#### 3.2.5. Curvas Parametricas Espaciales y Marco TNB (`curve3d`)
+
+Visualiza trayectorias tridimensionales de particulas definidas por funciones parametricas $\mathbf{r}(t) = (x(t), y(t), z(t))$, mostrando la posicion actual, vectores de velocidad y el marco Frenet-Serret.
+
+**Sintaxis:**
+```curve3d
+x: <expresion_x(t)>
+y: <expresion_y(t)>
+z: <expresion_z(t)>
+tDomain: [<min_t>, <max_t>]
+color: "<codigo_hex>"
+```
+
+**Ejemplo de uso (Helice Circular):**
+```curve3d
+x: cos(t)
+y: sin(t)
+z: t / 3
+tDomain: [0, 6.28]
+color: "#0284c7"
+```
+
+**Comportamiento reactivo:**
+- Si existe un `slider` llamado `t`, la particula esferica roja se desplaza sobre la curva al mover el deslizador o al pulsar Play.
+- Se proyectan automaticamente los vectores normalizados:
+  - Vector Tangente $\mathbf{T}$ en color cian.
+  - Vector Normal Principal $\mathbf{N}$ en color purpura.
+  - Vector Binormal $\mathbf{B}$ en color rosa.
+- El panel cientifico inferior calcula en tiempo real la curvatura $\kappa$, torsion $\tau$ y radio osculador $R$.
+
+---
+
+#### 3.2.6. Campos Vectoriales 2D y Circulacion (`vectorfield2d`)
+
+Dibuja una distribucion regular de vectores en el plano carthesiano para visualizar campos de fuerzas, velocidades o gradientes.
+
+**Sintaxis:**
+```vectorfield2d
+field: ["<componente_P(x,y)>", "<componente_Q(x,y)>"]
+xDomain: [<min_x>, <max_x>]
+yDomain: [<min_y>, <max_y>]
+density: <numero_vectores_por_eje>
+color: "<codigo_hex>"
+```
+
+**Ejemplo de uso (Vortice de Rotacion Rigida):**
+```vectorfield2d
+field: ["-y", "x"]
+xDomain: [-3, 3]
+yDomain: [-3, 3]
+density: 12
+color: "#0284c7"
+```
+
+---
+
+### 3.3. Manual de Operacion de BWJM Studio
+
+#### 3.3.1. Modos de Vista: Editor, Split y Lector
+
+En la esquina superior derecha o mediante el menu **Ver**, el usuario puede seleccionar tres modalidades de visualizacion:
+1. **Modo Editor**: Maximiza el panel de codigo fuente con numeracion de lineas y atajos de formateo, ideal para redactar informes cientificos o programar simulaciones.
+2. **Modo Split**: Muestra en paralelo el editor a la izquierda y el documento vivo interactivo a la derecha con sincronizacion instantanea al escribir.
+3. **Modo Lector**: Oculta el editor para proporcionar una experiencia de lectura academica limpia, libre de distracciones, con formulas matematicas estilizadas y graficos reactivos listos para ensenanza o presentaciones.
+
+#### 3.3.2. Carga de Lecciones y Navegacion de Esquema
+
+- **Selector de Lecciones**: En la barra superior se encuentra un menu desplegable con lecciones integradas que cubren desde sumas de Riemann y solidos de revolucion hasta cinematica espacial y Teorema de Green.
+- **Paleta de Comandos (`Ctrl+K`)**: Permite buscar cualquier comando, cambiar temas o cargar lecciones de manera rapida con el teclado.
+- **Panel Lateral de Esquema (`SidebarLeft`)**: Muestra la jerarquia de titulos (H1, H2, H3) del documento para navegacion rapida, junto con una lista en vivo de las variables activas y sus valores actuales.
+
+#### 3.3.3. Asistente Visual de Graficas (`ChartModal`)
+
+Si el usuario prefiere no escribir el codigo del bloque manualmente, puede acceder al asistente mediante el menu **Insertar -> Grafica / Parametro (Asistente)**:
+- Dispone de pestanas diferenciadas para `plot2d`, `surface3d`, `curve3d`, `vectorfield2d` y `slider`.
+- Al rellenar los campos de ecuaciones y dominios, el modal genera el bloque formateado y lo inserta en la posicion actual del cursor con el boton **Insertar en el Editor**.
+
+#### 3.3.4. Exportacion a HTML Autonomo y Persistencia Local
+
+- **Abrir (`Ctrl+O`)**: Permite cargar cualquier archivo local con extension `.bwjm`, `.jm`, `.md` o `.txt`.
+- **Guardar (`Ctrl+S`)**: Descarga el codigo fuente del documento activo en disco local conservando el nombre de archivo asignado.
+- **Exportar como HTML Interactivo**: Genera un documento HTML autonomo e interactivo sin dependencias de servidor, listo para ser enviado por correo o compartido con estudiantes e investigadores.
+
+---
+
+## 4. Futuras Herramientas del Proyecto (Roadmap)
+
+Conforme a la vision integral de la especificacion de BlackWolfJM, el ecosistema evolucionara a traves de las siguientes herramientas:
+
+1. Aplicacion de Escritorio Standalone (BWJM Desktop):
+   - Construida sobre Tauri / Rust con aislamiento seguro de procesos y consumo minimo de memoria.
+   - Apertura nativa de archivos `.bwjm` y `.jm` con doble clic en Windows, macOS y Linux.
+   - Acceso a sistema de archivos local sin depender de navegador web.
+
+2. Extension Universal de Navegador (Sustituto de Visor PDF):
+   - Extension para Google Chrome, Microsoft Edge y Firefox que intercepta archivos `.bwjm`.
+   - Permite leer articulos cientificos e informes tecnicos interactivos directamente en el navegador con graficas 2D/3D interactivas.
+
+3. Integracion con CAS Simbolico (SymPy / WebAssembly):
+   - Motor algebraico simbolico en WebAssembly para derivacion analitica, integrales impropias, sistemas de ecuaciones diferenciales y algebra lineal.
+
+4. Motor 3D de Alto Rendimiento WebGPU / Three.js:
+   - Soporte para simulaciones de alta densidad de particulas, dinamica de fluidos computacional (CFD) y superficies de Riemann complejas con aceleracion por GPU.
+
+5. Pasarelas de Interoperabilidad Academica:
+   - Exportadores e importadores bidireccionales con LaTeX, cuadernos de Jupyter (`.ipynb`) y Typst.
+
+6. Sistema de Aprendizaje Activo y Evaluacion por Pasos:
+   - Modo examen con verificacion formal paso a paso de procedimientos matematicos y generacion de ejercicios parametricos.
+
+---
+
+## 5. Estructura del Monorepo
 
 ```
 BWJM/
@@ -139,19 +414,20 @@ BWJM/
 │   ├── core/                # Motor de reactividad y grafo de dependencias
 │   ├── github/              # Generador de assets estaticos deterministas
 │   ├── graph/               # Grafo de evaluacion de variables
-│   ├── math/                # Biblioteca analitica (Riemann, intersecciones, revolucion)
+│   ├── math/                # Biblioteca analitica (Riemann, intersecciones, Frenet, Green)
 │   ├── parser/              # Parser determinista con Zod y tolerancia YAML
-│   ├── renderer-plotly/     # Renderizador 3D basado en Plotly
-│   └── renderer-svg/        # Renderizador 2D vectorial SVG nativo
+│   ├── renderer-plotly/     # Renderizador 3D basado en Plotly (superficies y curvas)
+│   └── renderer-svg/        # Renderizador 2D vectorial SVG nativo (curvas y campos)
 ├── docs/
 │   └── images/              # Capturas y diagramas tecnicos de las funcionalidades
 ├── Especificacion_bwjm_Formato_Cientifico_Interactivo.md
+├── BWJM_200_FUNCIONALIDADES_GRAFICAS_ANIMADAS_CALCULO_VECTORIAL.md
 └── package.json
 ```
 
 ---
 
-## 5. Instalacion y Uso
+## 6. Instalacion y Uso
 
 ### Requisitos Previos
 
@@ -187,18 +463,18 @@ pnpm build
 
 ---
 
-## 6. Comprobaciones de Calidad y Tests
+## 7. Comprobaciones de Calidad y Tests
 
-El proyecto mantiene un estricto estandar de calidad con cero errores tolerados en TypeScript y linter:
+El proyecto mantiene un estricto estandar de ingenieria con cero errores tolerados en compilacion, tipado estricto y analisis de codigo:
 
 ```bash
-# Validacion estatica de codigo
+# Validacion estatica de codigo y reglas de estilo
 pnpm lint
 
-# Comprobacion de tipos en modo estricto
+# Comprobacion de tipos TypeScript en modo estricto en todos los paquetes
 pnpm typecheck
 
-# Suite completa de pruebas unitarias e integracion (138 tests)
+# Suite completa de pruebas unitarias e integracion (162 tests pasando)
 pnpm test
 
 # Verificacion de empaquetado y distribucion ESM
@@ -206,14 +482,15 @@ node scripts/test-dist.mjs
 ```
 
 Estado de Verificacion:
-- 12 suites de prueba ejecutadas exitosamente.
-- 138 tests pasando (100% de cobertura en modulos criticos).
+- 15 suites de prueba ejecutadas exitosamente.
+- 162 pruebas unitarias e integradas pasando al 100%.
 - 0 errores y 0 advertencias en ESLint.
-- 0 errores en TypeScript estricto.
+- 0 errores en TypeScript estricto (`tsc --noEmit`).
+- Empaquetado ESM de 11 paquetes monorepo y extensiones verificado.
 
 ---
 
-## Licencia
+## 8. Licencia
 
 Este proyecto esta licenciado bajo los terminos de la Licencia MIT.
 Formato y concepto original creados por BlackWolfJM.

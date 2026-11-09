@@ -87,3 +87,4 @@ describe("Cálculo Vectorial: Cinemática, Curvas y Campos (200 Funcionalidades 
     expect(traj[0].y).toBeCloseTo(0, 3);
   });
 });
+
