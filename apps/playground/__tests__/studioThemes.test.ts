@@ -1,15 +1,12 @@
 import {describe,it,expect} from "vitest";
 import {
-  STUDIO_THEMES, DEFAULT_STUDIO_THEME, THEME_STORAGE_KEY,
+  STUDIO_THEMES, STUDIO_THEME_GROUPS, DEFAULT_STUDIO_THEME, THEME_STORAGE_KEY,
   isStudioTheme, resolveStoredTheme,
 } from "../src/studioThemes.js";
 
-describe("theme catalog and six supplied palettes",()=>{
+describe("theme catalog and 12 recovered colors plus four community themes",()=>{
   it("contains the three original themes and six new ones, without duplicates",()=>{
-    expect(STUDIO_THEMES.map(item=>item.id)).toEqual([
-      "linear","catppuccin","tokyonight",
-      "bruma","marea","lino","oliva","bosque","arcilla",
-    ]);
+    expect(STUDIO_THEMES.map(item=>item.id)).toEqual(["linear","catppuccin","tokyonight","bruma","marea","lino","oliva","bosque","arcilla","bruma-celeste","bruma-rosa","bruma-terracota","marea-carmesi","marea-piedra","lino-tinta","lino-canela","oliva-salvia","oliva-carbon","bosque-musgo","bosque-cacao","arcilla-salmon","nord-polar","dracula","rose-pine","catppuccin-latte"]);
     expect(new Set(STUDIO_THEMES.map(item=>item.id)).size).toBe(9);
   });
   it("uses the six visible hexadecimal swatches in the supplied image",()=>{
@@ -35,5 +32,24 @@ describe("theme catalog and six supplied palettes",()=>{
       expect(theme.colors).toHaveLength(6);
       theme.colors.forEach(color=>expect(color).toMatch(/^#[0-9A-F]{6}$/));
     }
+  });
+});
+
+describe("theme gallery grouping and recovered color coverage",()=>{
+  it("places every registered theme into exactly one category",()=>{
+    const ids=STUDIO_THEME_GROUPS.flatMap(group=>[...group.ids]);
+    expect(ids).toHaveLength(STUDIO_THEMES.length);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.sort()).toEqual(STUDIO_THEMES.map(theme=>theme.id).sort());
+  });
+  it("creates 12 additional themes, each anchored to one previously unused source color",()=>{
+    const recovered=STUDIO_THEMES.filter(theme=>STUDIO_THEME_GROUPS[2].ids.some(id=>id===theme.id));
+    expect(recovered).toHaveLength(12);
+    expect(recovered.map(theme=>theme.colors[0])).toEqual(["#A1BECD","#C88488","#AC746C","#AA2E27","#9F7570","#050505","#DBC4A4","#B9B77C","#151411","#5C6B34","#5C2C0C","#E77B6C"]);
+  });
+  it("also provides Nord, Dracula, Rosé Pine and Catppuccin Latte palettes",()=>{
+    expect(STUDIO_THEME_GROUPS[3].ids).toEqual(["nord-polar","dracula","rose-pine","catppuccin-latte"]);
+    expect(resolveStoredTheme("nord-polar")).toBe("nord-polar");
+    expect(resolveStoredTheme("arcilla-salmon")).toBe("arcilla-salmon");
   });
 });
