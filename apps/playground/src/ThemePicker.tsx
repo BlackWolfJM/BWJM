@@ -61,7 +61,7 @@ export const ThemePicker: React.FC<Props> = ({theme,onThemeChange}) => {
 
   return <>
     <button ref={triggerRef} type="button" className="bwjm-theme-trigger"
-      onClick={toggle} aria-expanded={open} aria-haspopup="listbox"
+      onClick={toggle} aria-expanded={open} aria-haspopup="dialog"
       aria-controls="bwjm-theme-options" title="Cambiar tema y previsualizar colores">
       <span className="bwjm-theme-trigger-colors" aria-hidden="true">
         {selected.colors.slice(0,3).map((color,index)=>
@@ -76,7 +76,7 @@ export const ThemePicker: React.FC<Props> = ({theme,onThemeChange}) => {
         aria-label="Elegir tema visual del editor">
         <div className="bwjm-theme-popover-heading">
           <strong>Tema de BWJM Studio</strong>
-          <small>25 estilos · elige uno para compararlo inmediatamente.</small>
+          <small>{STUDIO_THEMES.length} estilos · elige uno para compararlo inmediatamente.</small>
           <input type="search" className="bwjm-theme-search" value={query}
             onChange={event=>setQuery(event.target.value)} placeholder="Buscar tema o color…"
             aria-label="Filtrar temas por nombre o color hexadecimal" />

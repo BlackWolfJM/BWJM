@@ -132,6 +132,40 @@ La elección se conserva con `localStorage` (`bwjm-studio:appearance-theme`) si 
 **Arquitectura extensible:** el catálogo vive en `apps/playground/src/studioThemes.ts`, el menú en `ThemePicker.tsx`, la integración en la cinta en `Ribbon.tsx` y los tokens de apariencia en `theme.css`. Agregar otro tema no requiere duplicar comandos.
 
 ---
+### 16 temas adicionales: colores recuperados y referencias de diseño
+
+El selector **Vista → Apariencia → Cambiar tema** incluye **25 temas** (9 existentes + 16 nuevos), organizados por categorías y con un buscador de nombre o hexadecimal. La vista previa del editor se actualiza en cada clic; no es necesario reiniciarlo.
+
+**12 temas nuevos a partir de colores que no estaban aplicados**: cada uno conserva el tono original como color activo de una propiedad CSS (no solo como muestra). Se generaron tonos auxiliares para fondos, contraste y legibilidad:
+
+| Nuevo tema | Color recuperado |
+|---|---|
+| Bruma celeste | `#A1BECD` |
+| Bruma rosa antigua | `#C88488` |
+| Bruma terracota | `#AC746C` |
+| Marea carmesí | `#AA2E27` |
+| Marea piedra | `#9F7570` |
+| Lino tinta | `#050505` |
+| Lino canela | `#DBC4A4` |
+| Oliva salvia | `#B9B77C` |
+| Oliva carbón | `#151411` |
+| Bosque musgo | `#5C6B34` |
+| Bosque cacao | `#5C2C0C` |
+| Arcilla salmón | `#E77B6C` |
+
+**4 temas inspirados en paletas públicas conocidas:**
+
+- [Nord](https://www.nordtheme.com/) — base polar y azules glaciales.
+- [Dracula](https://draculatheme.com/contribute) — fondo nocturno, violeta y cian.
+- [Rosé Pine](https://github.com/rose-pine/rose-pine-palette) — base oscura, malva y tonos de pino.
+- [Catppuccin Latte](https://catppuccin.com/palette/) — base clara y acentos pasteles.
+
+Estas cuatro adaptaciones **se inspiran en las paletas documentadas**; no son distribuciones oficiales de esos proyectos. Las fórmulas, las curvas, los bloques `.bwjm` y los datos matemáticos no se modifican al cambiar el tema.
+
+**Arquitectura:** registrar los temas en `studioThemes.ts` y sus tokens CSS en `theme.css`. `STUDIO_THEME_GROUPS` controla la sección de cada tema; `ThemePicker.tsx` presenta una galería filtrable con vista previa y persistencia de la preferencia del usuario.
+
+---
+
 ## 2. Funcionalidades Implementadas
 
 Cada funcionalidad se encuentra desarrollada en TypeScript estricto, cubierta por pruebas unitarias automatizadas y respaldada por su correspondiente diagrama tecnico.
