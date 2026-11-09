@@ -26,7 +26,7 @@ import { IconAtom, IconCheck } from "./icons.js";
 import { FormulaModal } from "./FormulaModal.js";
 import { ChartModal } from "./ChartModal.js";
 import { CommandPalette, CommandItem } from "./CommandPalette.js";
-import { ScientificTimeline } from "./ScientificTimeline.js";
+import { createInlinePlayback, supportsInlinePlayback, type InlinePlaybackController } from "./inlineGraphPlayback.js";
 import "./theme.css";
 
 declare global {
@@ -542,6 +542,7 @@ export function BWJMStudio() {
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
   const openGraphSettingsRef = useRef<Set<string>>(new Set());
   const sceneOptionsRef = useRef<Map<string, Partial<Parametric2DNode>>>(new Map());
+  const playbackRef = useRef<InlinePlaybackController | null>(null);
   const liveAnalysisRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -566,6 +567,8 @@ export function BWJMStudio() {
   };
 
   const clearRenderers = () => {
+    playbackRef.current?.dispose();
+    playbackRef.current = null;
     plotlyRenderersRef.current.forEach((renderer) => renderer.destroy());
     plotlyRenderersRef.current.clear();
     svgRenderersRef.current.clear();
@@ -917,6 +920,7 @@ export function BWJMStudio() {
     sheet.className = "bwjm-sheet";
 
     const segments = parseDocumentSegments(markdown, doc.children, doc.diagnostics);
+    let inlinePlaybackMounted = false;
 
     for (const segment of segments) {
       if (segment.kind === "prose" && segment.content) {
@@ -1471,6 +1475,22 @@ export function BWJMStudio() {
           renderer.render(nodeData);
         }
 
+        // The large global clock is removed. Insert one small transport alongside
+        // the first animated graph; existing layer checkboxes remain unchanged.
+        if (!inlinePlaybackMounted && timelines.length > 0 && supportsInlinePlayback(node)) {
+          const transport = createInlinePlayback(
+            timelines,
+            () => coreRef.current?.getVariables() ?? {},
+            (name, value) => handleVariableChange(name, value),
+          );
+          const layerPanel = node.type === "parametric2d"
+            ? cardBody.querySelector(".bwjm-curve-layers") : null;
+          if (layerPanel) layerPanel.prepend(transport.element);
+          else cardBody.appendChild(transport.element);
+          playbackRef.current = transport;
+          inlinePlaybackMounted = true;
+        }
+
         const svgRenderer = svgRenderersRef.current.get(node.id);
         if (svgRenderer) {
           const exportButton = document.createElement("button");
@@ -1926,15 +1946,6 @@ export function BWJMStudio() {
 
       </div>
 
-
-      {timelines.length > 0 && (
-        <ScientificTimeline
-          timelines={timelines}
-          onVariableChange={handleVariableChange}
-          getVariables={() => coreRef.current?.getVariables() ?? {}}
-          onSaveSource={setMarkdown}
-        />
-      )}
 
       <FormulaModal
         isOpen={isFormulaModalOpen}
