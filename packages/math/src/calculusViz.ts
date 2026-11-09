@@ -77,7 +77,7 @@ function addBoundedRegion(
   if (ts.some((_, i) => hi[i] < lo[i] - 1e-8)) {
     throw new Error("La frontera superior/derecha debe estar por encima/a la derecha de la inferior/izquierda.");
   }
-  const point = (t: number, value: number) => axis === "x" ? [t, value] : [value, t];
+  const point = (t: number, value: number): [number,number] => axis === "x" ? [t, value] : [value, t];
   out.polygons.push({ points: [...ts.map((t, i) => point(t, hi[i])),
     ...ts.slice().reverse().map((t, i) => point(t, lo[ts.length - 1 - i]))], fill });
   out.curves.push({ points: ts.map((t, i) => point(t, hi[i])), color: "#2563eb", label: "frontera superior/derecha" });
