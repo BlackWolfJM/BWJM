@@ -27,7 +27,7 @@ describe("MathMD Parser", () => {
   });
   it("rejects function tables with mismatched columns", () => {
     const markdown = ["```functiontable", "columns: [t]",
-      "expressions: [sin(t)]", "domain: [0, 2]", "```"].join("\n");
+      "expressions: [sin(t), cos(t)]", "domain: [0, 2]", "```"].join("\n");
     const result = parseMathMD(markdown);
     expect(result.children).toHaveLength(0);
     expect(result.diagnostics.some(d => d.code === "MATHMD_TABLE_DIMENSIONS")).toBe(true);
