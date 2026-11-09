@@ -743,7 +743,10 @@ export function BWJMStudio() {
       case "slider": insertAtCursor("\n" + fence +
         "slider\nname: a\nmin: 0.1\nmax: 5\nstep: 0.1\ndefault: 1\n" + fence + "\n"); break;
       case "data-table":
-        insertAtCursor("\n| t (s) | x (m) | v (m/s) |\n|---:|---:|---:|\n| 0 | 0 | 0 |\n| 1 | 1 | 2 |\n");
+        insertAtCursor("\n" + fence +
+          "datatable\ncaption: Medición experimental\ncolumns: [Tiempo, Posición, Velocidad]\nunits: [s, m, m/s]\nrows:\n" +
+          "  - [0, 0, 0]\n  - [1, 1.5, 3]\n  - [2, 6, 6]\nprecision: 3\n" +
+          fence + "\n");
         break;
       case "vectorfield":
         insertAtCursor("\n" + fence +
