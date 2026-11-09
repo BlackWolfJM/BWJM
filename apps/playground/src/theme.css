@@ -1420,3 +1420,23 @@ body {
   font-size: 0.78rem;
   color: var(--primary);
 }
+
+/* Scientific document enhancements: readable formulas, tables and graph layout */
+.bwjm-node-header { gap: 1rem; flex-wrap: wrap; min-height: 48px; }
+.bwjm-node-equation { min-width: 0; max-width: 100%; overflow-x: auto; color: #0f172a; padding: 0.3rem 0.15rem; font-size: 1.14rem; }
+.bwjm-node-equation .katex { font-size: 1.05em; }
+.bwjm-node-card { border-radius: 14px; border-color: #d7e1ef; box-shadow: 0 6px 24px rgba(15, 23, 42, 0.065); }
+.bwjm-node-body { background: #fff; }
+.bwjm-node-body .js-plotly-plot { border-radius: 10px; overflow: hidden; }
+.bwjm-table-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.8rem; }
+.bwjm-table-actions button { border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #1e3a8a; font-weight: 600; padding: 0.42rem 0.78rem; cursor: pointer; }
+.bwjm-table-actions button:hover { background: #eff6ff; border-color: #60a5fa; }
+.bwjm-table-scroll { overflow: auto; max-height: 540px; border: 1px solid #dce6f0; border-radius: 9px; }
+.bwjm-scientific-table { border-collapse: collapse; width: 100%; min-width: max-content; font-variant-numeric: tabular-nums; }
+.bwjm-scientific-table caption { text-align: left; font-weight: 700; color: #0f172a; padding: 0.8rem; }
+.bwjm-scientific-table th { background: #edf4fd; text-align: left; position: sticky; top: 0; color: #1e293b; }
+.bwjm-scientific-table th, .bwjm-scientific-table td { border-bottom: 1px solid #e2e8f0; padding: 0.7rem 1rem; white-space: nowrap; }
+.bwjm-scientific-table td.numeric { text-align: right; font-family: var(--font-mono); }
+.bwjm-scientific-table th small { color: #64748b; font-weight: 400; }
+.bwjm-scientific-table tbody tr:nth-child(even) { background: #f8fafc; }
+.bwjm-scientific-table tbody tr:hover { background: #eff6ff; }

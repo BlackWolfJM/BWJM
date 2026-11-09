@@ -21,6 +21,9 @@ import {
 } from "./vectorCalculus.js";
 
 export { compileExpression, evaluateExpression, sample1D, sampleSurface };
+export { expressionToLatex } from "./latex.js";
+export { serializeScientificTable } from "./scientificTable.js";
+export type { ScientificCell, ScientificTableFormat } from "./scientificTable.js";
 export { computeExactArea, computePiecewiseArea, computeRiemannPartition, findIntersections };
 export { computeCrossSection, computeRevolutionVolume, sampleRevolutionMesh };
 export {

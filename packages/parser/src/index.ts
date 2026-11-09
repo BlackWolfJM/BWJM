@@ -32,6 +32,7 @@ import {
   regionSchema,
   cameraSchema,
   timelineSchema,
+  dataTableSchema,
 } from "@mathmd/ast";
 
 interface MdastPosition {
@@ -71,6 +72,7 @@ const SUPPORTED_MATHMD_TYPES = new Set([
   "region",
   "camera",
   "timeline",
+  "datatable",
 ]);
 
 const VALID_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -879,6 +881,33 @@ function buildMathMDNode(
         return null;
       }
       return result.data;
+    }
+
+    case "datatable": {
+      const payload = {
+        ...base,
+        caption: data.caption,
+        columns: data.columns,
+        units: data.units,
+        rows: data.rows,
+        precision: data.precision ?? 6,
+      };
+      const result = dataTableSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) diagnostics.push({
+          severity: "error", code: "MATHMD_SCHEMA_INVALID", message: issue.message,
+          range, blockType: type, blockId: id, path: issue.path,
+        });
+        return null;
+      }
+      const node = result.data;
+      if ((node.units && node.units.length !== node.columns.length) ||
+        node.rows.some(row => row.length !== node.columns.length)) {
+        diagnostics.push({ severity: "error", code: "MATHMD_TABLE_DIMENSIONS",
+          message: "Table rows and units must match the number of columns", range, blockType: type, blockId: id });
+        return null;
+      }
+      return node;
     }
 
     case "timeline": {

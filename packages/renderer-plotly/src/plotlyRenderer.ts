@@ -859,20 +859,12 @@ export class PlotlyRenderer {
       
       this.data = [surfaceTrace];
       
-      this.layout.title = {
-        text: `Surface: ${equation}`,
-        x: 0.5,
-        xanchor: 'center'
-      };
+      // Formula is typeset by the document header with KaTeX; do not display raw math here.
+      this.layout.title = { text: "" };
+      this.layout.margin = { l: 0, r: 0, b: 0, t: 8 };
       
-      const xRange = xDomain[1] - xDomain[0];
-      const yRange = yDomain[1] - yDomain[0];
-      this.layout.scene.aspectmode = "manual";
-      this.layout.scene.aspectratio = { 
-        x: xRange, 
-        y: yRange, 
-        z: Math.max(xRange, yRange) 
-      };
+      // Plotly computes the actual 3D ratio including z, avoiding distorted flat surfaces.
+      this.layout.scene.aspectmode = "data";
       
     } catch (error: any) {
       this.renderError(`Error rendering surface3d: ${error?.message || String(error)}`);

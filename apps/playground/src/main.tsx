@@ -12,8 +12,10 @@ import {
   computeCrossSection,
   computeKinematics,
   sampleVectorField2D,
+  expressionToLatex,
+  serializeScientificTable,
 } from "@mathmd/math";
-import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode } from "@mathmd/ast";
+import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode } from "@mathmd/ast";
 import { MenuBar } from "./MenuBar.js";
 import { ToolBar } from "./ToolBar.js";
 import { StatusBar } from "./StatusBar.js";
@@ -331,37 +333,37 @@ $$
 
 Ajusta el número de particiones rectangulares para observar la convergencia:
 
-\`\`\`slider
+```slider
 name: n
 min: 2
 max: 50
 step: 1
 default: 10
-\`\`\`
+```
 
-\`\`\`slider
+```slider
 name: a
 min: 0.1
 max: 2.0
 step: 0.1
 default: 1.0
-\`\`\`
+```
 
 ## Gráfica de la Curva Superior e Inferior
 
-\`\`\`plot2d
+```plot2d
 equation: a * x
 x: [0, 1.2]
 grid: true
 color: "#0284c7"
-\`\`\`
+```
 
-\`\`\`plot2d
+```plot2d
 equation: x^2
 x: [0, 1.2]
 grid: true
 color: "#ea580c"
-\`\`\`
+```
 `,
   },
   revolution: {
@@ -381,23 +383,23 @@ $$
 
 Pulsa **Play** para observar el barrido en el espacio tridimensional de $0$ a $3\\pi$:
 
-\`\`\`slider
+```slider
 name: alpha
 min: 0.1
 max: 9.42
 step: 0.15
 default: 6.28
-\`\`\`
+```
 
 ## Vista Tridimensional del Sólido
 
-\`\`\`surface3d
+```surface3d
 equation: sqrt(x^2 + y^2) * sin(alpha * 0.1)
 x: [-2, 2]
 y: [-2, 2]
 samples: 50
 contours: true
-\`\`\`
+```
 `,
   },
   surface: {
@@ -411,29 +413,29 @@ $$
 z(x, y) = A \\cdot \\frac{\\sin(\\omega \\sqrt{x^2 + y^2})}{\\sqrt{x^2 + y^2}}
 $$
 
-\`\`\`slider
+```slider
 name: amplitud
 min: 0.2
 max: 3.0
 step: 0.1
 default: 1.5
-\`\`\`
+```
 
-\`\`\`slider
+```slider
 name: frecuencia
 min: 0.5
 max: 4.0
 step: 0.25
 default: 1.5
-\`\`\`
+```
 
-\`\`\`surface3d
+```surface3d
 equation: amplitud * sin(frecuencia * sqrt(x^2 + y^2 + 0.1))
 x: [-6, 6]
 y: [-6, 6]
 samples: 55
 contours: true
-\`\`\`
+```
 `,
   },
   vector_calculus: {
@@ -451,23 +453,23 @@ $$
 
 Ajusta el parámetro temporal $t$ o pulsa Play para activar la cinemática animada:
 
-\`\`\`slider
+```slider
 name: t
 min: 0.0
 max: 6.28
 step: 0.05
 default: 1.57
-\`\`\`
+```
 
 ## Visualización Tridimensional de la Curva y Triedro Móvil
 
-\`\`\`curve3d
+```curve3d
 x: cos(t)
 y: sin(t)
 z: t / 3
 tDomain: [0, 6.28]
 color: "#0284c7"
-\`\`\`
+```
 `,
   },
   vector_field: {
@@ -483,13 +485,13 @@ $$
 
 ## Visualización del Campo Vectorial 2D
 
-\`\`\`vectorfield2d
+```vectorfield2d
 field: ["-y", "x"]
 xDomain: [-3, 3]
 yDomain: [-3, 3]
 density: 12
 color: "#0284c7"
-\`\`\`
+```
 `,
   },
 };
@@ -846,6 +848,12 @@ export function BWJMStudio() {
 
   const commandsList: CommandItem[] = [
     {
+      id: "insert-scientific-table",
+      title: "Insertar tabla científica exportable",
+      category: "Datos",
+      action: () => insertAtCursor("\\n\\n```datatable\\ncaption: Medición experimental\\ncolumns: [Tiempo, Posición, Velocidad]\\nunits: [s, m, m/s]\\nrows:\\n  - [0, 0, 0]\\n  - [1, 1.5, 3]\\n  - [2, 6, 6]\\nprecision: 3\\n```\\n"),
+    },
+    {
       id: "insert-formula",
       title: "Insertar Fórmula Matemática",
       category: "Matemáticas",
@@ -1030,12 +1038,97 @@ export function BWJMStudio() {
             ${escapeHtml(node.type.toUpperCase())} • ${escapeHtml(node.id)}
           </span>
         `;
+        if (node.type === "plot2d" || node.type === "surface3d" || node.type === "curve3d") {
+          const formula = document.createElement("div");
+          formula.className = "bwjm-node-equation";
+          const latex = node.type === "curve3d"
+            ? String.raw`\\mathbf{r}(t)=\\left(\` + [node.x, node.y, node.z].map(expressionToLatex).join(",\\;") + String.raw`\\right)\`
+            : (node.type === "surface3d" ? "z=" : "y=") + expressionToLatex(node.equation);
+          formula.innerHTML = renderMathToString(latex, false);
+          formula.title = node.type === "curve3d"
+            ? [node.x, node.y, node.z].join(" , ")
+            : node.equation;
+          cardHeader.appendChild(formula);
+        }
         card.appendChild(cardHeader);
 
         const cardBody = document.createElement("div");
         cardBody.className = "bwjm-node-body";
 
-        if (node.type === "slider") {
+        if (node.type === "datatable") {
+          const tableNode = node as DataTableNode;
+          const tableWrapper = document.createElement("div");
+          tableWrapper.className = "bwjm-table-scroll";
+          const table = document.createElement("table");
+          table.className = "bwjm-scientific-table";
+          if (tableNode.caption) {
+            const caption = document.createElement("caption");
+            caption.textContent = tableNode.caption;
+            table.appendChild(caption);
+          }
+          const thead = document.createElement("thead");
+          const headerRow = document.createElement("tr");
+          tableNode.columns.forEach((name, col) => {
+            const th = document.createElement("th");
+            th.scope = "col";
+            th.textContent = name;
+            if (tableNode.units?.[col]) {
+              const unit = document.createElement("small");
+              unit.textContent = " [" + tableNode.units[col] + "]";
+              th.appendChild(unit);
+            }
+            headerRow.appendChild(th);
+          });
+          thead.appendChild(headerRow);
+          table.appendChild(thead);
+          const tbody = document.createElement("tbody");
+          tableNode.rows.forEach(rowData => {
+            const tr = document.createElement("tr");
+            rowData.forEach(value => {
+              const td = document.createElement("td");
+              const display = typeof value === "number" && tableNode.precision !== undefined
+                ? Number(value.toFixed(tableNode.precision))
+                : value;
+              td.textContent = display === null ? "—" : String(display);
+              if (typeof value === "number") td.className = "numeric";
+              tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          tableWrapper.appendChild(table);
+          const toolbar = document.createElement("div");
+          toolbar.className = "bwjm-table-actions";
+          const formats = ["csv", "tsv", "json"] as const;
+          formats.forEach(format => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = "↓ " + format.toUpperCase();
+            button.setAttribute("aria-label", "Exportar tabla a " + format.toUpperCase());
+            button.addEventListener("click", () => {
+              const data = serializeScientificTable(tableNode.columns, tableNode.rows, format);
+              const contentType = format === "json" ? "application/json" : "text/plain";
+              const blob = new Blob([data], { type: contentType + ";charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement("a");
+              anchor.href = url;
+              anchor.download = (tableNode.id || "tabla") + "." + format;
+              anchor.click();
+              URL.revokeObjectURL(url);
+            });
+            toolbar.appendChild(button);
+          });
+          const copy = document.createElement("button");
+          copy.type = "button";
+          copy.textContent = "Copiar TSV";
+          copy.addEventListener("click", () => {
+            const data = serializeScientificTable(tableNode.columns, tableNode.rows, "tsv");
+            void navigator.clipboard?.writeText(data);
+          });
+          toolbar.appendChild(copy);
+          cardBody.appendChild(toolbar);
+          cardBody.appendChild(tableWrapper);
+        } else if (node.type === "slider") {
           const sliderNode = node as SliderNode;
           const row = document.createElement("div");
           row.className = "bwjm-slider-row";

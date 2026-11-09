@@ -278,6 +278,16 @@ export interface TimelineNode extends MathMDNodeBase {
   controls?: string[]; // IDs of nodes controlled by this timeline
 }
 
+/** Table stored as native, portable scientific data within a .bwjm document. */
+export interface DataTableNode extends MathMDNodeBase {
+  type: "datatable";
+  caption?: string;
+  columns: string[];
+  units?: string[];
+  rows: Array<Array<string | number | boolean | null>>;
+  precision?: number;
+}
+
 // TextNode preserved for legacy consumers
 export interface TextNode extends MathMDNodeBase {
   type: "text";
@@ -308,7 +318,8 @@ export type MathMDNode =
   | FieldNode
   | RegionNode
   | CameraNode
-  | TimelineNode;
+  | TimelineNode
+  | DataTableNode;
 
 // --- Deterministic & Unicode-Safe ID Helper ---
 
@@ -675,7 +686,21 @@ function validateTimelineBounds(
 
 export const timelineSchema = timelineNodeSchema.superRefine(validateTimelineBounds);
 
-// Discriminated union of all 23 MathMD block schemas
+export const dataTableSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("datatable"),
+  caption: z.string().max(256).optional(),
+  columns: z.array(z.string().min(1).max(100)).min(1).max(25),
+  units: z.array(z.string().max(32)).max(25).optional(),
+  rows: z.array(z.array(z.union([
+    z.string().max(512),
+    z.number().finite(),
+    z.boolean(),
+    z.null(),
+  ])).max(25)).max(500),
+  precision: z.number().int().min(0).max(12).optional(),
+});
+
+// Discriminated union of all 24 MathMD block schemas
 const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   plot2dSchema,
   surface3dSchema,
@@ -700,6 +725,7 @@ const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   regionSchema,
   cameraSchema,
   timelineNodeSchema,
+  dataTableSchema,
 ]);
 
 export const mathmdNodeSchema = mathmdNodeDiscriminatedUnion.superRefine((node, context) => {
@@ -708,6 +734,16 @@ export const mathmdNodeSchema = mathmdNodeDiscriminatedUnion.superRefine((node, 
   }
   if (node.type === "timeline") {
     validateTimelineBounds(node, context);
+  }
+  if (node.type === "datatable") {
+    if (node.units && node.units.length !== node.columns.length) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "units must match column count", path: ["units"] });
+    }
+    node.rows.forEach((row, index) => {
+      if (row.length !== node.columns.length) context.addIssue({
+        code: z.ZodIssueCode.custom, message: "row width must match column count", path: ["rows", index],
+      });
+    });
   }
   if (node.type === "field") {
     const data = node as z.infer<typeof fieldSchema>;
