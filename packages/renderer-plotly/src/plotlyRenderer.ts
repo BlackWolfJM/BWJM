@@ -101,6 +101,9 @@ export class PlotlyRenderer {
    */
   render(node: PlotlyRenderNode): void {
     this.data = [];
+    // Reset state between renders (important when switching graphs and documents).
+    this.layout.showlegend = false;
+    this.layout.title = { text: "" };
 
     switch (node.type) {
       case "calculusviz":
@@ -268,7 +271,7 @@ export class PlotlyRenderer {
 
       const traces: any[] = [curveTrace];
 
-      if (node.currentT !== undefined || node.particle) {
+      if (node.animated === true || node.particle === true) {
         const particleT = node.currentT ?? tDomain[1];
         const kin = computeKinematics({ x, y, z }, particleT, scope);
         traces.push({
@@ -339,11 +342,10 @@ export class PlotlyRenderer {
       }
 
       this.data = traces;
-      this.layout.title = {
-        text: `Curva Parametrica 3D r(t) = (${x}, ${y}, ${z})`,
-        x: 0.5,
-        xanchor: "center"
-      };
+      // The document card already contains the typeset equation.
+      this.layout.title = { text: "" };
+      this.layout.margin = { l: 0, r: 0, b: 0, t: 8 };
+      this.layout.showlegend = node.showLegend === true;
       this.layout.scene.aspectmode = "data";
     } catch (error: any) {
       this.renderError(`Error rendering curve3d: ${error?.message || String(error)}`);

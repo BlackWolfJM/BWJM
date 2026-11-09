@@ -7,7 +7,7 @@ export type RibbonTab = "Archivo" | "Inicio" | "Insertar" | "Matemáticas" | "Da
 export type RibbonAction =
   | "open" | "save" | "export-html"
   | "h1" | "h2" | "h3" | "bold" | "italic" | "code" | "quote" | "list" | "rule"
-  | "formula" | "graph" | "table" | "picture" | "plot2d" | "surface3d"
+  | "formula" | "graph" | "table" | "picture"
   | "equation" | "inline-math" | "matrix" | "integral" | "slider"
   | "data-table" | "vectorfield" | "riemann"
   | "view-editor" | "view-split" | "view-reader" | "outline" | "inspector"
@@ -33,8 +33,7 @@ export const RIBBON_GROUPS: Record<RibbonTab, readonly RibbonGroup[]> = {
   Insertar: [
     {label:"Contenido",actions:[item("formula","Fórmula","formula","Ctrl+Mayús+M"),
       item("table","Tabla","list"),item("picture","Imagen","file")]},
-    {label:"Gráficas",actions:[item("graph","Asistente de gráficas","graph"),
-      item("plot2d","Gráfica 2D","graph"),item("surface3d","Superficie 3D","layers")]},
+    {label:"Gráficos",actions:[item("graph","Gráficos y superficies","graph")]},
   ],
   Matemáticas: [
     {label:"Notación",actions:[item("equation","Ecuación","formula"),

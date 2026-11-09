@@ -20,6 +20,20 @@ export function initialWorkspace(filename: string, content: string, lessonKey: s
   const document = createWorkspaceDocument(filename, content, lessonKey);
   return { documents: [document], activeId: document.id };
 }
+export function normalizeFilename(filename: string): string | null {
+  const cleaned = filename.trim().replace(/[\\/]/g, "").replace(/[\u0000-\u001f\u007f]/g, "");
+  if (!cleaned || cleaned.length > 140 || cleaned === "." || cleaned === "..") return null;
+  return /\.(bwjm|jm)$/i.test(cleaned) ? cleaned : cleaned + ".bwjm";
+}
+export function renameWorkspaceDocument(workspace: WorkspaceState, id: string, name: string): WorkspaceState {
+  const filename = normalizeFilename(name);
+  if (!filename) return workspace;
+  return {
+    ...workspace,
+    documents: workspace.documents.map(document => document.id === id
+      ? { ...document, filename } : document),
+  };
+}
 export function updateActiveContent(workspace: WorkspaceState, next: SetStateAction<string>): WorkspaceState {
   return {
     ...workspace,
@@ -74,12 +88,15 @@ export function useDocumentWorkspace(filename: string, content: string, lessonKe
     setWorkspace(previous => closeWorkspaceDocument(previous, id));
   }, []);
   const markSaved = useCallback(() => setWorkspace(previous => markDocumentSaved(previous)), []);
+  const renameDocument = useCallback((id: string, filename: string) => {
+    setWorkspace(previous => renameWorkspaceDocument(previous, id, filename));
+  }, []);
   return {
     documents: workspace.documents,
     activeId: workspace.activeId,
     filename: active.filename,
     markdown: active.content,
     selectedTemplate: active.lessonKey ?? "",
-    setMarkdown, openDocument, createDocument, selectDocument, closeDocument, markSaved,
+    setMarkdown, openDocument, createDocument, selectDocument, closeDocument, markSaved, renameDocument,
   };
 }

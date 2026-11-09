@@ -246,6 +246,8 @@ function buildMathMDNode(
         yDomain: "y" in data ? data.y : "yDomain" in data ? data.yDomain : [-5, 5],
         samples,
         contours: "contours" in data ? data.contours : false,
+        animated: data.animated,
+        showInfo: data.showInfo,
         color: typeof data.color === "string" ? data.color : undefined,
       };
 
@@ -326,6 +328,11 @@ function buildMathMDNode(
         y: "y" in data ? data.y : "sin(t)",
         z: "z" in data ? data.z : "t",
         tDomain: "t" in data ? data.t : "tDomain" in data ? data.tDomain : [0, 2 * Math.PI],
+        animated: data.animated,
+        showVectors: data.showVectors,
+        showTNB: data.showTNB,
+        showLegend: data.showLegend,
+        showInfo: data.showInfo,
         color: typeof data.color === "string" ? data.color : undefined,
       };
       const result = curve3dSchema.safeParse(payload);

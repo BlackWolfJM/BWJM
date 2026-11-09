@@ -58,6 +58,10 @@ export interface Surface3DNode extends MathMDNodeBase {
   yDomain: [number, number];
   samples?: number;
   contours?: boolean;
+  /** Controls whether a time-dependent surface is animated by the t timeline. */
+  animated?: boolean;
+  /** Optional document analysis; never required to plot a surface. */
+  showInfo?: boolean;
   color?: string;
 }
 
@@ -84,6 +88,11 @@ export interface Curve3DNode extends MathMDNodeBase {
   z: string;
   tDomain: [number, number];
   color?: string;
+  animated?: boolean;
+  showVectors?: boolean;
+  showTNB?: boolean;
+  showLegend?: boolean;
+  showInfo?: boolean;
 }
 
 export interface VectorField2DNode extends MathMDNodeBase {
@@ -513,6 +522,8 @@ export const surface3dSchema = mathmdNodeBaseSchema.extend({
   yDomain: domainSchema,
   samples: z.number().int().min(2).max(200).optional(),
   contours: z.boolean().optional(),
+  animated: z.boolean().optional(),
+  showInfo: z.boolean().optional(),
   color: z.string().optional(),
 });
 
@@ -539,6 +550,11 @@ export const curve3dSchema = mathmdNodeBaseSchema.extend({
   z: z.string().min(1, "z equation must be a non-empty string"),
   tDomain: domainSchema,
   color: z.string().optional(),
+  animated: z.boolean().optional(),
+  showVectors: z.boolean().optional(),
+  showTNB: z.boolean().optional(),
+  showLegend: z.boolean().optional(),
+  showInfo: z.boolean().optional(),
 });
 
 export const vectorfield2dSchema = mathmdNodeBaseSchema.extend({
