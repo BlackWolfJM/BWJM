@@ -26,6 +26,14 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
   const [yMax3d, setYMax3d] = useState<string>("4");
   const [samples3d, setSamples3d] = useState<string>("40");
   const [contours3d, setContours3d] = useState<boolean>(true);
+  const [surfaceAnimated, setSurfaceAnimated] = useState(false);
+  const [surfaceInfo, setSurfaceInfo] = useState(false);
+  const [curveAnimated, setCurveAnimated] = useState(false);
+  const [curveInfo, setCurveInfo] = useState(false);
+  const [curveLegend, setCurveLegend] = useState(false);
+  const [curveVectors, setCurveVectors] = useState(false);
+  const [curveTNB, setCurveTNB] = useState(false);
+  const [parametricAnimated, setParametricAnimated] = useState(false);
 
   const [curveX, setCurveX] = useState<string>("cos(t)");
   const [curveY, setCurveY] = useState<string>("sin(t)");
@@ -56,9 +64,25 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
   if (kind === "plot2d") {
     generatedCode = `\`\`\`plot2d\nequation: ${eq2d}\nx: [${xMin2d}, ${xMax2d}]\ngrid: ${grid2d}\ncolor: "${color2d}"\n\`\`\``;
   } else if (kind === "surface3d") {
-    generatedCode = `\`\`\`surface3d\nequation: ${eq3d}\nx: [${xMin3d}, ${xMax3d}]\ny: [${yMin3d}, ${yMax3d}]\nsamples: ${samples3d}\ncontours: ${contours3d}\n\`\`\``;
+    const fence = String.fromCharCode(96).repeat(3);
+    generatedCode = [
+      ...(surfaceAnimated ? [fence+"timeline","name: t","domain: [0, 6.28]","default: 0","loop: true",fence,""] : []),
+      fence+"surface3d","equation: "+eq3d,
+      "x: ["+xMin3d+", "+xMax3d+"]","y: ["+yMin3d+", "+yMax3d+"]",
+      "samples: "+samples3d,"contours: "+contours3d,
+      "animated: "+surfaceAnimated,"showInfo: "+surfaceInfo,fence,
+    ].join("\n");
   } else if (kind === "curve3d") {
-    generatedCode = `\`\`\`curve3d\nx: ${curveX}\ny: ${curveY}\nz: ${curveZ}\ntDomain: [${curveTMin}, ${curveTMax}]\ncolor: "${curveColor}"\n\`\`\``;
+    const fence = String.fromCharCode(96).repeat(3);
+    generatedCode = [
+      ...(curveAnimated ? [fence+"timeline","name: t",
+        "domain: ["+curveTMin+", "+curveTMax+"]","default: "+curveTMin,"loop: true",fence,""] : []),
+      fence+"curve3d","x: "+curveX,"y: "+curveY,"z: "+curveZ,
+      "tDomain: ["+curveTMin+", "+curveTMax+"]",
+      "color: "+JSON.stringify(curveColor),
+      "animated: "+curveAnimated,"showVectors: "+curveVectors,"showTNB: "+curveTNB,
+      "showLegend: "+curveLegend,"showInfo: "+curveInfo,fence,
+    ].join("\n");
   } else if (kind === "flow2d") {
     generatedCode = [
       "```slider", "name: t", "min: 0", "max: 6.28",
@@ -70,13 +94,15 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
     ].join("\n");
   } else if (kind === "parametric2d") {
     generatedCode = [
-      "```slider", "name: t", "min: " + curveTMin, "max: " + curveTMax,
-      "step: 0.02", "default: " + curveTMin, "```", "",
+      ...(parametricAnimated ? ["```timeline", "name: t",
+        "domain: [" + curveTMin + ", " + curveTMax + "]",
+        "default: " + curveTMin, "loop: true", "```", ""] : []),
       "```parametric2d", "x: " + curveX, "y: " + curveY,
       "tDomain: [" + curveTMin + ", " + curveTMax + "]",
-      'color: "' + curveColor + '"', "samples: 200", "showTrail: true",
-      "showVelocity: true", "showAcceleration: false",
-      "showTangent: true", "showNormal: true", "```",
+      'color: "' + curveColor + '"', "samples: 200",
+      "animated: " + parametricAnimated, "showTrail: " + parametricAnimated,
+      "showVelocity: " + parametricAnimated, "showAcceleration: false",
+      "showTangent: " + parametricAnimated, "showNormal: " + parametricAnimated, "```",
     ].join("\n");
   } else if (kind === "experiment") {
     generatedCode = [
@@ -183,6 +209,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
           )}
           {kind === "parametric2d" && (
             <div className="bwjm-modal-grid">
+              <label className="bwjm-checkbox-label bwjm-modal-field full-width">
+                <input type="checkbox" checked={parametricAnimated} onChange={event => setParametricAnimated(event.target.checked)} />
+                <span>Animar partícula (desmarcado: curva estática)</span>
+              </label>
               <div className="bwjm-modal-field">
                 <label className="bwjm-modal-label">x(t)</label>
                 <input className="bwjm-modal-input" value={curveX} onChange={e => setCurveX(e.target.value)} />
@@ -346,6 +376,16 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
                   <span>Curvas de nivel</span>
                 </label>
               </div>
+              <div className="bwjm-modal-field full-width bwjm-graph-wizard-options">
+                <label className="bwjm-checkbox-label">
+                  <input type="checkbox" checked={surfaceAnimated} onChange={event => setSurfaceAnimated(event.target.checked)} />
+                  <span>Animar (si la ecuación depende de t)</span>
+                </label>
+                <label className="bwjm-checkbox-label">
+                  <input type="checkbox" checked={surfaceInfo} onChange={event => setSurfaceInfo(event.target.checked)} />
+                  <span>Mostrar ficha científica debajo de la superficie</span>
+                </label>
+              </div>
             </div>
           )}
 
@@ -406,6 +446,28 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
                     onChange={(e) => setCurveTMax(e.target.value)}
                   />
                 </div>
+              </div>
+              <div className="bwjm-modal-field full-width bwjm-graph-wizard-options">
+                <label className="bwjm-checkbox-label">
+                  <input type="checkbox" checked={curveAnimated} onChange={event => setCurveAnimated(event.target.checked)} />
+                  <span>Animar partícula (desmarcado: curva estática)</span>
+                </label>
+                <label className="bwjm-checkbox-label">
+                  <input type="checkbox" checked={curveVectors} onChange={event => setCurveVectors(event.target.checked)} />
+                  <span>Mostrar velocidad y aceleración</span>
+                </label>
+                <label className="bwjm-checkbox-label">
+                  <input type="checkbox" checked={curveTNB} onChange={event => setCurveTNB(event.target.checked)} />
+                  <span>Mostrar triedro Frenet (T, N, B)</span>
+                </label>
+                <label className="bwjm-checkbox-label">
+                  <input type="checkbox" checked={curveLegend} onChange={event => setCurveLegend(event.target.checked)} />
+                  <span>Mostrar leyenda</span>
+                </label>
+                <label className="bwjm-checkbox-label">
+                  <input type="checkbox" checked={curveInfo} onChange={event => setCurveInfo(event.target.checked)} />
+                  <span>Mostrar panel científico debajo</span>
+                </label>
               </div>
             </div>
           )}

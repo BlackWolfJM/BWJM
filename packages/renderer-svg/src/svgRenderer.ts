@@ -266,6 +266,7 @@ export class SVGRenderer {
     path.setAttribute("stroke", node.color ?? "#2563eb");
     path.setAttribute("stroke-width", "2.5");
     this.svgElement.appendChild(path);
+    if (node.animated === false) return; // Static curve only; no moving marker or Frenet vectors.
     const frac = Math.max(0, Math.min(1, (node.currentT - node.tDomain[0]) /
       (node.tDomain[1] - node.tDomain[0])));
     if (node.showTrail) {
