@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, ChangeEvent } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { parseMathMD } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
@@ -12,8 +12,9 @@ import {
   computeCrossSection,
   computeKinematics,
   computeLineIntegral,
+  sampleVectorField2D,
 } from "@mathmd/math";
-import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode } from "@mathmd/ast";
+import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode } from "@mathmd/ast";
 import { MenuBar } from "./MenuBar.js";
 import { ToolBar } from "./ToolBar.js";
 import { StatusBar } from "./StatusBar.js";
@@ -99,6 +100,197 @@ export function formatInlineMarkdown(text: string): string {
   });
 
   return sanitized;
+}
+
+// --- Timeline Controller for Shared Clock/Animation ---
+
+interface TimelineControllerProps {
+  core: MathMDCore | null;
+  timelines: TimelineNode[];
+  variables: Record<string, number>;
+  onVariableChange: (name: string, value: number) => void;
+  activeTimers: Map<string, number>;
+  setActiveTimers: React.Dispatch<React.SetStateAction<Map<string, number>>>;
+}
+
+function TimelineController({
+  core,
+  timelines,
+  variables,
+  onVariableChange,
+  activeTimers: _activeTimers,
+  setActiveTimers: _setActiveTimers,
+}: TimelineControllerProps) {
+  const [masterPlaying, setMasterPlaying] = useState(false);
+  const [masterSpeed, setMasterSpeed] = useState(1.0);
+  const [scrubValue, setScrubValue] = useState(0);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
+
+  // Get all timeline-controlled variables
+  const timelineVars = useMemo(() => {
+    const vars = new Set<string>();
+    timelines.forEach(tl => {
+      vars.add(tl.name);
+      tl.controls?.forEach(c => vars.add(c));
+    });
+    return Array.from(vars);
+  }, [timelines]);
+
+  // Compute global time domain from all timelines
+  const globalDomain = useMemo(() => {
+    if (timelines.length === 0) return [0, 1] as [number, number];
+    let min = Infinity, max = -Infinity;
+    timelines.forEach(tl => {
+      min = Math.min(min, tl.domain[0]);
+      max = Math.max(max, tl.domain[1]);
+    });
+    return [min, max] as [number, number];
+  }, [timelines]);
+
+  const step = useCallback(() => {
+    if (!core || timelineVars.length === 0) return;
+    
+    const now = performance.now();
+    const dt = (now - lastTimeRef.current) / 1000 * masterSpeed; // seconds * speed
+    lastTimeRef.current = now;
+
+    let anyChanged = false;
+    timelineVars.forEach(varName => {
+      const tl = timelines.find(t => t.name === varName);
+      if (!tl) return;
+      
+      const currentVal = variables[varName] ?? tl.default ?? tl.domain[0];
+      const stepSize = (tl.domain[1] - tl.domain[0]) / 100 * dt * 30; // ~30 steps per second at 1x
+      let nextVal = currentVal + stepSize;
+      
+      if (nextVal > tl.domain[1]) {
+        if (tl.loop) {
+          nextVal = tl.domain[0] + (nextVal - tl.domain[1]);
+        } else {
+          nextVal = tl.domain[1];
+          if (masterPlaying) setMasterPlaying(false);
+        }
+      }
+      
+      if (Math.abs(nextVal - currentVal) > 1e-6) {
+        onVariableChange(varName, nextVal);
+        anyChanged = true;
+      }
+    });
+
+    // Update scrub position
+    if (anyChanged) {
+      const firstTl = timelines[0];
+      if (firstTl) {
+        const val = variables[firstTl.name] ?? firstTl.default ?? firstTl.domain[0];
+        setScrubValue((val - globalDomain[0]) / (globalDomain[1] - globalDomain[0]));
+      }
+    }
+
+    if (masterPlaying) {
+      animationFrameRef.current = requestAnimationFrame(step);
+    }
+  }, [core, timelines, timelineVars, variables, masterSpeed, masterPlaying, globalDomain, onVariableChange]);
+
+  const togglePlay = useCallback(() => {
+    setMasterPlaying(prev => {
+      const next = !prev;
+      if (next) {
+        lastTimeRef.current = performance.now();
+        animationFrameRef.current = requestAnimationFrame(step);
+      } else if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      return next;
+    });
+  }, [step]);
+
+  const handleScrub = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setScrubValue(val);
+    void globalDomain;
+    
+    timelineVars.forEach(varName => {
+      const tl = timelines.find(t => t.name === varName);
+      if (!tl) return;
+      // Scale to this timeline's domain
+      const scaledVal = tl.domain[0] + val * (tl.domain[1] - tl.domain[0]);
+      onVariableChange(varName, Math.min(Math.max(scaledVal, tl.domain[0]), tl.domain[1]));
+    });
+  }, [globalDomain, timelineVars, timelines, onVariableChange]);
+
+  const handleSpeedChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const speed = parseFloat(e.target.value);
+    setMasterSpeed(speed);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
+  if (timelines.length === 0) return null;
+
+  return (
+    <div className="bwjm-timeline-controller">
+      <div className="bwjm-timeline-header">
+        <span className="bwjm-timeline-title">Linea de Tiempo Global</span>
+        <span className="bwjm-timeline-speed">
+          Velocidad: <input type="range" min="0.1" max="5" step="0.1" value={masterSpeed} onChange={handleSpeedChange} /> {masterSpeed.toFixed(1)}x
+        </span>
+      </div>
+      <div className="bwjm-timeline-scrub">
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.001"
+          value={scrubValue}
+          onChange={handleScrub}
+          className="bwjm-timeline-scrub-input"
+        />
+        <span className="bwjm-timeline-scrub-value">
+          {timelines[0] ? ((variables[timelines[0].name] ?? timelines[0].default ?? timelines[0].domain[0])).toFixed(3) : '0'}
+        </span>
+      </div>
+      <div className="bwjm-timeline-controls">
+        <button
+          className={`bwjm-play-btn ${masterPlaying ? 'playing' : ''}`}
+          onClick={togglePlay}
+          title={masterPlaying ? "Pausar" : "Reproducir"}
+        >
+          {masterPlaying
+            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
+            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>`
+          }
+        </button>
+        <button
+          className="bwjm-timeline-reset-btn"
+          onClick={() => {
+            timelineVars.forEach(varName => {
+              const tl = timelines.find(t => t.name === varName);
+              if (tl) onVariableChange(varName, tl.default ?? tl.domain[0]);
+            });
+            setScrubValue(0);
+          }}
+          title="Reiniciar"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+        </button>
+      </div>
+      <div className="bwjm-timeline-linked">
+        <small>Controla: {timelineVars.join(", ")}</small>
+      </div>
+    </div>
+  );
 }
 
 const SAMPLE_LESSONS: Record<string, { title: string; filename: string; content: string }> = {
@@ -494,6 +686,11 @@ export function BWJMStudio() {
 
   const doc = useMemo(() => parseMathMD(markdown), [markdown]);
   const outline = useMemo(() => extractOutline(markdown), [markdown]);
+  
+  // Extract timeline nodes from document
+  const timelines = useMemo(() => 
+    doc.children.filter(node => node.type === "timeline") as TimelineNode[], 
+  [doc]);
 
   const wordCount = useMemo(() => {
     const clean = markdown.replace(/[#*`>$~-]/g, " ").trim();
@@ -993,13 +1190,11 @@ export function BWJMStudio() {
     sheet.appendChild(livePanel);
 
     const updateLiveScientificAnalysis = () => {
-      const isDemo =
-        filename === "area_riemann.bwjm" ||
-        filename === "solido_revolucion.bwjm" ||
-        filename === "onda_armonica.bwjm" ||
-        filename === "cinematica_helice_3d.bwjm" ||
-        filename === "campo_vectorial_green.bwjm";
-      if (!isDemo) {
+      // Check if there are any visualizable nodes in the document
+      const hasVisualNodes = doc.children.some(node => 
+        ["curve3d", "trajectory", "surface3d", "vectorfield2d", "field", "plot2d", "region", "frame", "particle"].includes(node.type)
+      );
+      if (!hasVisualNodes) {
         livePanel.style.display = "none";
         return;
       }
@@ -1007,9 +1202,34 @@ export function BWJMStudio() {
 
       const vars = coreRef.current?.getVariables() || {};
 
-      if (filename === "cinematica_helice_3d.bwjm") {
-        const tVal = vars["t"] ?? 1.57;
-        const kin = computeKinematics({ x: "cos(t)", y: "sin(t)", z: "t / 3" }, tVal, vars);
+      // Find trajectory/curve3d nodes for kinematics
+      const trajectoryNode = doc.children.find(n => n.type === "trajectory" || n.type === "curve3d");
+      const fieldNode = doc.children.find(n => n.type === "vectorfield2d" || n.type === "field");
+      const surfaceNode = doc.children.find(n => n.type === "surface3d");
+      const plot2dNodes = doc.children.filter(n => n.type === "plot2d");
+      const regionNode = doc.children.find(n => n.type === "region");
+      const frameNode = doc.children.find(n => n.type === "frame");
+      const sliderNodes = doc.children.filter(n => n.type === "slider");
+
+      // Case 1: Trajectory/Curve3D with kinematics
+      if (trajectoryNode) {
+        const tVal = vars["t"] ?? (trajectoryNode as any).tDomain?.[0] ?? 0;
+        const x = (trajectoryNode as any).x ?? "cos(t)";
+        const y = (trajectoryNode as any).y ?? "sin(t)";
+        const z = (trajectoryNode as any).z ?? "0";
+        const kin = computeKinematics({ x, y, z }, tVal, vars);
+        
+        // Determine if curvature/torsion are symbolic, numerical, or undefined
+        const isStationary = kin.isStationary || kin.speed < 1e-7;
+        const crossMag = Math.sqrt(
+          (kin.tangent.y * kin.binormal.z - kin.tangent.z * kin.binormal.y)**2 +
+          (kin.tangent.z * kin.binormal.x - kin.tangent.x * kin.binormal.z)**2 +
+          (kin.tangent.x * kin.binormal.y - kin.tangent.y * kin.binormal.x)**2
+        );
+        const isDegenerate = crossMag < 1e-7;
+        const curvatureType = isStationary ? "undefined" : (frameNode?.curvatureType ?? "numerical");
+        const torsionType = isDegenerate ? "undefined" : (frameNode?.torsionType ?? "numerical");
+        
         livePanel.innerHTML = `
           <div class="bwjm-panel-header">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -1024,7 +1244,7 @@ export function BWJMStudio() {
               </div>
               <div class="bwjm-metric-row">
                 <span>Rapidez |v(t)|:</span>
-                <strong style="color: #0284c7;">${kin.speed.toFixed(4)} (Exacta: √10/3 ≈ 1.0541)</strong>
+                <strong style="color: #0284c7;">${kin.speed.toFixed(4)} ${kin.speed !== kin.speed ? "" : "(numérica)"}</strong>
               </div>
             </div>
             <div class="bwjm-panel-col">
@@ -1042,15 +1262,15 @@ export function BWJMStudio() {
               <div class="bwjm-col-title">Geometría Diferencial Intrínseca</div>
               <div class="bwjm-metric-row">
                 <span>Curvatura κ:</span>
-                <strong style="color: #6366f1;">${kin.curvature.toFixed(4)} (Exacta: 9/10 = 0.9)</strong>
+                <strong style="color: #6366f1;">${kin.curvature.toFixed(4)} <span class="bwjm-math-type">[${curvatureType}]</span></strong>
               </div>
               <div class="bwjm-metric-row">
                 <span>Torsión τ:</span>
-                <strong style="color: #ec4899;">${kin.torsion.toFixed(4)} (Exacta: 3/10 = 0.3)</strong>
+                <strong style="color: #ec4899;">${kin.torsion.toFixed(4)} <span class="bwjm-math-type">[${torsionType}]</span></strong>
               </div>
               <div class="bwjm-metric-row">
                 <span>Radio osculador R:</span>
-                <strong>${kin.osculatingRadius.toFixed(4)}</strong>
+                <strong>${isStationary || isDegenerate ? "∞ (indeterminado)" : kin.osculatingRadius.toFixed(4)}</strong>
               </div>
             </div>
           </div>
@@ -1058,51 +1278,106 @@ export function BWJMStudio() {
         return;
       }
 
-      if (filename === "campo_vectorial_green.bwjm") {
-        const lineInt = computeLineIntegral(
-          { P: "-y", Q: "x" },
-          { x: "cos(t)", y: "sin(t)" },
-          [0, 2 * Math.PI],
-          200,
-          vars
-        );
+      // Case 2: Vector field analysis (2D or 3D)
+      if (fieldNode) {
+        const is3D = (fieldNode as any).dimensions === 3 || (fieldNode as any).type === "field" && (fieldNode as any).dimensions === 3;
+        const components = (fieldNode as any).components || (fieldNode as any).field || ["-y", "x"];
+        
+        let fieldAnalysis = "";
+        if (!is3D) {
+          // 2D field - can compute divergence, curl
+          const sampleRes = sampleVectorField2D({ P: components[0], Q: components[1] }, [-3, 3], [-3, 3], 5, vars);
+          const curlVal = sampleRes.curlAt(0, 0);
+          const divVal = sampleRes.divergenceAt(0, 0);
+          const isConservative = Math.abs(curlVal) < 1e-3;
+          
+          fieldAnalysis = `
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Campo Vectorial 2D F = (${components[0]}, ${components[1]})</div>
+              <div class="bwjm-metric-row">
+                <span>Divergencia ∇ · F:</span>
+                <strong style="color: #10b981;">${divVal.toFixed(4)} ${Math.abs(divVal) < 1e-6 ? "(Incompresible)" : ""}</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Rotacional (∇ × F)_z:</span>
+                <strong style="color: #ea580c;">${curlVal.toFixed(4)} k</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Conservativo (estimado):</span>
+                <strong style="color: ${isConservative ? "#10b981" : "#f59e0b"};">${isConservative ? "Sí" : "No"}</strong>
+              </div>
+            </div>
+          `;
+        } else {
+          fieldAnalysis = `
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Campo Vectorial 3D F = (${components[0]}, ${components[1]}, ${components[2] || "0"})</div>
+              <div class="bwjm-metric-row">
+                <span>Visualización:</span>
+                <strong style="color: #0284c7;">Flechas 3D muestreadas</strong>
+              </div>
+            </div>
+          `;
+        }
+        
+        // Check for region for Green's theorem
+        let greensAnalysis = "";
+        if (regionNode && !is3D) {
+          // Could compute line integral and compare with double integral
+          // For now, just show region info
+          greensAnalysis = `
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Región para Teorema de Green</div>
+              <div class="bwjm-metric-row">
+                <span>Frontera:</span>
+                <strong>${(regionNode as any).boundary}</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Orientación:</span>
+                <strong>${(regionNode as any).orientation ?? "ccw"}</strong>
+              </div>
+            </div>
+          `;
+        }
+
         livePanel.innerHTML = `
           <div class="bwjm-panel-header">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            <strong>Motor Científico BWJM • Análisis de Campos Vectoriales & Teorema de Green</strong>
+            <strong>Motor Científico BWJM • Análisis de Campos Vectoriales${!is3D ? " & Teorema de Green" : ""}</strong>
+          </div>
+          <div class="bwjm-panel-grid">
+            ${fieldAnalysis}
+            ${greensAnalysis}
+          </div>
+        `;
+        return;
+      }
+
+      // Case 3: Surface 3D
+      if (surfaceNode) {
+        const equation = (surfaceNode as any).equation;
+        livePanel.innerHTML = `
+          <div class="bwjm-panel-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <strong>Motor Científico BWJM • Superficie 3D</strong>
           </div>
           <div class="bwjm-panel-grid">
             <div class="bwjm-panel-col">
-              <div class="bwjm-col-title">Campo Vectorial F(x, y) = (-y, x)</div>
+              <div class="bwjm-col-title">Ecuación</div>
               <div class="bwjm-metric-row">
-                <span>Tipo:</span>
-                <strong style="color: #0284c7;">Vórtice Rígido</strong>
-              </div>
-              <div class="bwjm-metric-row">
-                <span>Divergencia ∇ · F:</span>
-                <strong style="color: #10b981;">0.0000 (Incompresible)</strong>
+                <span>z =</span>
+                <strong>${equation}</strong>
               </div>
             </div>
             <div class="bwjm-panel-col">
-              <div class="bwjm-col-title">Rotacional Local (∇ × F)_z</div>
+              <div class="bwjm-col-title">Dominio</div>
               <div class="bwjm-metric-row">
-                <span>Rotacional Escalar:</span>
-                <strong style="color: #ea580c;">2.0000 k</strong>
+                <span>x ∈</span>
+                <strong>[${(surfaceNode as any).xDomain[0]}, ${(surfaceNode as any).xDomain[1]}]</strong>
               </div>
               <div class="bwjm-metric-row">
-                <span>Propiedad:</span>
-                <strong style="color: #f59e0b;">No Conservativo</strong>
-              </div>
-            </div>
-            <div class="bwjm-panel-col">
-              <div class="bwjm-col-title">Teorema de Green (∮ F · dr = ∬ rot F dA)</div>
-              <div class="bwjm-metric-row">
-                <span>Circulación cerrada:</span>
-                <strong style="color: #6366f1;">${lineInt.work.toFixed(5)} (2π ≈ 6.28319)</strong>
-              </div>
-              <div class="bwjm-metric-row">
-                <span>Integral Doble:</span>
-                <strong style="color: #10b981;">2 · Área(Disco) = 2π</strong>
+                <span>y ∈</span>
+                <strong>[${(surfaceNode as any).yDomain[0]}, ${(surfaceNode as any).yDomain[1]}]</strong>
               </div>
             </div>
           </div>
@@ -1110,57 +1385,80 @@ export function BWJMStudio() {
         return;
       }
 
-      const aVal = vars["a"] ?? 1.0;
-      const nVal = Math.round(vars["n"] ?? 10);
-      const alphaVal = vars["alpha"] ?? 2 * Math.PI;
+      // Case 4: 2D plots (Riemann, area, revolution)
+      if (plot2dNodes.length > 0) {
+        const aVal = vars["a"] ?? 1.0;
+        const nVal = Math.round(vars["n"] ?? 10);
+        const alphaVal = vars["alpha"] ?? 2 * Math.PI;
 
-      const fStr = aVal === 1.0 ? "x" : `${aVal} * x`;
-      const gStr = "x^2";
+        const fStr = aVal === 1.0 ? "x" : `${aVal} * x`;
+        const gStr = "x^2";
 
-      const intersections = findIntersections(fStr, gStr, [0, 2]);
-      const exactArea = computeExactArea(fStr, gStr, [0, 1], vars);
-      const riemann = computeRiemannPartition(fStr, gStr, [0, 1], nVal, "midpoint", vars);
-      const revVol = computeRevolutionVolume(fStr, gStr, [0, 1], "x", alphaVal, vars);
-      const slice = computeCrossSection(fStr, gStr, sliceX, "x", vars);
+        const intersections = findIntersections(fStr, gStr, [0, 2]);
+        const exactArea = computeExactArea(fStr, gStr, [0, 1], vars);
+        const riemann = computeRiemannPartition(fStr, gStr, [0, 1], nVal, "midpoint", vars);
+        const revVol = computeRevolutionVolume(fStr, gStr, [0, 1], "x", alphaVal, vars);
+        const slice = computeCrossSection(fStr, gStr, sliceX, "x", vars);
 
+        livePanel.innerHTML = `
+          <div class="bwjm-panel-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <strong>Motor Científico BWJM • Análisis de Área & Riemann</strong>
+          </div>
+          <div class="bwjm-panel-grid">
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Puntos de Intersección</div>
+              <div class="bwjm-metric-row">
+                <span>Raíces resueltas:</span>
+                <strong>${intersections.map((p) => `(${p.x}, ${p.y})`).join(" y ") || "Buscando..."}</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Área Exacta (∫):</span>
+                <strong style="color: #0284c7;">${exactArea.exactFraction ? exactArea.exactFraction + " ≈ " : ""}${exactArea.value}</strong>
+              </div>
+            </div>
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Suma de Riemann (n = ${nVal})</div>
+              <div class="bwjm-metric-row">
+                <span>Aproximación:</span>
+                <strong style="color: #ea580c;">${riemann.riemannSum}</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Error Absoluto (|Δ|):</span>
+                <strong style="color: ${riemann.error < 0.005 ? "#10b981" : "#f59e0b"};">${riemann.error}</strong>
+              </div>
+            </div>
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Sólido de Revolución (α = ${Number(alphaVal.toFixed(2))} rad)</div>
+              <div class="bwjm-metric-row">
+                <span>Volumen Unión Espacial:</span>
+                <strong style="color: #6366f1;">${revVol.rationalGuessOfPi ? revVol.rationalGuessOfPi + "π ≈ " : ""}${revVol.volume}</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Arandela en x = ${sliceX}:</span>
+                <strong>R=${slice.outerRadius}, r=${slice.innerRadius} (Área: ${slice.washerArea})</strong>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Default: no specific analysis
       livePanel.innerHTML = `
         <div class="bwjm-panel-header">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          <strong>Motor Científico BWJM • Análisis de Área & Riemann</strong>
+          <strong>Motor Científico BWJM</strong>
         </div>
         <div class="bwjm-panel-grid">
           <div class="bwjm-panel-col">
-            <div class="bwjm-col-title">Puntos de Intersección</div>
-            <div class="bwjm-metric-row">
-              <span>Raíces resueltas:</span>
-              <strong>${intersections.map((p) => `(${p.x}, ${p.y})`).join(" y ") || "Buscando..."}</strong>
-            </div>
-            <div class="bwjm-metric-row">
-              <span>Área Exacta (∫):</span>
-              <strong style="color: #0284c7;">${exactArea.exactFraction ? exactArea.exactFraction + " ≈ " : ""}${exactArea.value}</strong>
-            </div>
-          </div>
-          <div class="bwjm-panel-col">
-            <div class="bwjm-col-title">Suma de Riemann (n = ${nVal})</div>
-            <div class="bwjm-metric-row">
-              <span>Aproximación:</span>
-              <strong style="color: #ea580c;">${riemann.riemannSum}</strong>
-            </div>
-            <div class="bwjm-metric-row">
-              <span>Error Absoluto (|Δ|):</span>
-              <strong style="color: ${riemann.error < 0.005 ? "#10b981" : "#f59e0b"};">${riemann.error}</strong>
-            </div>
-          </div>
-          <div class="bwjm-panel-col">
-            <div class="bwjm-col-title">Sólido de Revolución (α = ${Number(alphaVal.toFixed(2))} rad)</div>
-            <div class="bwjm-metric-row">
-              <span>Volumen Unión Espacial:</span>
-              <strong style="color: #6366f1;">${revVol.rationalGuessOfPi ? revVol.rationalGuessOfPi + "π ≈ " : ""}${revVol.volume}</strong>
-            </div>
-            <div class="bwjm-metric-row">
-              <span>Arandela en x = ${sliceX}:</span>
-              <strong>R=${slice.outerRadius}, r=${slice.innerRadius} (Área: ${slice.washerArea})</strong>
-            </div>
+            <div class="bwjm-col-title">Variables Activas</div>
+            ${Object.entries(vars).map(([k, v]) => `
+              <div class="bwjm-metric-row">
+                <span>${k}:</span>
+                <strong>${typeof v === 'number' ? v.toFixed(4) : v}</strong>
+              </div>
+            `).join("")}
           </div>
         </div>
       `;
@@ -1329,6 +1627,17 @@ export function BWJMStudio() {
         viewMode={viewMode}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
+
+      {timelines.length > 0 && (
+        <TimelineController
+          core={coreRef.current}
+          timelines={timelines}
+          variables={currentVariables}
+          onVariableChange={handleVariableChange}
+          activeTimers={activeTimersRef.current}
+          setActiveTimers={() => {}}
+        />
+      )}
 
       <FormulaModal
         isOpen={isFormulaModalOpen}

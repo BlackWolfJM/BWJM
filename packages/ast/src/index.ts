@@ -173,13 +173,118 @@ export interface ContourNode extends MathMDNodeBase {
   color?: string;
 }
 
+// --- Generic Scene Contract Nodes (BWJM 200 Functionalities) ---
+
+export interface TrajectoryNode extends MathMDNodeBase {
+  type: "trajectory";
+  x: string;
+  y: string;
+  z?: string;
+  tDomain: [number, number];
+  samples?: number;
+  color?: string;
+  // Reference to particle/timeline IDs for linking
+  particleRef?: string;
+  timelineRef?: string;
+}
+
+export interface ParticleNode extends MathMDNodeBase {
+  type: "particle";
+  trajectoryRef: string; // ID of trajectory node
+  timelineRef?: string;
+  trailLength?: number; // number of points in trail
+  showTrail?: boolean;
+  size?: number;
+  color?: string;
+}
+
+export interface VectorArrowNode extends MathMDNodeBase {
+  type: "vectorarrow";
+  origin: [number, number, number] | [number, number];
+  vector: [number, number, number] | [number, number];
+  label?: string;
+  color?: string;
+  // Scale separation
+  physicalScale?: number; // physical units per visual unit
+  visualScale?: number; // visual multiplier
+  showTip?: boolean;
+  tipSize?: number;
+  // Layer/visibility
+  layer?: string;
+  visible?: boolean;
+}
+
+export interface FrameNode extends MathMDNodeBase {
+  type: "frame";
+  trajectoryRef: string; // ID of trajectory node
+  timelineRef?: string;
+  showT?: boolean;
+  showN?: boolean;
+  showB?: boolean;
+  frameLength?: number;
+  colors?: { T?: string; N?: string; B?: string };
+  // Differentiation between symbolic, numerical, undefined
+  curvatureType?: "symbolic" | "numerical" | "undefined";
+  torsionType?: "symbolic" | "numerical" | "undefined";
+}
+
+export interface FieldNode extends MathMDNodeBase {
+  type: "field";
+  dimensions: 2 | 3;
+  components: [string, string] | [string, string, string];
+  xDomain: [number, number];
+  yDomain: [number, number];
+  zDomain?: [number, number];
+  density?: number;
+  color?: string;
+  // For particle integration
+  timelineRef?: string;
+  integrationMethod?: "euler" | "rk4" | "adaptive";
+  stepSize?: number;
+}
+
+export interface RegionNode extends MathMDNodeBase {
+  type: "region";
+  boundary: string; // curve reference or equation
+  xDomain: [number, number];
+  yDomain: [number, number];
+  orientation?: "ccw" | "cw"; // for Green's theorem
+  color?: string;
+  fillColor?: string;
+  fillOpacity?: number;
+}
+
+export interface CameraNode extends MathMDNodeBase {
+  type: "camera";
+  target?: string; // node ID to follow
+  position?: [number, number, number];
+  eye?: [number, number, number];
+  up?: [number, number, number];
+  fov?: number;
+  aspect?: number;
+  mode?: "fixed" | "follow" | "orbit";
+  timelineRef?: string;
+}
+
+export interface TimelineNode extends MathMDNodeBase {
+  type: "timeline";
+  name: string;
+  domain: [number, number];
+  default?: number;
+  speed?: number; // 1.0 = normal
+  loop?: boolean;
+  autoplay?: boolean;
+  // References to controlled nodes
+  controls?: string[]; // IDs of nodes controlled by this timeline
+}
+
 // TextNode preserved for legacy consumers
 export interface TextNode extends MathMDNodeBase {
   type: "text";
   content: string;
 }
 
-// The 15 recognized MathMD visualization nodes
+// The 23 recognized MathMD visualization nodes (15 original + 8 new scene contracts)
 export type MathMDNode =
   | Plot2DNode
   | Surface3DNode
@@ -195,7 +300,15 @@ export type MathMDNode =
   | Point3DNode
   | DiagramNode
   | GeometryNode
-  | ContourNode;
+  | ContourNode
+  | TrajectoryNode
+  | ParticleNode
+  | VectorArrowNode
+  | FrameNode
+  | FieldNode
+  | RegionNode
+  | CameraNode
+  | TimelineNode;
 
 // --- Deterministic & Unicode-Safe ID Helper ---
 
@@ -436,7 +549,133 @@ export const contourSchema = mathmdNodeBaseSchema.extend({
   color: z.string().optional(),
 });
 
-// Discriminated union of all 15 MathMD block schemas
+// --- Generic Scene Contract Schemas ---
+
+export const trajectorySchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("trajectory"),
+  x: z.string().min(1, "x equation must be a non-empty string"),
+  y: z.string().min(1, "y equation must be a non-empty string"),
+  z: z.string().min(1, "z equation must be a non-empty string").optional(),
+  tDomain: domainSchema,
+  samples: z.number().int().min(2).max(500).optional(),
+  color: z.string().optional(),
+  particleRef: z.string().optional(),
+  timelineRef: z.string().optional(),
+});
+
+export const particleSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("particle"),
+  trajectoryRef: z.string().min(1, "trajectoryRef must reference a trajectory node"),
+  timelineRef: z.string().optional(),
+  trailLength: z.number().int().min(0).max(1000).optional(),
+  showTrail: z.boolean().optional(),
+  size: z.number().finite().positive().optional(),
+  color: z.string().optional(),
+});
+
+const vectorComponents2D = z.tuple([z.number().finite(), z.number().finite()]);
+const vectorComponents3D = z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]);
+const vectorComponents = z.union([vectorComponents2D, vectorComponents3D]);
+
+export const vectorArrowSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("vectorarrow"),
+  origin: vectorComponents,
+  vector: vectorComponents,
+  label: z.string().optional(),
+  color: z.string().optional(),
+  physicalScale: z.number().finite().positive().optional(),
+  visualScale: z.number().finite().positive().optional(),
+  showTip: z.boolean().optional(),
+  tipSize: z.number().finite().positive().optional(),
+  layer: z.string().optional(),
+  visible: z.boolean().optional(),
+});
+
+export const frameSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("frame"),
+  trajectoryRef: z.string().min(1, "trajectoryRef must reference a trajectory node"),
+  timelineRef: z.string().optional(),
+  showT: z.boolean().optional(),
+  showN: z.boolean().optional(),
+  showB: z.boolean().optional(),
+  frameLength: z.number().finite().positive().optional(),
+  colors: z.object({
+    T: z.string().optional(),
+    N: z.string().optional(),
+    B: z.string().optional(),
+  }).optional(),
+  curvatureType: z.enum(["symbolic", "numerical", "undefined"]).optional(),
+  torsionType: z.enum(["symbolic", "numerical", "undefined"]).optional(),
+});
+
+const fieldComponents2D = z.tuple([z.string().min(1), z.string().min(1)]);
+const fieldComponents3D = z.tuple([z.string().min(1), z.string().min(1), z.string().min(1)]);
+const fieldComponents = z.union([fieldComponents2D, fieldComponents3D]);
+
+export const fieldSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("field"),
+  dimensions: z.literal(2).or(z.literal(3)),
+  components: fieldComponents,
+  xDomain: domainSchema,
+  yDomain: domainSchema,
+  zDomain: domainSchema.optional(),
+  density: z.number().int().min(2).max(50).optional(),
+  color: z.string().optional(),
+  timelineRef: z.string().optional(),
+  integrationMethod: z.enum(["euler", "rk4", "adaptive"]).optional(),
+  stepSize: z.number().finite().positive().optional(),
+});
+
+export const regionSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("region"),
+  boundary: z.string().min(1, "boundary must be a non-empty string"),
+  xDomain: domainSchema,
+  yDomain: domainSchema,
+  orientation: z.enum(["ccw", "cw"]).optional(),
+  color: z.string().optional(),
+  fillColor: z.string().optional(),
+  fillOpacity: z.number().finite().min(0).max(1).optional(),
+});
+
+export const cameraSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("camera"),
+  target: z.string().optional(),
+  position: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]).optional(),
+  eye: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]).optional(),
+  up: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]).optional(),
+  fov: z.number().finite().positive().optional(),
+  aspect: z.number().finite().positive().optional(),
+  mode: z.enum(["fixed", "follow", "orbit"]).optional(),
+  timelineRef: z.string().optional(),
+});
+
+const timelineNodeSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("timeline"),
+  name: controlNameSchema,
+  domain: domainSchema,
+  default: z.number().finite().optional(),
+  speed: z.number().finite().positive().optional(),
+  loop: z.boolean().optional(),
+  autoplay: z.boolean().optional(),
+  controls: z.array(z.string()).optional(),
+});
+
+function validateTimelineBounds(
+  data: z.infer<typeof timelineNodeSchema>,
+  context: z.RefinementCtx,
+): void {
+  if (data.default !== undefined && (data.default < data.domain[0] || data.default > data.domain[1])) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Timeline default must be within domain",
+      path: ["default"],
+    });
+  }
+}
+
+export const timelineSchema = timelineNodeSchema.superRefine(validateTimelineBounds);
+
+// Discriminated union of all 23 MathMD block schemas
 const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   plot2dSchema,
   surface3dSchema,
@@ -453,11 +692,46 @@ const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   diagramSchema,
   geometrySchema,
   contourSchema,
+  trajectorySchema,
+  particleSchema,
+  vectorArrowSchema,
+  frameSchema,
+  fieldSchema,
+  regionSchema,
+  cameraSchema,
+  timelineNodeSchema,
 ]);
 
 export const mathmdNodeSchema = mathmdNodeDiscriminatedUnion.superRefine((node, context) => {
   if (node.type === "slider") {
     validateSliderBounds(node, context);
+  }
+  if (node.type === "timeline") {
+    validateTimelineBounds(node, context);
+  }
+  if (node.type === "field") {
+    const data = node as z.infer<typeof fieldSchema>;
+    if (data.dimensions === 3 && !data.zDomain) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "3D field requires zDomain",
+        path: ["zDomain"],
+      });
+    }
+    if (data.dimensions === 2 && data.components.length !== 2) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "2D field requires exactly 2 components",
+        path: ["components"],
+      });
+    }
+    if (data.dimensions === 3 && data.components.length !== 3) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "3D field requires exactly 3 components",
+        path: ["components"],
+      });
+    }
   }
 });
 

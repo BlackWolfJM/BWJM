@@ -35,12 +35,17 @@ FLUJO_DE_TRABAJO.md
 AGENTS.md
 CLAUDE.md
 GEMINI.md
+AUDITORIA_*.md
+BWJM_200_*.md
+ESTADO_IMPLEMENTACION_*.md
+MEJORAS_BWJM.md
 
 # Environment and logs
 *.log
 .env
 .env.*.local
 .eslintcache
+acl-recovery/
 
 # OS files
 .DS_Store

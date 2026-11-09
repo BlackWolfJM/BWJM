@@ -24,6 +24,14 @@ import {
   diagramSchema,
   geometrySchema,
   contourSchema,
+  trajectorySchema,
+  particleSchema,
+  vectorArrowSchema,
+  frameSchema,
+  fieldSchema,
+  regionSchema,
+  cameraSchema,
+  timelineSchema,
 } from "@mathmd/ast";
 
 interface MdastPosition {
@@ -55,6 +63,14 @@ const SUPPORTED_MATHMD_TYPES = new Set([
   "diagram",
   "geometry",
   "contour",
+  "trajectory",
+  "particle",
+  "vectorarrow",
+  "frame",
+  "field",
+  "region",
+  "camera",
+  "timeline",
 ]);
 
 const VALID_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -618,6 +634,276 @@ function buildMathMDNode(
         color: typeof data.color === "string" ? data.color : undefined,
       };
       const result = contourSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          diagnostics.push({
+            severity: "error",
+            code: "MATHMD_SCHEMA_INVALID",
+            message: issue.message,
+            range,
+            blockType: type,
+            blockId: id,
+            path: issue.path,
+          });
+        }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "trajectory": {
+      payload = {
+        ...base,
+        x: "x" in data ? data.x : "cos(t)",
+        y: "y" in data ? data.y : "sin(t)",
+        z: "z" in data ? data.z : undefined,
+        tDomain: "t" in data ? data.t : "tDomain" in data ? data.tDomain : [0, 2 * Math.PI],
+        samples: "samples" in data ? data.samples : 100,
+        color: typeof data.color === "string" ? data.color : undefined,
+        particleRef: typeof data.particleRef === "string" ? data.particleRef : undefined,
+        timelineRef: typeof data.timelineRef === "string" ? data.timelineRef : undefined,
+      };
+      const result = trajectorySchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          diagnostics.push({
+            severity: "error",
+            code: "MATHMD_SCHEMA_INVALID",
+            message: issue.message,
+            range,
+            blockType: type,
+            blockId: id,
+            path: issue.path,
+          });
+        }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "particle": {
+      payload = {
+        ...base,
+        trajectoryRef: data.trajectoryRef,
+        timelineRef: typeof data.timelineRef === "string" ? data.timelineRef : undefined,
+        trailLength: typeof data.trailLength === "number" ? data.trailLength : 50,
+        showTrail: "showTrail" in data ? data.showTrail : true,
+        size: typeof data.size === "number" ? data.size : 8,
+        color: typeof data.color === "string" ? data.color : "#f43f5e",
+      };
+      const result = particleSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          diagnostics.push({
+            severity: "error",
+            code: "MATHMD_SCHEMA_INVALID",
+            message: issue.message,
+            range,
+            blockType: type,
+            blockId: id,
+            path: issue.path,
+          });
+        }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "vectorarrow": {
+      const origin = "origin" in data ? data.origin : [0, 0, 0];
+      const vector = "vector" in data ? data.vector : [1, 0, 0];
+      payload = {
+        ...base,
+        origin,
+        vector,
+        label: data.label,
+        color: typeof data.color === "string" ? data.color : "#0284c7",
+        physicalScale: typeof data.physicalScale === "number" ? data.physicalScale : undefined,
+        visualScale: typeof data.visualScale === "number" ? data.visualScale : 1,
+        showTip: "showTip" in data ? data.showTip : true,
+        tipSize: typeof data.tipSize === "number" ? data.tipSize : 0.15,
+        layer: typeof data.layer === "string" ? data.layer : "default",
+        visible: "visible" in data ? data.visible : true,
+      };
+      const result = vectorArrowSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          diagnostics.push({
+            severity: "error",
+            code: "MATHMD_SCHEMA_INVALID",
+            message: issue.message,
+            range,
+            blockType: type,
+            blockId: id,
+            path: issue.path,
+          });
+        }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "frame": {
+      payload = {
+        ...base,
+        trajectoryRef: data.trajectoryRef,
+        timelineRef: typeof data.timelineRef === "string" ? data.timelineRef : undefined,
+        showT: "showT" in data ? data.showT : true,
+        showN: "showN" in data ? data.showN : true,
+        showB: "showB" in data ? data.showB : true,
+        frameLength: typeof data.frameLength === "number" ? data.frameLength : 0.8,
+        colors: typeof data.colors === "object" ? data.colors : undefined,
+        curvatureType: typeof data.curvatureType === "string" ? data.curvatureType : "numerical",
+        torsionType: typeof data.torsionType === "string" ? data.torsionType : "numerical",
+      };
+      const result = frameSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          diagnostics.push({
+            severity: "error",
+            code: "MATHMD_SCHEMA_INVALID",
+            message: issue.message,
+            range,
+            blockType: type,
+            blockId: id,
+            path: issue.path,
+          });
+        }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "field": {
+      let density = "density" in data ? data.density : 15;
+      if (typeof density === "number" && Number.isFinite(density)) {
+        if (density < 2 || density > 50) {
+          const clamped = Math.min(Math.max(Math.round(density), 2), 50);
+          diagnostics.push({
+            severity: "warning",
+            code: "MATHMD_VALUE_CLAMPED",
+            message: `Value of "density" (${density}) was clamped to ${clamped}`,
+            range,
+            blockType: type,
+            blockId: id,
+            path: ["density"],
+          });
+          density = clamped;
+        }
+      }
+      payload = {
+        ...base,
+        dimensions: "dimensions" in data ? data.dimensions : 2,
+        components: data.field ?? data.components,
+        xDomain: "x" in data ? data.x : "xDomain" in data ? data.xDomain : [-5, 5],
+        yDomain: "y" in data ? data.y : "yDomain" in data ? data.yDomain : [-5, 5],
+        zDomain: "z" in data ? data.z : "zDomain" in data ? data.zDomain : undefined,
+        density,
+        color: typeof data.color === "string" ? data.color : "#0284c7",
+        timelineRef: typeof data.timelineRef === "string" ? data.timelineRef : undefined,
+        integrationMethod: typeof data.integrationMethod === "string" ? data.integrationMethod : "rk4",
+        stepSize: typeof data.stepSize === "number" ? data.stepSize : 0.01,
+      };
+      const result = fieldSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          diagnostics.push({
+            severity: "error",
+            code: "MATHMD_SCHEMA_INVALID",
+            message: issue.message,
+            range,
+            blockType: type,
+            blockId: id,
+            path: issue.path,
+          });
+        }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "region": {
+      payload = {
+        ...base,
+        boundary: data.boundary,
+        xDomain: "x" in data ? data.x : "xDomain" in data ? data.xDomain : [-5, 5],
+        yDomain: "y" in data ? data.y : "yDomain" in data ? data.yDomain : [-5, 5],
+        orientation: typeof data.orientation === "string" ? data.orientation : "ccw",
+        color: typeof data.color === "string" ? data.color : "#6366f1",
+        fillColor: typeof data.fillColor === "string" ? data.fillColor : "#6366f1",
+        fillOpacity: typeof data.fillOpacity === "number" ? data.fillOpacity : 0.2,
+      };
+      const result = regionSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          diagnostics.push({
+            severity: "error",
+            code: "MATHMD_SCHEMA_INVALID",
+            message: issue.message,
+            range,
+            blockType: type,
+            blockId: id,
+            path: issue.path,
+          });
+        }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "camera": {
+      payload = {
+        ...base,
+        target: typeof data.target === "string" ? data.target : undefined,
+        position: "position" in data ? data.position : undefined,
+        eye: "eye" in data ? data.eye : undefined,
+        up: "up" in data ? data.up : undefined,
+        fov: typeof data.fov === "number" ? data.fov : undefined,
+        aspect: typeof data.aspect === "number" ? data.aspect : undefined,
+        mode: typeof data.mode === "string" ? data.mode : "fixed",
+        timelineRef: typeof data.timelineRef === "string" ? data.timelineRef : undefined,
+      };
+      const result = cameraSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          diagnostics.push({
+            severity: "error",
+            code: "MATHMD_SCHEMA_INVALID",
+            message: issue.message,
+            range,
+            blockType: type,
+            blockId: id,
+            path: issue.path,
+          });
+        }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "timeline": {
+      const timelineData = data as Record<string, unknown>;
+      const minVal = "min" in data ? data.min : "domain" in timelineData ? (timelineData.domain as [number, number])[0] : 0;
+      const maxVal = "max" in data ? data.max : "domain" in timelineData ? (timelineData.domain as [number, number])[1] : 2 * Math.PI;
+      const defaultVal = "default" in data ? data.default : minVal;
+      const speedVal = "speed" in data ? data.speed : 1.0;
+      const loopVal = "loop" in data ? data.loop : true;
+      const autoplayVal = "autoplay" in data ? data.autoplay : false;
+      const controlsVal = "controls" in data ? data.controls : [];
+
+      payload = {
+        ...base,
+        name: data.name,
+        min: minVal,
+        max: maxVal,
+        step: "step" in data ? data.step : 0.01,
+        default: defaultVal,
+        speed: speedVal,
+        loop: loopVal,
+        autoplay: autoplayVal,
+        controls: controlsVal,
+      };
+      const result = timelineSchema.safeParse(payload);
       if (!result.success) {
         for (const issue of result.error.issues) {
           diagnostics.push({

@@ -1,5 +1,13 @@
 import { MathMDDocument, MathMDNode } from "@mathmd/ast";
-import { compileExpression, evaluateExpression, sample1D, sampleSurface } from "@mathmd/math";
+import { 
+  compileExpression, 
+  evaluateExpression, 
+  sample1D, 
+  sampleSurface,
+  sampleParametricTrajectory,
+  computeKinematics
+} from "@mathmd/math";
+import type { Vector3D } from "@mathmd/math";
 
 // Core MathMD runtime with reactivity system
 export class MathMDCore {
@@ -15,13 +23,16 @@ export class MathMDCore {
   }
   
   private initialize() {
-    // Extract initial state from slider and checkbox nodes
+    // Extract initial state from slider, checkbox, and timeline nodes
     this.document.children.forEach(node => {
       if (node.type === "slider") {
         this.variables.set(node.name, node.default);
       }
       if (node.type === "checkbox") {
         this.variables.set(node.name, node.default ? 1 : 0);
+      }
+      if (node.type === "timeline") {
+        this.variables.set(node.name, node.default ?? node.domain[0]);
       }
     });
     
@@ -113,14 +124,20 @@ export class MathMDCore {
         break;
         
       case "curve3d":
+      case "trajectory":
         deps.push(...extractVarsFromStr(node.x));
         deps.push(...extractVarsFromStr(node.y));
-        deps.push(...extractVarsFromStr(node.z));
+        if (node.z) deps.push(...extractVarsFromStr(node.z));
         break;
         
       case "vectorfield2d":
-        deps.push(...extractVarsFromStr(node.field[0]));
-        deps.push(...extractVarsFromStr(node.field[1]));
+      case "field":
+        if (node.type === "vectorfield2d") {
+          deps.push(...extractVarsFromStr(node.field[0]));
+          deps.push(...extractVarsFromStr(node.field[1]));
+        } else {
+          node.components.forEach(comp => deps.push(...extractVarsFromStr(comp)));
+        }
         break;
         
       case "gradient":
@@ -133,6 +150,34 @@ export class MathMDCore {
         
       case "contour":
         deps.push(...extractVarsFromStr(node.function));
+        break;
+        
+      case "vectorarrow":
+        if (Array.isArray(node.origin)) {
+          node.origin.forEach(val => {
+            if (typeof val === 'string') {
+              deps.push(...extractVarsFromStr(val));
+            }
+          });
+        }
+        if (Array.isArray(node.vector)) {
+          node.vector.forEach(val => {
+            if (typeof val === 'string') {
+              deps.push(...extractVarsFromStr(val));
+            }
+          });
+        }
+        break;
+        
+      case "particle":
+      case "frame":
+      case "region":
+      case "camera":
+        // These reference other nodes, not direct variable dependencies
+        break;
+        
+      case "timeline":
+        // Timeline controls its own variable
         break;
         
       default:
@@ -452,7 +497,251 @@ export class MathMDCore {
           ...node,
           type: node.type
         };
+
+      case "trajectory": {
+        const trajectory = sampleParametricTrajectory(
+          { x: node.x, y: node.y, z: node.z },
+          node.tDomain,
+          node.samples ?? 100,
+          scope
+        );
+        return {
+          ...node,
+          type: "trajectory",
+          points: trajectory
+        };
+      }
+
+      case "particle": {
+        // Find the referenced trajectory
+        const trajectoryNode = this.document.children.find(
+          n => n.id === node.trajectoryRef && (n.type === "trajectory" || n.type === "curve3d")
+        );
+        if (!trajectoryNode) {
+          return { ...node, type: "particle", position: [0, 0, 0], trail: [] };
+        }
+
+        const tVal = this.variables.get(node.timelineRef ?? "t") ?? 
+                     (trajectoryNode.type === "trajectory" ? trajectoryNode.tDomain[0] : 
+                      (trajectoryNode as any).tDomain?.[0] ?? 0);
         
+        const trajectoryData = this.getNodeData(trajectoryNode.id);
+        const points = trajectoryData.points || [];
+        
+        // Find closest point to current t
+        let position: Vector3D = { x: 0, y: 0, z: 0 };
+        if (trajectoryNode.type === "trajectory") {
+          const kin = computeKinematics({ x: trajectoryNode.x, y: trajectoryNode.y, z: trajectoryNode.z ?? "0" }, tVal, scope);
+          position = kin.position;
+        } else if ((trajectoryNode as any).tDomain) {
+          const kin = computeKinematics({ x: (trajectoryNode as any).x, y: (trajectoryNode as any).y, z: (trajectoryNode as any).z ?? "0" }, tVal, scope);
+          position = kin.position;
+        }
+
+        // Generate trail if enabled
+        const trail: Vector3D[] = [];
+        if (node.showTrail && points.length > 0) {
+          const trailLength = node.trailLength ?? 50;
+          const startIdx = Math.max(0, points.length - trailLength);
+          for (let i = startIdx; i < points.length; i++) {
+            const p = points[i];
+            trail.push(typeof p === 'object' && 'x' in p ? p : { x: p[0], y: p[1], z: p[2] || 0 });
+          }
+        }
+
+        return {
+          ...node,
+          type: "particle",
+          position,
+          trail,
+          currentT: tVal
+        };
+      }
+
+      case "vectorarrow": {
+        const origin = this.resolveArray(node.origin, scope) ?? [0, 0, 0];
+        const vector = this.resolveArray(node.vector, scope) ?? [0, 0, 0];
+        const visualScale = node.visualScale ?? 1;
+        const physicalScale = node.physicalScale ?? 1;
+        const scale = visualScale * physicalScale;
+        
+        const end = [
+          origin[0] + vector[0] * scale,
+          origin[1] + vector[1] * scale,
+          origin[2] + vector[2] * scale
+        ];
+
+        // Calculate arrow tip points
+        const tipSize = node.tipSize ?? 0.15;
+        const vecMag = Math.sqrt(vector[0]**2 + vector[1]**2 + vector[2]**2);
+        let tipPoints: number[][] = [];
+        if (node.showTip !== false && vecMag > 0) {
+          const dir = [vector[0]/vecMag, vector[1]/vecMag, vector[2]/vecMag];
+          const tipBase = [end[0] - dir[0] * tipSize, end[1] - dir[1] * tipSize, end[2] - dir[2] * tipSize];
+          // Simple cone tip - two side points
+          const ortho = Math.abs(dir[0]) > 0.9 ? [0, 1, 0] : [1, 0, 0];
+          const side1 = [
+            tipBase[0] + ortho[0] * tipSize * 0.5,
+            tipBase[1] + ortho[1] * tipSize * 0.5,
+            tipBase[2] + ortho[2] * tipSize * 0.5
+          ];
+          const side2 = [
+            tipBase[0] - ortho[0] * tipSize * 0.5,
+            tipBase[1] - ortho[1] * tipSize * 0.5,
+            tipBase[2] - ortho[2] * tipSize * 0.5
+          ];
+          tipPoints = [end, side1, tipBase, side2, end];
+        }
+
+        return {
+          ...node,
+          type: "vectorarrow",
+          origin,
+          vector,
+          end,
+          tipPoints,
+          scale,
+          layer: node.layer ?? "default",
+          visible: node.visible !== false
+        };
+      }
+
+      case "frame": {
+        // Find referenced trajectory
+        const trajectoryNode = this.document.children.find(
+          n => n.id === node.trajectoryRef && (n.type === "trajectory" || n.type === "curve3d")
+        );
+        if (!trajectoryNode) {
+          return { ...node, type: "frame", T: null, N: null, B: null };
+        }
+
+        const tVal = this.variables.get(node.timelineRef ?? "t") ?? 
+                     (trajectoryNode.type === "trajectory" ? trajectoryNode.tDomain[0] : 
+                      (trajectoryNode as any).tDomain?.[0] ?? 0);
+
+        let kin: any = null;
+        if (trajectoryNode.type === "trajectory") {
+          kin = computeKinematics({ x: trajectoryNode.x, y: trajectoryNode.y, z: trajectoryNode.z ?? "0" }, tVal, scope);
+        } else {
+          kin = computeKinematics({ x: (trajectoryNode as any).x, y: (trajectoryNode as any).y, z: (trajectoryNode as any).z ?? "0" }, tVal, scope);
+        }
+
+        const frameLen = node.frameLength ?? 0.8;
+        const colors = node.colors ?? { T: "#06b6d4", N: "#a855f7", B: "#ec4899" };
+
+        // Determine if curvature/torsion are symbolic, numerical, or undefined
+        const isStationary = kin.isStationary || kin.speed < 1e-7;
+        const crossMag = Math.sqrt(
+          (kin.tangent.y * kin.binormal.z - kin.tangent.z * kin.binormal.y)**2 +
+          (kin.tangent.z * kin.binormal.x - kin.tangent.x * kin.binormal.z)**2 +
+          (kin.tangent.x * kin.binormal.y - kin.tangent.y * kin.binormal.x)**2
+        );
+        const isDegenerate = crossMag < 1e-7;
+
+        return {
+          ...node,
+          type: "frame",
+          position: kin.position,
+          T: node.showT !== false ? {
+            start: kin.position,
+            end: { x: kin.position.x + kin.tangent.x * frameLen, y: kin.position.y + kin.tangent.y * frameLen, z: kin.position.z + kin.tangent.z * frameLen },
+            color: colors.T,
+            curvatureType: isStationary ? "undefined" : (node.curvatureType ?? "numerical"),
+            curvatureValue: kin.curvature
+          } : null,
+          N: node.showN !== false ? {
+            start: kin.position,
+            end: { x: kin.position.x + kin.normal.x * frameLen, y: kin.position.y + kin.normal.y * frameLen, z: kin.position.z + kin.normal.z * frameLen },
+            color: colors.N,
+            curvatureType: isDegenerate ? "undefined" : (node.curvatureType ?? "numerical")
+          } : null,
+          B: node.showB !== false ? {
+            start: kin.position,
+            end: { x: kin.position.x + kin.binormal.x * frameLen, y: kin.position.y + kin.binormal.y * frameLen, z: kin.position.z + kin.binormal.z * frameLen },
+            color: colors.B,
+            torsionType: isDegenerate ? "undefined" : (node.torsionType ?? "numerical"),
+            torsionValue: kin.torsion
+          } : null,
+          currentT: tVal,
+          isStationary,
+          isDegenerate
+        };
+      }
+
+      case "field": {
+        const density = node.density ?? 15;
+        const [xMin, xMax] = node.xDomain;
+        const [yMin, yMax] = node.yDomain;
+        const is3D = node.dimensions === 3;
+        const [zMin, zMax] = is3D ? (node.zDomain ?? [-5, 5]) : [0, 0];
+
+        const vectors: any[] = [];
+        const cols = density;
+        const rows = density;
+        const layers = is3D ? density : 1;
+
+        for (let layer = 0; layer < layers; layer++) {
+          for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+              const x = xMin + (col / (cols - 1)) * (xMax - xMin);
+              const y = yMin + (row / (rows - 1)) * (yMax - yMin);
+              const z = is3D ? zMin + (layer / (layers - 1)) * (zMax - zMin) : 0;
+
+              const scopeWithXYZ = { ...scope, x, y, z };
+              const components = node.components as [string, string, string];
+
+              const fx = evaluateExpression(compileExpression(components[0]), scopeWithXYZ);
+              const fy = evaluateExpression(compileExpression(components[1]), scopeWithXYZ);
+              const fz = is3D ? evaluateExpression(compileExpression(components[2]), scopeWithXYZ) : 0;
+
+              vectors.push({
+                position: [x, y, z],
+                vector: [fx, fy, fz],
+                magnitude: Math.sqrt(fx*fx + fy*fy + fz*fz)
+              });
+            }
+          }
+        }
+
+        return {
+          ...node,
+          type: "field",
+          vectors,
+          dimensions: node.dimensions
+        };
+      }
+
+      case "region": {
+        // For now, return the region data for rendering
+        // Actual region rendering would need boundary curve sampling
+        return {
+          ...node,
+          type: "region",
+          boundary: node.boundary,
+          orientation: node.orientation ?? "ccw"
+        };
+      }
+
+      case "camera": {
+        return {
+          ...node,
+          type: "camera",
+          mode: node.mode ?? "fixed"
+        };
+      }
+
+      case "timeline": {
+        const currentValue = this.variables.get(node.name) ?? node.default ?? node.domain[0];
+        return {
+          ...node,
+          type: "timeline",
+          value: currentValue,
+          speed: node.speed ?? 1.0,
+          loop: node.loop ?? true,
+          autoplay: node.autoplay ?? false
+        };
+      }
+
       default:
         return node;
     }

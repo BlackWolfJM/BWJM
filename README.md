@@ -375,7 +375,9 @@ Si el usuario prefiere no escribir el codigo del bloque manualmente, puede acced
 
 ## 4. Futuras Herramientas del Proyecto (Roadmap)
 
-Conforme a la vision integral de la especificacion de BlackWolfJM, el ecosistema evolucionara a traves de las siguientes herramientas:
+Conforme a la vision integral de la especificacion de BlackWolfJM, el ecosistema evolucionara a traves de las siguientes herramientas y bloques curriculares:
+
+### 4.1. Herramientas del Ecosistema
 
 1. Aplicacion de Escritorio Standalone (BWJM Desktop):
    - Construida sobre Tauri / Rust con aislamiento seguro de procesos y consumo minimo de memoria.
@@ -397,6 +399,33 @@ Conforme a la vision integral de la especificacion de BlackWolfJM, el ecosistema
 
 6. Sistema de Aprendizaje Activo y Evaluacion por Pasos:
    - Modo examen con verificacion formal paso a paso de procedimientos matematicos y generacion de ejercicios parametricos.
+
+### 4.2. Catalogo Tematico de Calculo Vectorial (20 Bloques de Innovacion Cientifica)
+
+El desarrollo del motor grafico y analitico se estructura en 20 bloques curriculares transversales (200 funcionalidades interactivas compuestas):
+
+| N. Bloque | Area Tematica | Espacio | Descripcion Funcional |
+|---:|---|---|---|
+| 01 | Motor temporal y reloj de animaciones | 2D/3D | Linea temporal global, reproduccion parametrica continua a 60 FPS y control de velocidad. |
+| 02 | Funciones reales y transformaciones | 2D | Deformaciones continuas, familias de funciones y traslaciones parametricas. |
+| 03 | Conicas y geometria analitica plana | 2D | Excentricidad variable, focos dinámicos y transicion conica continua. |
+| 04 | Vectores, rectas, planos y cuadraticas | 3D | Operaciones vectoriales espaciales, producto cruz, planos tangentes y superficies cuadraticas. |
+| 05 | Coordenadas polares, cilindricas y esfericas | 2D/3D | Mallas de transformacion de coordenadas, curvas polares y solidos esfericos. |
+| 06 | Movimiento sobre curvas planas 2D | 2D | Particula movil, vector velocidad, aceleracion y radio de curvatura en el plano. |
+| 07 | Cinematica espacial y trayectorias 3D | 3D | Helices, curvas de Viviani, marcos Frenet-Serret móviles y particulas tridimensionales. |
+| 08 | Curvatura, torsion y geometria diferencial | 3D | Triedro ortonormal (T, N, B), planos osculador/normal/rectificante y circulo osculador. |
+| 09 | Funciones multivariables y curvas de nivel | 2D/3D | Planos de corte horizontal, curvas de nivel topologicas y superficies $z = f(x, y)$. |
+| 10 | Limites, continuidad y trayectorias visuales | 2D/3D | Acercamiento por rectas y parabolas para deteccion visual y analitica de no-existencia de limites. |
+| 11 | Derivadas parciales, gradiente y cadena | 3D | Planos tangentes, lineas de maxima pendiente y campo de vectores gradiente $\nabla f$. |
+| 12 | Extremos, Hessiano y Lagrange | 3D | Puntos silla, maximos/minimos relativos y optimizacion con multiplicadores de Lagrange. |
+| 13 | Areas, Riemann e integrales dobles | 2D/3D | Prismas de Riemann en volumenes, sumas dobles y aproximacion numerica. |
+| 14 | Coordenadas polares y Jacobianos | 2D/3D | Elemento diferencial de area $r \, dr \, d\theta$ y transformaciones bilineales. |
+| 15 | Integrales triples y solidos de revolucion | 3D | Integracion por arandelas y cascarones con cumplimiento de la Ley Geometrica de $2\pi$. |
+| 16 | Campos vectoriales 2D, divergencia y rotacional | 2D | Rejillas quiver, calculo de divergencia $\nabla \cdot \mathbf{F}$ y rotacional escalar $(\nabla \times \mathbf{F})_z$. |
+| 17 | Integrales de linea y Teorema de Green | 2D | Circulacion cerrada, trabajo de fuerzas, conservatividad y equivalencia $\oint = \iint$. |
+| 18 | Superficies parametricas y flujo | 3D | Muestreo de superficies $\mathbf{r}(u, v)$, vectores normales fundamentales y area de superficie. |
+| 19 | Teorema de Stokes espacial | 3D | Circulacion espacial sobre curvas cerradas y flujo del rotacional $\iint (\nabla \times \mathbf{F}) \cdot d\mathbf{S}$. |
+| 20 | Teorema de la Divergencia de Gauss | 3D | Flujo sobre superficies cerradas y balance neto con la integral triple de divergencia. |
 
 ---
 
@@ -421,7 +450,6 @@ BWJM/
 ├── docs/
 │   └── images/              # Capturas y diagramas tecnicos de las funcionalidades
 ├── Especificacion_bwjm_Formato_Cientifico_Interactivo.md
-├── BWJM_200_FUNCIONALIDADES_GRAFICAS_ANIMADAS_CALCULO_VECTORIAL.md
 └── package.json
 ```
 
