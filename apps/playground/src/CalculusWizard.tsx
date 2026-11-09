@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import type { CalculusVizMode } from "@mathmd/ast";
+import { compileExpression, evaluateExpression } from "@mathmd/math";
 
 type Field = { key: string; label: string; options?: string[] };
 interface Template {
@@ -27,13 +28,13 @@ const templates: Template[] = [
  { mode:"area-parametric",label:"04 · Área firmada paramétrica",
    help:"Proyección firmada respecto a X; los retrocesos pueden cancelar áreas.",
    formula:"A_firmada = ∫ y(t) x′(t) dt",
-   values:{paramX:"t-sin(t)",paramY:"1-cos(t)",a:"0",b:"6.283185307179586"},
+   values:{paramX:"t-sin(t)",paramY:"1-cos(t)",a:"0",b:"2*pi"},
    fields:[{key:"paramX",label:"x(t)"},{key:"paramY",label:"y(t)"},
      {key:"a",label:"t inicial"},{key:"b",label:"t final"}] },
  { mode:"area-polar",label:"05 · Área polar y lóbulos",
    help:"Radio exterior ≥ radio interior ≥ 0; selecciona el sector angular.",
    formula:"A = ½ ∫ (r_ext²−r_int²) dθ",
-   values:{f:"1+cos(theta)",g:"0",a:"0",b:"6.283185307179586"},
+   values:{f:"1+cos(theta)",g:"0",a:"0",b:"2*pi"},
    fields:[{key:"f",label:"r exterior(θ)"},{key:"g",label:"r interior(θ)"},
      {key:"a",label:"θ inicial (rad)"},{key:"b",label:"θ final (rad)"}] },
  { mode:"double-region",label:"06 · Integral doble Tipo I / II",
@@ -56,7 +57,7 @@ const templates: Template[] = [
  { mode:"double-polar",label:"08 · Integral doble en coordenadas polares",
    help:"Sustituye x=r cos θ, y=r sin θ y aplica el jacobiano r.",
    formula:"∫∫ h(r cos θ,r sin θ) r dr dθ",
-   values:{f:"1",g:"0",integrand:"x^2+y^2",a:"0",b:"6.283185307179586"},
+   values:{f:"1",g:"0",integrand:"x^2+y^2",a:"0",b:"2*pi"},
    fields:[{key:"f",label:"r exterior(θ)"},{key:"g",label:"r interior(θ)"},
      {key:"integrand",label:"Integrando h(x,y)"},
      {key:"a",label:"θ inicial (rad)"},{key:"b",label:"θ final (rad)"}] },
@@ -71,48 +72,59 @@ const templates: Template[] = [
  { mode:"green",label:"10 · Integral de línea / teorema de Green",
    help:"Curva cerrada y simple, campo C¹; compara circulación y rotacional interior.",
    formula:"∮ P dx + Q dy = ∬ (Qₓ−Pᵧ) dA",
-   values:{paramX:"cos(t)",paramY:"sin(t)",fieldP:"-y/2",fieldQ:"x/2",a:"0",b:"6.283185307179586"},
+   values:{paramX:"cos(t)",paramY:"sin(t)",fieldP:"-y/2",fieldQ:"x/2",a:"0",b:"2*pi"},
    fields:[{key:"paramX",label:"Contorno x(t)"},{key:"paramY",label:"Contorno y(t)"},
      {key:"fieldP",label:"P(x,y)"},{key:"fieldQ",label:"Q(x,y)"},
      {key:"a",label:"t inicial"},{key:"b",label:"t final"}] },
 ];
 
+function parseConstant(input: string): number {
+  try {
+    const result = evaluateExpression(compileExpression(input), {});
+    return Number.isFinite(result) ? result : Number.NaN;
+  } catch { return Number.NaN; }
+}
 interface Props { onInsert: (block: string) => void }
 export const CalculusWizard: React.FC<Props> = ({onInsert}) => {
   const [mode,setMode]=useState<CalculusVizMode>("area-dx");
   const [values,setValues]=useState<Record<string,string>>({...templates[0].values});
   const template=templates.find(option=>option.mode===mode)??templates[0];
-  const invalidDomain=!Number.isFinite(Number(values.a)) || !Number.isFinite(Number(values.b)) ||
-    Number(values.a)>=Number(values.b);
-  const invalidReverse=mode==="change-order" && (
-    !Number.isFinite(Number(values.reverseA)) || !Number.isFinite(Number(values.reverseB)) ||
-    Number(values.reverseA)>=Number(values.reverseB));
+  const aValue=parseConstant(values.a??"");
+  const bValue=parseConstant(values.b??"");
+  const reverseAValue=parseConstant(values.reverseA??"");
+  const reverseBValue=parseConstant(values.reverseB??"");
+  const axisOffsetValue=parseConstant(values.axisOffset??"0");
+  const invalidDomain=!Number.isFinite(aValue) || !Number.isFinite(bValue) || aValue>=bValue;
+  const invalidReverse=mode==="change-order" &&
+    (!Number.isFinite(reverseAValue)||!Number.isFinite(reverseBValue)||reverseAValue>=reverseBValue);
   const invalidAxis=mode==="revolution" && (
     (values.axis==="y"&&values.method!=="shells")||
     (values.axis==="x"&&values.method==="shells"));
+  const invalidOffset=mode==="revolution"&&!Number.isFinite(axisOffsetValue);
   const invalidExpr=template.fields.some(field=>!field.options &&
     !["a","b","reverseA","reverseB","axisOffset"].includes(field.key)&&
     !values[field.key]?.trim());
-  const error=invalidDomain?"El límite final debe superar al inicial.":
+  const error=invalidDomain?"Escribe límites válidos (admite pi y 2*pi) y un final mayor al inicio.":
     invalidReverse?"Los límites del segundo orden no son válidos.":
     invalidAxis?"Cascarones con eje Y; discos o arandelas con eje X.":
+    invalidOffset?"Desplazamiento del eje inválido.":
     invalidExpr?"Completa todas las expresiones necesarias.":null;
 
   const generated=useMemo(()=>{
     const fence=String.fromCharCode(96).repeat(3);
     const lines=[fence+"calculusviz","mode: "+mode,
-      "domain: ["+values.a+", "+values.b+"]","samples: 160"];
+      "domain: ["+aValue+", "+bValue+"]","samples: 160"];
     ["f","g","integrand","paramX","paramY","fieldP","fieldQ","reverseLower","reverseUpper"]
       .forEach(key=>{if(values[key]&&template.fields.some(field=>field.key===key)) {
         lines.push(key+": "+JSON.stringify(values[key]));
       }});
     if(mode==="double-region")lines.push("order: "+values.order);
     if(mode==="change-order")lines.push("order: dydx",
-      "reverseDomain: ["+values.reverseA+", "+values.reverseB+"]");
+      "reverseDomain: ["+reverseAValue+", "+reverseBValue+"]");
     if(mode==="revolution")lines.push("axis: "+values.axis,
-      "method: "+values.method,"axisOffset: "+(values.axisOffset||"0"));
+      "method: "+values.method,"axisOffset: "+axisOffsetValue);
     return [...lines,fence].join("\n");
-  },[mode,values,template]);
+  },[mode,values,template,aValue,bValue,reverseAValue,reverseBValue,axisOffsetValue]);
 
   return <section className="bwjm-calculus-wizard" aria-label="Asistente de cálculo integral">
     <header className="bwjm-calculus-wizard-header">
