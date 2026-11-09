@@ -2127,3 +2127,193 @@ body {
   .bwjm-adaptive-configuration { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .bwjm-adaptive-parameters { padding:.6rem; }
 }
+
+
+/* ── Appearance themes: 6 six-color palettes supplied for BWJM Studio ──
+ * UI surfaces may use accessible tints derived from the supplied swatches.
+ * The original six colors remain intact in the ThemePicker preview strip.
+ * Math formulas, scientific graph data and documents are never rewritten.
+ */
+.theme-bruma {
+  --bg-app:#EADED4; --bg-surface:#F5ECE8; --bg-panel:#EADFE1;
+  --bg-card:#FFF8F5; --bg-elevated:#DFD2D7; --border:#C7B7BD;
+  --border-subtle:rgba(85,95,119,.20); --border-focus:#AA6077;
+  --text-main:#30394F; --text-secondary:#555F77; --text-muted:#686477;
+  --text-dark:#30394F; --primary:#AA6077; --primary-hover:#90485F;
+  --primary-glow:rgba(170,96,119,.20); --accent-math:#AA6077;
+  --accent-chart:#555F77; --accent-success:#226B54; --accent-warning:#9F5D29;
+  --accent-error:#A92D42; --bg-sheet:#FFFBF8; --border-sheet:#D9C6CC;
+}
+.theme-marea {
+  --bg-app:#074659; --bg-surface:#0B4B5C; --bg-panel:#0E5360;
+  --bg-card:#165D6A; --bg-elevated:#1C6873; --border:#357581;
+  --border-subtle:rgba(212,221,198,.19); --border-focus:#D98229;
+  --text-main:#F9FCF1; --text-secondary:#D4DDC6; --text-muted:#B1C7BE;
+  --text-dark:#163A3A; --primary:#D98229; --primary-hover:#E99A46;
+  --primary-glow:rgba(217,130,41,.22); --accent-math:#D98229;
+  --accent-chart:#049494; --accent-success:#B5E2BD; --accent-warning:#F7CA70;
+  --accent-error:#F19B8E; --bg-sheet:#FCFDF5; --border-sheet:#BCD7CE;
+}
+.theme-lino {
+  --bg-app:#F2F1EC; --bg-surface:#F9F7F1; --bg-panel:#EDE6DC;
+  --bg-card:#FFFCF6; --bg-elevated:#E0D4C3; --border:#C8BBA9;
+  --border-subtle:rgba(84,84,83,.16); --border-focus:#7A6A54;
+  --text-main:#292925; --text-secondary:#545453; --text-muted:#6F695E;
+  --text-dark:#292925; --primary:#7A6A54; --primary-hover:#5D4D3A;
+  --primary-glow:rgba(122,106,84,.19); --accent-math:#7A6A54;
+  --accent-chart:#9D8B75; --accent-success:#3B7358; --accent-warning:#91642B;
+  --accent-error:#B13535; --bg-sheet:#FFFEFA; --border-sheet:#DDD0BD;
+}
+.theme-oliva {
+  --bg-app:#F9F9F1; --bg-surface:#F4F3E7; --bg-panel:#EAE9D9;
+  --bg-card:#FFFFFF; --bg-elevated:#E0DFC8; --border:#C5C4B0;
+  --border-subtle:rgba(92,92,92,.15); --border-focus:#746644;
+  --text-main:#272723; --text-secondary:#5C5C5C; --text-muted:#67685C;
+  --text-dark:#272723; --primary:#746644; --primary-hover:#5B4D31;
+  --primary-glow:rgba(116,102,68,.2); --accent-math:#746644;
+  --accent-chart:#71726F; --accent-success:#426E40; --accent-warning:#946424;
+  --accent-error:#A62E25; --bg-sheet:#FFFFFB; --border-sheet:#D6D6C3;
+}
+.theme-bosque {
+  --bg-app:#243214; --bg-surface:#2B3B1C; --bg-panel:#344623;
+  --bg-card:#3A4F29; --bg-elevated:#4B6035; --border:#63714C;
+  --border-subtle:rgba(251,251,227,.15); --border-focus:#CB8740;
+  --text-main:#FBFBE3; --text-secondary:#D2D4B7; --text-muted:#BABD9D;
+  --text-dark:#243214; --primary:#CB8740; --primary-hover:#DEA15D;
+  --primary-glow:rgba(203,135,64,.22); --accent-math:#CB8740;
+  --accent-chart:#ACAC94; --accent-success:#C0D995; --accent-warning:#F0BC78;
+  --accent-error:#F1A1A1; --bg-sheet:#FBFBE3; --border-sheet:#D9D7B8;
+}
+.theme-arcilla {
+  --bg-app:#F3E5DF; --bg-surface:#FAF0EB; --bg-panel:#E7C6BB;
+  --bg-card:#FFF8F4; --bg-elevated:#DDB1A3; --border:#CD9682;
+  --border-subtle:rgba(84,62,49,.17); --border-focus:#B22414;
+  --text-main:#543E31; --text-secondary:#705448; --text-muted:#795F51;
+  --text-dark:#543E31; --primary:#B22414; --primary-hover:#8E1C0F;
+  --primary-glow:rgba(178,36,20,.19); --accent-math:#B22414;
+  --accent-chart:#9C7668; --accent-success:#33745B; --accent-warning:#9D632D;
+  --accent-error:#B22414; --bg-sheet:#FFFAF5; --border-sheet:#E4C6B8;
+}
+
+/* One dropdown under Vista → Apariencia instead of a row of duplicated themes. */
+.bwjm-theme-trigger {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:.3rem;
+  min-height:67px;
+  min-width:110px;
+  padding:.42rem .65rem;
+  background:transparent;
+  color:var(--text-secondary);
+  border:1px solid transparent;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:.73rem;
+  font-weight:650;
+}
+.bwjm-theme-trigger:hover,.bwjm-theme-trigger[aria-expanded="true"] {
+  border-color:var(--border-focus);
+  background:var(--bg-elevated);
+  color:var(--text-main);
+}
+.bwjm-theme-trigger-colors {
+  width:58px; height:17px; display:flex;
+  border-radius:4px; overflow:hidden;
+  border:1px solid var(--border);
+}
+.bwjm-theme-trigger-colors i,.bwjm-theme-swatch-strip i {display:block;flex:1;min-width:0;}
+.bwjm-theme-trigger-text {white-space:nowrap;}
+.bwjm-theme-trigger svg {position:absolute;margin-left:86px; margin-top:12px;}
+.bwjm-theme-popover {
+  position:fixed;
+  width:min(325px,calc(100vw - 16px));
+  max-height:min(72vh,540px);
+  overflow-y:auto;
+  z-index:1000;
+  padding:.5rem;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--bg-surface);
+  color:var(--text-main);
+  box-shadow:0 16px 45px rgba(0,0,0,.32);
+  font-family:var(--font-sans);
+}
+.bwjm-theme-popover-heading {
+  display:flex;flex-direction:column;gap:.2rem;
+  padding:.7rem .7rem .65rem;
+}
+.bwjm-theme-popover-heading strong {font-size:.88rem;}
+.bwjm-theme-popover-heading small,
+.bwjm-theme-option-caption small {font-size:.7rem;color:var(--text-secondary);line-height:1.35;}
+.bwjm-theme-option {
+  display:grid;
+  grid-template-columns:112px minmax(0,1fr) 14px;
+  align-items:center;
+  gap:.6rem;
+  width:100%;
+  padding:.6rem .55rem;
+  border:1px solid transparent;
+  border-radius:8px;
+  background:transparent;
+  color:var(--text-main);
+  cursor:pointer;
+  text-align:left;
+  font-family:inherit;
+}
+.bwjm-theme-option:hover {background:var(--bg-elevated);}
+.bwjm-theme-option.selected {background:var(--bg-panel);border-color:var(--border-focus);}
+.bwjm-theme-option:focus-visible,.bwjm-theme-trigger:focus-visible {
+  outline:2px solid var(--border-focus);
+  outline-offset:2px;
+}
+.bwjm-theme-swatch-strip {
+  display:flex;overflow:hidden;
+  height:27px;width:112px;
+  border-radius:5px;
+  border:1px solid var(--border-subtle);
+  box-shadow:0 1px 2px rgba(0,0,0,.09);
+}
+.bwjm-theme-option-caption {display:flex;flex-direction:column;gap:.2rem;min-width:0;}
+.bwjm-theme-option-caption strong {font-size:.75rem;font-weight:670;}
+.bwjm-theme-option-check {font-size:.9rem;color:var(--primary);font-weight:750;}
+.bwjm-theme-popover-footer {
+  margin-top:.4rem;
+  padding:.7rem .55rem .35rem;
+  border-top:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.55rem;
+}
+.bwjm-theme-popover-footer span {font-size:.69rem;color:var(--text-secondary);max-width:190px;}
+.bwjm-theme-popover-footer button {
+  padding:.35rem .6rem;
+  font-size:.73rem;
+  background:var(--bg-elevated);
+  color:var(--text-main);
+  border:1px solid var(--border);
+  border-radius:6px;
+  cursor:pointer;
+}
+/* These accents follow the chosen palette, but the document remains a
+ * readable paper-like surface and plot data retain their original colors. */
+.bwjm-app-container:is(.theme-bruma,.theme-marea,.theme-lino,.theme-oliva,.theme-bosque,.theme-arcilla)
+  .bwjm-studio-mark {
+  background:linear-gradient(135deg,var(--primary),var(--accent-chart));
+  box-shadow:0 4px 16px var(--primary-glow);
+}
+.bwjm-app-container:is(.theme-bruma,.theme-marea,.theme-lino,.theme-oliva,.theme-bosque,.theme-arcilla)
+  .bwjm-prose-block h1,
+.bwjm-app-container:is(.theme-bruma,.theme-marea,.theme-lino,.theme-oliva,.theme-bosque,.theme-arcilla)
+  .bwjm-prose-block h2 {
+  color:var(--text-dark);
+}
+.bwjm-app-container:is(.theme-bruma,.theme-marea,.theme-lino,.theme-oliva,.theme-bosque,.theme-arcilla)
+  .bwjm-prose-block h2 {
+  border-bottom-color:var(--border-sheet);
+}
+@media (prefers-reduced-motion:reduce) {
+  .bwjm-theme-trigger,.bwjm-theme-option {transition:none;}
+}
