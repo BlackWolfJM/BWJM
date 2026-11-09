@@ -1,0 +1,56 @@
+name: Preview BWJM Studio on GitHub Pages
+
+on:
+  push:
+    branches:
+      - feat/scientific-tables-equations-3d-20261108
+    paths:
+      - '.github/workflows/preview-pages.yml'
+      - 'apps/playground/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages-bwjm-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout scientific preview branch
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - name: Configure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install monorepo dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build shared scientific packages
+        run: pnpm --filter "./packages/*" run build
+      - name: Build public Studio with repository-relative assets
+        run: pnpm --filter @mathmd/playground run build -- --base=/BWJM/
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Studio site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/playground/dist
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
