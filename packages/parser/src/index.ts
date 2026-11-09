@@ -195,6 +195,7 @@ function buildMathMDNode(
       payload = {
         ...base,
         equation: data.equation,
+        paramControls: data.paramControls,
         xDomain: "x" in data ? data.x : "xDomain" in data ? data.xDomain : [-5, 5],
         yDomain: "y" in data ? data.y : "yDomain" in data ? data.yDomain : undefined,
         grid: "grid" in data ? data.grid : true,
@@ -242,6 +243,7 @@ function buildMathMDNode(
       payload = {
         ...base,
         equation: data.equation,
+        paramControls: data.paramControls,
         xDomain: "x" in data ? data.x : "xDomain" in data ? data.xDomain : [-5, 5],
         yDomain: "y" in data ? data.y : "yDomain" in data ? data.yDomain : [-5, 5],
         samples,
@@ -325,6 +327,7 @@ function buildMathMDNode(
       payload = {
         ...base,
         x: "x" in data ? data.x : "cos(t)",
+        paramControls: data.paramControls,
         y: "y" in data ? data.y : "sin(t)",
         z: "z" in data ? data.z : "t",
         tDomain: "t" in data ? data.t : "tDomain" in data ? data.tDomain : [0, 2 * Math.PI],
@@ -374,6 +377,7 @@ function buildMathMDNode(
       payload = {
         ...base,
         field: data.field,
+        paramControls: data.paramControls,
         xDomain: "x" in data ? data.x : "xDomain" in data ? data.xDomain : [-5, 5],
         yDomain: "y" in data ? data.y : "yDomain" in data ? data.yDomain : [-5, 5],
         density,
@@ -909,6 +913,7 @@ function buildMathMDNode(
       const payload = {
         ...base,
         mode: data.mode,
+        paramControls: data.paramControls,
         domain: data.domain ?? [0, 1],
         f: asExpression(data.f), g: asExpression(data.g), integrand: asExpression(data.integrand),
         paramX: asExpression(data.paramX), paramY: asExpression(data.paramY),
@@ -956,6 +961,7 @@ function buildMathMDNode(
       const payload = {
         ...base,
         field: data.field,
+        paramControls: data.paramControls,
         seeds: data.seeds ?? [[1, 0], [0, 1], [-1, 0], [0, -1]],
         xDomain: data.xDomain ?? data.x ?? [-3, 3],
         yDomain: data.yDomain ?? data.y ?? [-3, 3],
@@ -980,6 +986,7 @@ function buildMathMDNode(
     case "parametric2d": {
       const payload = { ...base,
         x: data.x, y: data.y,
+        paramControls: data.paramControls,
         tDomain: data.tDomain ?? data.t ?? [0, 2 * Math.PI],
         samples: data.samples ?? 200,
         timelineRef: data.timelineRef,
