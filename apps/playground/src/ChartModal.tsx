@@ -169,7 +169,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
               className={`bwjm-tab-item ${kind === "parametric2d" ? "active" : ""}`}
               onClick={() => setKind("parametric2d")}
             >
-              Curva móvil 2D
+              Curva paramétrica 2D
             </button>
             <button
               className={`bwjm-tab-item ${kind === "experiment" ? "active" : ""}`}

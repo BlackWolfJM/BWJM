@@ -303,6 +303,11 @@ y: sin(t)
 z: t / 3
 tDomain: [0, 6.28]
 color: "#0284c7"
+animated: true
+showVectors: true
+showTNB: true
+showLegend: false
+showInfo: false
 \`\`\`
 `,
   },
@@ -981,7 +986,8 @@ export function BWJMStudio() {
           ];
           const details = document.createElement("details");
           details.className = "bwjm-graph-settings";
-          details.open = openGraphSettingsRef.current.has(node.id);
+          const settingsKey = node.type + ":" + node.range.start.offset;
+          details.open = openGraphSettingsRef.current.has(settingsKey);
           const summary = document.createElement("summary");
           summary.textContent = "Personalizar gráfica";
           details.appendChild(summary);
@@ -995,7 +1001,7 @@ export function BWJMStudio() {
             checkbox.checked = key === "animated" && node.type === "parametric2d"
               ? configured !== false : configured === true;
             checkbox.onchange = () => {
-              openGraphSettingsRef.current.add(node.id);
+              openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, key, checkbox.checked));
             };
@@ -1003,8 +1009,8 @@ export function BWJMStudio() {
             controls.appendChild(wrapper);
           });
           details.addEventListener("toggle", () => {
-            if (details.open) openGraphSettingsRef.current.add(node.id);
-            else openGraphSettingsRef.current.delete(node.id);
+            if (details.open) openGraphSettingsRef.current.add(settingsKey);
+            else openGraphSettingsRef.current.delete(settingsKey);
           });
           details.appendChild(controls);
           cardBody.appendChild(details);
