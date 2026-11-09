@@ -54,6 +54,23 @@ const range = {
 };
 
 describe('SVGRenderer', () => {
+  it('renders shaded calculus regions with guide slices instead of a placeholder', () => {
+    const container = createMockElement('div');
+    const renderer = new SVGRenderer(container as unknown as HTMLElement, 720, 390);
+    renderer.render({
+      id: 'area-dx', range, type: 'calculusviz', mode: 'area-dx', domain: [0, 2],
+      f: '2*x', g: 'x^2',
+      value: 4/3, valueLabel: 'Área', unit: 'u²',
+      polygons: [{ points: [[0,0],[1,2],[2,0],[0,0]], fill: '#a5b4fc' }],
+      curves: [{ points: [[0,0],[1,2],[2,0]], color: '#2563eb' }],
+      guides: [{ a: [1,0], b: [1,2] }],
+    } as never);
+    const tags = allDescendants(renderer.getElement() as unknown as MockElement).map(el => el.tagName);
+    expect(tags).toContain('polygon');
+    expect(tags).toContain('polyline');
+    expect(tags).not.toContain('Unsupported node type');
+  });
+
   it('renders the vectors calculated by core instead of placeholder arrows', () => {
     const container = createMockElement('div');
     const renderer = new SVGRenderer(container as unknown as HTMLElement, 300, 200);
