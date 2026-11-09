@@ -1797,14 +1797,13 @@ export function BWJMStudio() {
       const plotlyRenderer = plotlyRenderersRef.current.get(nodeId);
       if (plotlyRenderer) {
         const currentT = currentVars["t"] ?? (nodeData as any).tDomain?.[1];
-        plotlyRenderer.render({
-          ...nodeData,
-          scope: currentVars,
-          currentT,
-          particle: true,
-          showTNB: true,
-          showVectors: true,
-        } as any);
+        const curveOpts = nodeData.type === "curve3d" ? {
+          particle: nodeData.animated === true,
+          showVectors: nodeData.animated === true && nodeData.showVectors === true,
+          showTNB: nodeData.animated === true && nodeData.showTNB === true,
+          showLegend: nodeData.showLegend === true,
+        } : {};
+        plotlyRenderer.render({ ...nodeData, scope: currentVars, currentT, ...curveOpts } as any);
       }
     });
 
@@ -1819,9 +1818,10 @@ export function BWJMStudio() {
             ...nodeData,
             scope: currentVars,
             currentT,
-            particle: nodeType === "curve3d",
-            showTNB: nodeType === "curve3d",
-            showVectors: nodeType === "curve3d",
+            particle: nodeType === "curve3d" && (nodeData as any).animated === true,
+            showTNB: nodeType === "curve3d" && (nodeData as any).animated === true && (nodeData as any).showTNB === true,
+            showVectors: nodeType === "curve3d" && (nodeData as any).animated === true && (nodeData as any).showVectors === true,
+            showLegend: nodeType === "curve3d" && (nodeData as any).showLegend === true,
           } as any);
         }
       }
