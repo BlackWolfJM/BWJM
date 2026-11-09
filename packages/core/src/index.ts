@@ -50,7 +50,8 @@ export class MathMDCore {
     // Display them with explicitly documented provisional value 1 rather than crashing
     // the entire scientific editor; activating graph controls persists the real defaults.
     this.document.children.forEach(node => {
-      if ("paramControls" in node && node.paramControls?.enabled) return;
+      if (!("paramControls" in node) || !node.paramControls ||
+        node.paramControls.enabled) return;
       let expressions: string[] = [];
       switch (node.type) {
         case "plot2d": case "surface3d": expressions=[node.equation]; break;

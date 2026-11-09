@@ -80,7 +80,7 @@ export function extractFreeParameters(
 ): string[] {
   const excluded=new Set(
     ["x","y","z","t","r","theta","phi","pi","e","tau","i","infinity",
-      "true","false",...independent].map(name=>name.toLowerCase()));
+      "true","false",...independent]);
   const symbols=new Set<string>();
   for(const expr of expressions){
     if(!expr?.trim())continue;
@@ -93,7 +93,7 @@ export function extractFreeParameters(
     tree.traverse((node:any)=>{
       if(!node.isSymbolNode)return;
       const name=String(node.name);
-      if(!functions.has(name)&&!excluded.has(name.toLowerCase())&&
+      if(!functions.has(name)&&!excluded.has(name)&&
         /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) symbols.add(name);
     });
   }

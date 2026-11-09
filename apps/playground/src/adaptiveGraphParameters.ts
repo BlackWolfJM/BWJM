@@ -54,7 +54,7 @@ export function validateGraphControlSettings(config:GraphParameterControls):stri
   const seen=new Set<string>();
   for(const p of config.parameters) {
     if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(p.name)||
-      ["x","y","z","t","r","theta","phi","pi","e"].includes(p.name.toLowerCase())||
+      ["x","y","z","t","r","theta","phi","pi","e"].includes(p.name)||
       seen.has(p.name))return "Nombre de parámetro inválido o repetido.";
     seen.add(p.name);
     if(![p.min,p.max,p.step,p.default].every(Number.isFinite)||
