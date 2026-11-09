@@ -72,7 +72,7 @@ export function createAdaptiveParameterEditor(
     explanation.className = "bwjm-adaptive-hint";
     explanation.textContent = defaults.length
       ? "Detectados: " + defaults.map(item => item.name).join(", ") +
-        ". Actívalos para cambiar sus valores sin editar las ecuaciones."
+        ". Sin slider ni variable global se usa 1 provisionalmente. Actívalos para establecer sus valores."
       : "Esta gráfica no tiene coeficientes libres detectables. La variable temporal t se controla con reproducción.";
     container.append(explanation, message);
     return { element: container, dispose: () => { disposed = true; } };
