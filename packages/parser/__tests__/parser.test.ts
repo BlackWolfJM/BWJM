@@ -3,20 +3,20 @@ import { parseMathMD } from "../src/index.js";
 
 describe("MathMD Parser", () => {
   it("parses scientific data tables and rejects invalid row widths", () => {
-    const valid = parseMathMD("\n\`\`\`datatable\ncolumns: [t, x]\nunits: [s, m]\nrows:\n  - [0, 2]\n  - [1, 3]\n\`\`\`\n");
+    const valid = parseMathMD("\n```datatable\ncolumns: [t, x]\nunits: [s, m]\nrows:\n  - [0, 2]\n  - [1, 3]\n```\n");
     expect(valid.children).toHaveLength(1);
     expect(valid.children[0].type).toBe("datatable");
-    const invalid = parseMathMD("\n\`\`\`datatable\ncolumns: [t, x]\nrows:\n  - [0]\n\`\`\`\n");
+    const invalid = parseMathMD("\n```datatable\ncolumns: [t, x]\nrows:\n  - [0]\n```\n");
     expect(invalid.children).toHaveLength(0);
     expect(invalid.diagnostics.some(d => d.code === "MATHMD_TABLE_DIMENSIONS")).toBe(true);
   });
 
   it("should parse a simple plot2d block", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: x^2
 x: [-5, 5]
-\`\`\`
+```
 `;
 
     const doc = parseMathMD(markdown);
@@ -29,11 +29,11 @@ x: [-5, 5]
 
   it("should parse a surface3d block", () => {
     const markdown = `
-\`\`\`surface3d
+```surface3d
 equation: x^2 + y^2
 x: [-5, 5]
 y: [-5, 5]
-\`\`\`
+```
 `;
 
     const doc = parseMathMD(markdown);
@@ -45,16 +45,16 @@ y: [-5, 5]
 
   it("should parse multiple blocks", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: sin(x)
 x: [0, 6.28]
-\`\`\`
+```
 
-\`\`\`slider
+```slider
 name: a
 min: 0
 max: 10
-\`\`\`
+```
 `;
 
     const doc = parseMathMD(markdown);
@@ -66,16 +66,16 @@ max: 10
 
   it("should handle variables in equations", () => {
     const markdown = `
-\`\`\`slider
+```slider
 name: a
 min: -5
 max: 5
-\`\`\`
+```
 
-\`\`\`plot2d
+```plot2d
 equation: a*x^2
 x: [-10, 10]
-\`\`\`
+```
 `;
 
     const doc = parseMathMD(markdown);
@@ -96,12 +96,12 @@ x: [-10, 10]
 
   it("should correctly parse kebab-case properties on gradient nodes", () => {
     const markdown = `
-\`\`\`gradient
+```gradient
 function: x^2 + y^2
 point: [1, 2]
 show-surface: false
 show-level-curves: false
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -116,13 +116,13 @@ show-level-curves: false
 
   it("should defend against prototype pollution keys in YAML front matter", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: x^2
 __proto__: polluter
 constructor: polluter
 prototype: polluter
 x: [-5, 5]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -133,12 +133,12 @@ x: [-5, 5]
 
   it("should enforce bounds on surface3d samples to prevent DoS", () => {
     const markdown = `
-\`\`\`surface3d
+```surface3d
 equation: x^2 + y^2
 x: [-5, 5]
 y: [-5, 5]
 samples: 999999
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -152,7 +152,7 @@ samples: 999999
   // --- Mandatory TDD Test Cases from TASK-003B ---
 
   it("should produce deep equality when parsing identical source twice", () => {
-    const markdown = `# Title\n\n\`\`\`plot2d\nequation: x^2\nx: [-2, 2]\n\`\`\`\n\nText\n\n\`\`\`slider\nname: k\nmin: 1\nmax: 10\n\`\`\`\n`;
+    const markdown = `# Title\n\n```plot2d\nequation: x^2\nx: [-2, 2]\n```\n\nText\n\n```slider\nname: k\nmin: 1\nmax: 10\n```\n`;
     const doc1 = parseMathMD(markdown);
     const doc2 = parseMathMD(markdown);
     expect(doc1).toEqual(doc2);
@@ -160,20 +160,20 @@ samples: 999999
 
   it("should generate unique IDs within document across blocks", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: x
 x: [-1, 1]
-\`\`\`
+```
 
-\`\`\`plot2d
+```plot2d
 equation: x^2
 x: [-1, 1]
-\`\`\`
+```
 
-\`\`\`plot2d
+```plot2d
 equation: x^3
 x: [-1, 1]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(3);
@@ -187,11 +187,11 @@ x: [-1, 1]
 
   it("should preserve valid explicit ID", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 id: custom-plot-42
 equation: x^3
 x: [-2, 2]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -201,11 +201,11 @@ x: [-2, 2]
 
   it("should diagnose invalid explicit ID and omit block", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 id: "invalid id with spaces & symbols!"
 equation: x^2
 x: [-2, 2]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(0);
@@ -217,18 +217,18 @@ x: [-2, 2]
 
   it("should diagnose duplicate ID and omit duplicate block", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 id: shared-id
 equation: x
 x: [-1, 1]
-\`\`\`
+```
 
-\`\`\`slider
+```slider
 id: shared-id
 name: a
 min: 0
 max: 5
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -272,18 +272,18 @@ $$
 |----------|----------|
 | Val 1    | Val 2    |
 
-\`\`\`python
+```python
 print("Hello Python")
-\`\`\`
+```
 
-\`\`\`text
+```text
 Plain text fence
-\`\`\`
+```
 
-\`\`\`plot2d
+```plot2d
 equation: x^2
 x: [-1, 1]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -293,11 +293,11 @@ x: [-1, 1]
 
   it("should safely handle Unicode content without breaking parser", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: α*x^2 + β
 label: "Función cuadrática αβγδ 🚀"
 x: [-5, 5]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -310,16 +310,16 @@ x: [-5, 5]
 
   it("should diagnose malformed YAML syntax and process subsequent blocks", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: x^2
 this is: [unclosed list
-\`\`\`
+```
 
-\`\`\`slider
+```slider
 name: b
 min: 0
 max: 10
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -332,10 +332,10 @@ max: 10
 
   it("should expose detailed Zod schema error with code, blockType, range, and path", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: ""
 x: [-5, 5]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(0);
@@ -349,11 +349,11 @@ x: [-5, 5]
 
   it("should not fall back to default when explicit invalid value is given", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: x^2
 grid: "not-a-boolean"
 x: [-5, 5]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(0);
@@ -364,9 +364,9 @@ x: [-5, 5]
 
   it("should use documented default when field is omitted", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: x^2
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -381,19 +381,19 @@ equation: x^2
 
   it("should emit MATHMD_VALUE_CLAMPED when clamping samples or density", () => {
     const markdown = `
-\`\`\`surface3d
+```surface3d
 equation: x*y
 x: [-2, 2]
 y: [-2, 2]
 samples: 1
-\`\`\`
+```
 
-\`\`\`vectorfield2d
+```vectorfield2d
 field: ["-y", "x"]
 x: [-3, 3]
 y: [-3, 3]
 density: 100
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(2);
@@ -414,10 +414,10 @@ density: 100
 
   it("should not evaluate math expressions during parsing and report MATHMD_SCHEMA_INVALID for [0, 2*pi]", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: sin(x)
 x: [0, 2*pi]
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(0);
@@ -427,92 +427,92 @@ x: [0, 2*pi]
 
   it("should parse all 15 valid block types in a comprehensive document", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: sin(x)
 x: [-3.14, 3.14]
-\`\`\`
+```
 
-\`\`\`surface3d
+```surface3d
 equation: x^2 - y^2
 x: [-2, 2]
 y: [-2, 2]
-\`\`\`
+```
 
-\`\`\`vector2d
+```vector2d
 origin: [0, 0]
 vector: [1, 2]
-\`\`\`
+```
 
-\`\`\`vector3d
+```vector3d
 origin: [0, 0, 0]
 vector: [1, 2, 3]
-\`\`\`
+```
 
-\`\`\`curve3d
+```curve3d
 x: cos(t)
 y: sin(t)
 z: t
 t: [0, 6.28]
-\`\`\`
+```
 
-\`\`\`vectorfield2d
+```vectorfield2d
 field: ["-y", "x"]
 x: [-5, 5]
 y: [-5, 5]
-\`\`\`
+```
 
-\`\`\`gradient
+```gradient
 function: x^2 + y^2
 point: [1, 2]
-\`\`\`
+```
 
-\`\`\`tangentplane
+```tangentplane
 function: x^2 + y^2
 point: [1, 1]
-\`\`\`
+```
 
-\`\`\`slider
+```slider
 name: a
 min: 0
 max: 10
 step: 0.5
 default: 5
-\`\`\`
+```
 
-\`\`\`checkbox
+```checkbox
 name: visible
 default: true
-\`\`\`
+```
 
-\`\`\`point2d
+```point2d
 x: 3
 y: 4
 label: P
-\`\`\`
+```
 
-\`\`\`point3d
+```point3d
 x: 1
 y: 2
 z: 3
 label: Q
-\`\`\`
+```
 
-\`\`\`diagram
+```diagram
 elements: "A -> B -> C"
-\`\`\`
+```
 
-\`\`\`geometry
+```geometry
 primitives:
   - type: line
     points: [[0, 0], [1, 1]]
-\`\`\`
+```
 
-\`\`\`contour
+```contour
 function: x^2 + y^2
 x: [-3, 3]
 y: [-3, 3]
 levels: 10
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(15);
@@ -540,11 +540,11 @@ levels: 10
 
   it("should safely parse unquoted hex colors without treating them as comments or failing validation", () => {
     const markdown = `
-\`\`\`plot2d
+```plot2d
 equation: x^2
 x: [0, 1]
 color: #0284c7
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -557,14 +557,14 @@ color: #0284c7
 
   it("should parse timeline block with min and max normalized to domain (P0-01)", () => {
     const markdown = `
-\`\`\`timeline
+```timeline
 name: t
 min: 0
 max: 6.28
 default: 0
 speed: 1.0
 loop: true
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -582,13 +582,13 @@ loop: true
 
   it("should parse timeline block with explicit domain: [min, max]", () => {
     const markdown = `
-\`\`\`timeline
+```timeline
 name: u
 domain: [1, 10]
 default: 2
 speed: 2.0
 loop: false
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(1);
@@ -606,41 +606,41 @@ loop: false
 
   it("should parse scene blocks trajectory, particle, frame, vectorarrow, and field", () => {
     const markdown = `
-\`\`\`trajectory
+```trajectory
 id: traj-1
 x: cos(t)
 y: sin(t)
 z: t
 tDomain: [0, 6.28]
-\`\`\`
+```
 
-\`\`\`particle
+```particle
 trajectoryRef: traj-1
 showTrail: true
 trailLength: 20
-\`\`\`
+```
 
-\`\`\`frame
+```frame
 trajectoryRef: traj-1
 showT: true
 showN: true
 showB: true
-\`\`\`
+```
 
-\`\`\`vectorarrow
+```vectorarrow
 origin: [0, 0, 0]
 vector: [1, 2, 3]
 label: v
 color: #10b981
-\`\`\`
+```
 
-\`\`\`field
+```field
 dimensions: 2
 components: ["-y", "x"]
 xDomain: [-3, 3]
 yDomain: [-3, 3]
 density: 10
-\`\`\`
+```
 `;
     const doc = parseMathMD(markdown);
     expect(doc.children.length).toBe(5);
