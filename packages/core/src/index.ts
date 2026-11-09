@@ -278,7 +278,7 @@ export class MathMDCore {
         const numbers = pairs.filter(pair => typeof pair[0] === "number" && typeof pair[1] === "number") as number[][];
         const trend = node.trendline && numbers.length >= 2
           ? fitLinearRegression(numbers.map(pair => pair[0]), numbers.map(pair => pair[1])) : null;
-        return { ...node, x, y, trend };
+        return { ...node, chartX: x, chartY: y, trend };
       }
 
       case "statistics": {
@@ -294,7 +294,7 @@ export class MathMDCore {
         const pair = second >= 0 ? table.rows.filter((r: Array<string | number | boolean | null>) =>
           typeof r[column] === "number" && typeof r[second] === "number") : [];
         const regression = second >= 0 && pair.length >= 2
-          ? fitLinearRegression(pair.map((r: number[]) => r[column]), pair.map((r: number[]) => r[second])) : null;
+          ? fitLinearRegression(pair.map((r: Array<string | number | boolean | null>) => r[column] as number), pair.map((r: Array<string | number | boolean | null>) => r[second] as number)) : null;
         return { ...node, summary: summarizeColumn(numbers), regression };
       }
 

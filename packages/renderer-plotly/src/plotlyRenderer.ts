@@ -42,8 +42,8 @@ type PlotlyRenderNode = MathMDNode & {
   isDegenerate?: boolean;
   vectors?: { position: number[]; vector: number[]; magnitude: number }[];
   dimensions?: 2 | 3;
-  x?: Array<string | number | boolean | null>;
-  y?: Array<string | number | boolean | null>;
+  chartX?: Array<string | number | boolean | null>;
+  chartY?: Array<string | number | boolean | null>;
   trend?: { slope: number; intercept: number; r2: number } | null;
   error?: string;
 };
@@ -156,8 +156,8 @@ export class PlotlyRenderer {
       this.renderError(node.error);
       return;
     }
-    const x = node.x ?? [];
-    const y = node.y ?? [];
+    const x = node.chartX ?? [];
+    const y = node.chartY ?? [];
     const kind = node.kind;
     const color = node.color ?? "#2563eb";
     const name = node.title ?? node.yColumn ?? node.xColumn;
