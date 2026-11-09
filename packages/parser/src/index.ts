@@ -1054,6 +1054,7 @@ function buildMathMDNode(
         loop: loopVal,
         autoplay: autoplayVal,
         controls: controlsVal,
+        markers: data.markers,
       };
       const result = timelineSchema.safeParse(payload);
       if (!result.success) {

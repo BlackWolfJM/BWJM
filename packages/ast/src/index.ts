@@ -276,6 +276,7 @@ export interface TimelineNode extends MathMDNodeBase {
   autoplay?: boolean;
   // References to controlled nodes
   controls?: string[]; // IDs of nodes controlled by this timeline
+  markers?: Array<{ at: number; label: string }>; // Stored in .bwjm
 }
 
 /** Table stored as native, portable scientific data within a .bwjm document. */
@@ -736,12 +737,23 @@ const timelineNodeSchema = mathmdNodeBaseSchema.extend({
   loop: z.boolean().optional(),
   autoplay: z.boolean().optional(),
   controls: z.array(z.string()).optional(),
+  markers: z.array(z.object({
+    at: z.number().finite(),
+    label: z.string().min(1).max(80),
+  })).max(20).optional(),
 });
 
 function validateTimelineBounds(
   data: z.infer<typeof timelineNodeSchema>,
   context: z.RefinementCtx,
 ): void {
+  data.markers?.forEach((marker, index) => {
+    if (marker.at < data.domain[0] || marker.at > data.domain[1]) {
+      context.addIssue({ code: z.ZodIssueCode.custom,
+        message: "Timeline annotation must be within the time domain",
+        path: ["markers", index, "at"] });
+    }
+  });
   if (data.default !== undefined && (data.default < data.domain[0] || data.default > data.domain[1])) {
     context.addIssue({
       code: z.ZodIssueCode.custom,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, ChangeEvent } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { parseMathMD } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
@@ -24,6 +24,7 @@ import { SidebarRight } from "./SidebarRight.js";
 import { FormulaModal } from "./FormulaModal.js";
 import { ChartModal } from "./ChartModal.js";
 import { CommandPalette, CommandItem } from "./CommandPalette.js";
+import { ScientificTimeline } from "./ScientificTimeline.js";
 import "./theme.css";
 
 declare global {
@@ -138,211 +139,6 @@ function renderStatisticsPanel(report: HTMLElement, data: any): void {
     item.append(label, figure);
     report.appendChild(item);
   });
-}
-
-interface TimelineControllerProps {
-  core: MathMDCore | null;
-  timelines: TimelineNode[];
-  variables: Record<string, number>;
-  onVariableChange: (name: string, value: number) => void;
-  activeTimers: Map<string, number>;
-  setActiveTimers: React.Dispatch<React.SetStateAction<Map<string, number>>>;
-  getVariables: () => Record<string, number>;
-  subscribe: (callback: () => void) => () => void;
-}
-
-function TimelineController({
-  core,
-  timelines,
-  variables,
-  onVariableChange,
-  activeTimers: _activeTimers,
-  setActiveTimers: _setActiveTimers,
-  getVariables,
-  subscribe,
-}: TimelineControllerProps) {
-  const [masterPlaying, setMasterPlaying] = useState(false);
-  const masterPlayingRef = useRef(masterPlaying);
-  masterPlayingRef.current = masterPlaying;
-  const [masterSpeed, setMasterSpeed] = useState(1.0);
-  const [scrubValue, setScrubValue] = useState(0);
-  const animationFrameRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number>(0);
-
-  const reactiveVariables = useSyncExternalStore(
-    subscribe,
-    getVariables,
-    getVariables
-  );
-
-  const timelineVars = useMemo(() => {
-    const vars = new Set<string>();
-    timelines.forEach(tl => {
-      vars.add(tl.name);
-      tl.controls?.forEach(nodeId => {
-        if (core) {
-          const nodeData = core.getNodeData(nodeId);
-          if (nodeData && nodeData.variables) {
-            Object.keys(nodeData.variables).forEach(v => vars.add(v));
-          }
-        }
-      });
-    });
-    return Array.from(vars);
-  }, [timelines, core]);
-
-  const globalDomain = useMemo(() => {
-    if (timelines.length === 0) return [0, 1] as [number, number];
-    let min = Infinity, max = -Infinity;
-    timelines.forEach(tl => {
-      min = Math.min(min, tl.domain[0]);
-      max = Math.max(max, tl.domain[1]);
-    });
-    return [min, max] as [number, number];
-  }, [timelines]);
-
-  const step = useCallback(() => {
-    if (!core || timelineVars.length === 0) return;
-    
-    if (!masterPlayingRef.current) return;
-    
-    const now = performance.now();
-    const dt = (now - lastTimeRef.current) / 1000 * masterSpeed; // seconds * speed
-    lastTimeRef.current = now;
-
-    let anyChanged = false;
-    timelineVars.forEach(varName => {
-      const tl = timelines.find(t => t.name === varName);
-      if (!tl) return;
-      
-      const currentVal = reactiveVariables[varName] ?? tl.default ?? tl.domain[0];
-      const stepSize = (tl.domain[1] - tl.domain[0]) / 100 * dt * 30; // ~30 steps per second at 1x
-      let nextVal = currentVal + stepSize;
-      
-      if (nextVal > tl.domain[1]) {
-        if (tl.loop) {
-          nextVal = tl.domain[0] + (nextVal - tl.domain[1]);
-        } else {
-          nextVal = tl.domain[1];
-          if (masterPlayingRef.current) setMasterPlaying(false);
-        }
-      }
-      
-      if (Math.abs(nextVal - currentVal) > 1e-6) {
-        onVariableChange(varName, nextVal);
-        anyChanged = true;
-      }
-    });
-
-    if (anyChanged) {
-      const firstTl = timelines[0];
-      if (firstTl) {
-        const val = reactiveVariables[firstTl.name] ?? firstTl.default ?? firstTl.domain[0];
-        setScrubValue((val - globalDomain[0]) / (globalDomain[1] - globalDomain[0]));
-      }
-    }
-
-    if (masterPlayingRef.current) {
-      animationFrameRef.current = requestAnimationFrame(step);
-    }
-  }, [core, timelines, timelineVars, reactiveVariables, masterSpeed, globalDomain, onVariableChange]);
-
-  const togglePlay = useCallback(() => {
-    setMasterPlaying(prev => {
-      const next = !prev;
-      if (next) {
-        lastTimeRef.current = performance.now();
-        animationFrameRef.current = requestAnimationFrame(step);
-      } else if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      return next;
-    });
-  }, [step]);
-
-  const handleScrub = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
-    setScrubValue(val);
-    void globalDomain;
-    
-    timelineVars.forEach(varName => {
-      const tl = timelines.find(t => t.name === varName);
-      if (!tl) return;
-      const scaledVal = tl.domain[0] + val * (tl.domain[1] - tl.domain[0]);
-      onVariableChange(varName, Math.min(Math.max(scaledVal, tl.domain[0]), tl.domain[1]));
-    });
-  }, [globalDomain, timelineVars, timelines, onVariableChange]);
-
-  const handleSpeedChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const speed = parseFloat(e.target.value);
-    setMasterSpeed(speed);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, []);
-
-  if (timelines.length === 0) return null;
-
-  return (
-    <div className="bwjm-timeline-controller">
-      <div className="bwjm-timeline-header">
-        <span className="bwjm-timeline-title">Linea de Tiempo Global</span>
-        <span className="bwjm-timeline-speed">
-          Velocidad: <input type="range" min="0.1" max="5" step="0.1" value={masterSpeed} onChange={handleSpeedChange} /> {masterSpeed.toFixed(1)}x
-        </span>
-      </div>
-      <div className="bwjm-timeline-scrub">
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.001"
-          value={scrubValue}
-          onChange={handleScrub}
-          className="bwjm-timeline-scrub-input"
-        />
-        <span className="bwjm-timeline-scrub-value">
-          {timelines[0] ? ((variables[timelines[0].name] ?? timelines[0].default ?? timelines[0].domain[0])).toFixed(3) : '0'}
-        </span>
-      </div>
-      <div className="bwjm-timeline-controls">
-        <button
-          className={`bwjm-play-btn ${masterPlaying ? 'playing' : ''}`}
-          onClick={togglePlay}
-          title={masterPlaying ? "Pausar" : "Reproducir"}
-        >
-          {masterPlaying
-            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
-            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>`
-          }
-        </button>
-        <button
-          className="bwjm-timeline-reset-btn"
-          onClick={() => {
-            timelineVars.forEach(varName => {
-              const tl = timelines.find(t => t.name === varName);
-              if (tl) onVariableChange(varName, tl.default ?? tl.domain[0]);
-            });
-            setScrubValue(0);
-          }}
-          title="Reiniciar"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-            <path d="M3 3v5h5"/>
-          </svg>
-        </button>
-      </div>
-      <div className="bwjm-timeline-linked">
-        <small>Controla: {timelineVars.join(", ")}</small>
-      </div>
-    </div>
-  );
 }
 
 const SAMPLE_LESSONS: Record<string, { title: string; filename: string; content: string }> = {
@@ -1930,19 +1726,11 @@ export function BWJMStudio() {
       />
 
       {timelines.length > 0 && (
-        <TimelineController
-          core={coreRef.current}
+        <ScientificTimeline
           timelines={timelines}
-          variables={currentVariables}
           onVariableChange={handleVariableChange}
-          activeTimers={activeTimersRef.current}
-          setActiveTimers={() => {}}
           getVariables={() => coreRef.current?.getVariables() ?? {}}
-          subscribe={(callback) => {
-            const handler = () => callback();
-            window.addEventListener('bwjm-variable-change', handler);
-            return () => window.removeEventListener('bwjm-variable-change', handler);
-          }}
+          onSaveSource={setMarkdown}
         />
       )}
 
