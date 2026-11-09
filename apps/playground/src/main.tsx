@@ -1405,7 +1405,7 @@ export function BWJMStudio() {
           plotlyRenderersRef.current.set(node.id, renderer);
 
           const nodeData = coreRef.current.getNodeData(node.id) || node;
-          const currentVars = coreRef.current.getVariables();
+          const currentVars = coreRef.current.getGraphScope(node.id);
           const currentT = currentVars["t"] ?? (node as any).tDomain?.[1];
           renderer.render({
             ...nodeData, scope: currentVars, currentT,
@@ -1894,7 +1894,10 @@ export function BWJMStudio() {
           showTNB: nodeData.animated === true && nodeData.showTNB === true,
           showLegend: nodeData.showLegend === true,
         } : {};
-        plotlyRenderer.render({ ...nodeData, scope: currentVars, currentT, ...curveOpts } as any);
+        plotlyRenderer.render({
+          ...nodeData, scope: coreRef.current?.getGraphScope(nodeId) ?? currentVars,
+          currentT, ...curveOpts,
+        } as any);
       }
     });
 
@@ -1907,7 +1910,7 @@ export function BWJMStudio() {
           const currentT = currentVars["t"] ?? (nodeData as any).tDomain?.[1] ?? (nodeData as any).tDomain?.[0] ?? 0;
           renderer.render({
             ...nodeData,
-            scope: currentVars,
+            scope: coreRef.current?.getGraphScope(nodeId) ?? currentVars,
             currentT,
             particle: nodeType === "curve3d" && (nodeData as any).animated === true,
             showTNB: nodeType === "curve3d" && (nodeData as any).animated === true && (nodeData as any).showTNB === true,
