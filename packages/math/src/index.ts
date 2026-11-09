@@ -25,6 +25,7 @@ export { expressionToLatex } from "./latex.js";
 export { serializeScientificTable } from "./scientificTable.js";
 export { generateFunctionTable, summarizeColumn, fitLinearRegression } from "./scientificAnalysis.js";
 export { sampleParametric2D } from "./parametric2d.js";
+export { sampleFlow2D } from "./flow2d.js";
 export type { ScientificSummary, RegressionResult } from "./scientificAnalysis.js";
 export type { ScientificCell, ScientificTableFormat } from "./scientificTable.js";
 export { computeExactArea, computePiecewiseArea, computeRiemannPartition, findIntersections };

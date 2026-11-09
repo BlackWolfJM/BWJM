@@ -37,6 +37,7 @@ import {
   dataChartSchema,
   statisticsSchema,
   parametric2dSchema,
+  flow2dSchema,
 } from "@mathmd/ast";
 
 interface MdastPosition {
@@ -81,6 +82,7 @@ const SUPPORTED_MATHMD_TYPES = new Set([
   "datachart",
   "statistics",
   "parametric2d",
+  "flow2d",
 ]);
 
 const VALID_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -886,6 +888,31 @@ function buildMathMDNode(
             path: issue.path,
           });
         }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "flow2d": {
+      const payload = {
+        ...base,
+        field: data.field,
+        seeds: data.seeds ?? [[1, 0], [0, 1], [-1, 0], [0, -1]],
+        xDomain: data.xDomain ?? data.x ?? [-3, 3],
+        yDomain: data.yDomain ?? data.y ?? [-3, 3],
+        tMax: data.tMax ?? 6.28,
+        stepSize: data.stepSize ?? 0.04,
+        timelineRef: data.timelineRef,
+        color: data.color,
+        showVectors: data.showVectors ?? true,
+        showParticles: data.showParticles ?? true,
+      };
+      const result = flow2dSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) diagnostics.push({
+          severity: "error", code: "MATHMD_SCHEMA_INVALID", message: issue.message,
+          range, blockType: type, blockId: id, path: issue.path,
+        });
         return null;
       }
       return result.data;

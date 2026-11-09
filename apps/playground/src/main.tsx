@@ -1264,6 +1264,14 @@ export function BWJMStudio() {
           label.appendChild(checkbox);
           label.appendChild(textSpan);
           cardBody.appendChild(label);
+        } else if (node.type === "flow2d") {
+          const mount = document.createElement("div");
+          mount.style.width = "100%";
+          mount.style.minHeight = "380px";
+          cardBody.appendChild(mount);
+          const renderer = new SVGRenderer(mount, 720, 380);
+          svgRenderersRef.current.set(node.id, renderer);
+          renderer.render(coreRef.current.getNodeData(node.id));
         } else if (node.type === "parametric2d") {
           const mount = document.createElement("div");
           mount.style.width = "100%";

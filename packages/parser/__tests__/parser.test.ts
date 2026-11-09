@@ -2,6 +2,17 @@ import { describe, it, expect } from "vitest";
 import { parseMathMD } from "../src/index.js";
 
 describe("MathMD Parser", () => {
+  it("parses a 2D vector-field flow scene with seeds", () => {
+    const markdown = [
+      "```flow2d", "field: [\"-y\", \"x\"]", "seeds: [[1, 0], [0, 1]]",
+      "x: [-3, 3]", "y: [-3, 3]", "tMax: 6.28",
+      "stepSize: 0.04", "showParticles: true", "```",
+    ].join("\n");
+    const result = parseMathMD(markdown);
+    expect(result.children).toHaveLength(1);
+    expect(result.children[0].type).toBe("flow2d");
+  });
+
   it("parses a reusable animated parametric curve in two dimensions", () => {
     const markdown = [
       "```parametric2d", "x: cos(t)", "y: sin(t)", "tDomain: [0, 6.28318]",

@@ -9,7 +9,8 @@ import {
   generateFunctionTable,
   summarizeColumn,
   fitLinearRegression,
-  sampleParametric2D
+  sampleParametric2D,
+  sampleFlow2D
 } from "@mathmd/math";
 import type { Vector3D } from "@mathmd/math";
 
@@ -161,6 +162,14 @@ export class MathMDCore {
         }
         break;
         
+      case "flow2d": {
+        node.field.forEach(expression => deps.push(...extractVarsFromStr(expression)));
+        const temporal = this.document.children.find(item => item.id === node.timelineRef && item.type === "timeline");
+        const name = temporal?.type === "timeline" ? temporal.name : (node.timelineRef ?? "t");
+        if (this.variables.has(name)) deps.push(name);
+        break;
+      }
+
       case "parametric2d": {
         deps.push(...extractVarsFromStr(node.x), ...extractVarsFromStr(node.y));
         const temporal = this.document.children.find(item => item.id === node.timelineRef && item.type === "timeline");
@@ -265,6 +274,15 @@ export class MathMDCore {
     });
     
     switch (node.type) {
+      case "flow2d": {
+        let timeName = node.timelineRef ?? "t";
+        const temporal = this.document.children.find(item => item.id === node.timelineRef && item.type === "timeline");
+        if (temporal?.type === "timeline") timeName = temporal.name;
+        const currentT = Math.min(node.tMax, Math.max(0, this.variables.get(timeName) ?? 0));
+        return { ...node, ...sampleFlow2D(node.field, node.seeds, node.tMax,
+          node.stepSize ?? 0.04, scope), currentT };
+      }
+
       case "parametric2d": {
         let timeName = node.timelineRef ?? "t";
         const temporal = this.document.children.find(item => item.id === node.timelineRef && item.type === "timeline");

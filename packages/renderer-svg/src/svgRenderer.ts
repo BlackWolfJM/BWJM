@@ -66,6 +66,10 @@ export class SVGRenderer {
     }
     
     switch (node.type) {
+      case "flow2d":
+        this.renderFlow2D(node as any);
+        break;
+
       case "parametric2d":
         this.renderParametric2D(node as any);
         break;
@@ -97,6 +101,57 @@ export class SVGRenderer {
     }
   }
   
+  /**
+   * Streamline geometry computed with RK4 by @mathmd/math.
+   */
+  private renderFlow2D(node: Extract<MathMDNode, { type: "flow2d" }> & {
+    flowlines: number[][][];
+    vectors: Array<{ position: [number, number]; vector: [number, number] }>;
+    currentT: number;
+  }): void {
+    const [xMin, xMax] = node.xDomain, [yMin, yMax] = node.yDomain;
+    const tx = this.createTransform(xMin, xMax, yMin, yMax);
+    this.renderGrid(tx, xMin, xMax, yMin, yMax, 0.3);
+    this.renderAxes(tx, xMin, xMax, yMin, yMax);
+    if (node.showVectors) {
+      for (const item of node.vectors) {
+        const [vx, vy] = item.vector;
+        const magnitude = Math.hypot(vx, vy);
+        if (!Number.isFinite(magnitude) || magnitude < 1e-9) continue;
+        const [x, y] = item.position;
+        const length = Math.min(14, 5 + 4 * magnitude);
+        const x1 = tx.x(x), y1 = tx.y(y);
+        const x2 = x1 + vx / magnitude * length, y2 = y1 - vy / magnitude * length;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", String(x1)); line.setAttribute("y1", String(y1));
+        line.setAttribute("x2", String(x2)); line.setAttribute("y2", String(y2));
+        line.setAttribute("stroke", "#93a4b8"); line.setAttribute("stroke-width", "1.2");
+        this.svgElement.appendChild(line);
+      }
+    }
+    for (const line of node.flowlines) {
+      const visible = line.filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+      if (visible.length < 2) continue;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", visible.map((p, i) => (i === 0 ? "M " : "L ") +
+        tx.x(p[0]).toFixed(2) + " " + tx.y(p[1]).toFixed(2)).join(" "));
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", node.color ?? "#2563eb");
+      path.setAttribute("stroke-width", "2.5");
+      this.svgElement.appendChild(path);
+      if (node.showParticles) {
+        const index = Math.max(0, Math.min(visible.length - 1, Math.floor(node.currentT / (node.stepSize ?? 0.04))));
+        const [x, y] = visible[index];
+        const particle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        particle.setAttribute("cx", String(tx.x(x)));
+        particle.setAttribute("cy", String(tx.y(y)));
+        particle.setAttribute("r", "5.5"); particle.setAttribute("fill", "#e11d48");
+        particle.setAttribute("stroke", "#fff"); particle.setAttribute("stroke-width", "1.6");
+        this.svgElement.appendChild(particle);
+      }
+    }
+  }
+
   /**
    * Render a moving 2D parametric curve with a particle and Frenet vectors.
    * Measurements and derivatives are computed by @mathmd/math, not the renderer.

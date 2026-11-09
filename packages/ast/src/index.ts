@@ -303,6 +303,20 @@ export interface Parametric2DNode extends MathMDNodeBase {
   showNormal?: boolean;
 }
 
+export interface Flow2DNode extends MathMDNodeBase {
+  type: "flow2d";
+  field: [string, string];
+  seeds: Array<[number, number]>;
+  xDomain: [number, number];
+  yDomain: [number, number];
+  tMax: number;
+  stepSize?: number;
+  timelineRef?: string;
+  color?: string;
+  showVectors?: boolean;
+  showParticles?: boolean;
+}
+
 export interface FunctionTableNode extends MathMDNodeBase {
   type: "functiontable";
   caption?: string;
@@ -371,7 +385,8 @@ export type MathMDNode =
   | FunctionTableNode
   | DataChartNode
   | StatisticsNode
-  | Parametric2DNode;
+  | Parametric2DNode
+  | Flow2DNode;
 
 // --- Deterministic & Unicode-Safe ID Helper ---
 
@@ -752,6 +767,20 @@ export const dataTableSchema = mathmdNodeBaseSchema.extend({
   precision: z.number().int().min(0).max(12).optional(),
 });
 
+export const flow2dSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("flow2d"),
+  field: z.tuple([z.string().min(1), z.string().min(1)]),
+  seeds: z.array(z.tuple([z.number().finite(), z.number().finite()])).min(1).max(12),
+  xDomain: domainSchema,
+  yDomain: domainSchema,
+  tMax: z.number().finite().positive().max(20),
+  stepSize: z.number().finite().min(0.01).max(1).optional(),
+  timelineRef: z.string().optional(),
+  color: z.string().max(64).optional(),
+  showVectors: z.boolean().optional(),
+  showParticles: z.boolean().optional(),
+});
+
 export const parametric2dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("parametric2d"),
   x: z.string().min(1),
@@ -828,6 +857,7 @@ const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   dataChartSchema,
   statisticsSchema,
   parametric2dSchema,
+  flow2dSchema,
 ]);
 
 export const mathmdNodeSchema = mathmdNodeDiscriminatedUnion.superRefine((node, context) => {
