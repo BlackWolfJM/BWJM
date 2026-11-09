@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  computeGreensTheorem,
   computeKinematics,
+  computeKinematicsSeries,
   computeLineIntegral,
+  integrateFieldLine,
   sampleParametricTrajectory,
   sampleVectorField2D,
 } from "../src/vectorCalculus.js";
@@ -85,6 +88,64 @@ describe("Cálculo Vectorial: Cinemática, Curvas y Campos (200 Funcionalidades 
     expect(traj.length).toBe(20);
     expect(traj[0].x).toBeCloseTo(1, 3);
     expect(traj[0].y).toBeCloseTo(0, 3);
+  });
+
+  it("verifica torsión nula en curva plana r(t)=(cos(t), sin(t), 0)", () => {
+    const res = computeKinematics({ x: "cos(t)", y: "sin(t)", z: "0" }, 1.5);
+    expect(res.torsion).toBeCloseTo(0, 3);
+    expect(res.curvature).toBeCloseTo(1, 3);
+  });
+
+  it("verifica inversión de signo del trabajo según orientación antihoraria y horaria", () => {
+    const ccw = computeLineIntegral(
+      { P: "-y", Q: "x" },
+      { x: "cos(t)", y: "sin(t)" },
+      [0, 2 * Math.PI]
+    );
+    const cw = computeLineIntegral(
+      { P: "-y", Q: "x" },
+      { x: "cos(t)", y: "sin(t)" },
+      [2 * Math.PI, 0]
+    );
+
+    expect(ccw.work).toBeCloseTo(2 * Math.PI, 2);
+    expect(cw.work).toBeCloseTo(-2 * Math.PI, 2);
+  });
+
+  it("calcula serie temporal continua de cinemática con computeKinematicsSeries", () => {
+    const series = computeKinematicsSeries({ x: "cos(t)", y: "sin(t)", z: "t" }, [0, Math.PI], 10);
+    expect(series.t.length).toBe(10);
+    expect(series.position.length).toBe(10);
+    expect(series.curvature.length).toBe(10);
+    expect(series.speed[0]).toBeCloseTo(Math.SQRT2, 2);
+  });
+
+  it("integra líneas de corriente con algoritmo RK4 en integrateFieldLine", () => {
+    const res = integrateFieldLine({
+      field: { P: "-y", Q: "x" },
+      startPoint: [1, 0],
+      tMax: Math.PI / 2,
+      stepSize: 0.05,
+    });
+
+    expect(res.points.length).toBeGreaterThan(10);
+    const lastPoint = res.points[res.points.length - 1];
+    expect(lastPoint.x).toBeCloseTo(0, 1);
+    expect(lastPoint.y).toBeCloseTo(1, 1);
+  });
+
+  it("verifica equivalencia numérica integral de línea vs doble integral con computeGreensTheorem", () => {
+    const res = computeGreensTheorem({
+      field: { P: "-y", Q: "x" },
+      boundaryCurve: { x: "cos(t)", y: "sin(t)" },
+      domain: [0, 2 * Math.PI],
+      region: { type: "disk", center: [0, 0], radius: 1 },
+      steps: 400,
+    });
+
+    expect(res.lineIntegral).toBeCloseTo(2 * Math.PI, 2);
+    expect(res.doubleIntegral).toBeCloseTo(2 * Math.PI, 1);
+    expect(res.relativeError).toBeLessThan(0.05);
   });
 });
 
