@@ -213,7 +213,8 @@ function doubleRegion(spec: CalculusSpec, scope: Vars, changeOrder: boolean): Ca
   const upper=expression(spec.g,"frontera superior/derecha");
   const integrand=expression(spec.integrand ?? "1","integrando");
   const axis=spec.order==="dxdy"?"y":"x";
-  const calc=integrateRegion(lower,upper,spec.domain,axis,integrand,scope);
+  const resolution=Math.max(30,Math.min(180,Math.round(spec.samples??75)));
+  const calc=integrateRegion(lower,upper,spec.domain,axis,integrand,scope,resolution);
   const out=result(calc.value,"Integral doble aproximada","valor","Regla del punto medio en dos dimensiones");
   addBoundedRegion(out,lower,upper,spec.domain,scope,axis,Math.min(160,spec.samples??120));
   if (changeOrder) {
@@ -221,7 +222,7 @@ function doubleRegion(spec: CalculusSpec, scope: Vars, changeOrder: boolean): Ca
     const reverseUp=expression(spec.reverseUpper,"límite inverso superior");
     if(!spec.reverseDomain) throw new Error("Falta el dominio del segundo orden");
     const opposite=axis==="x"?"y":"x";
-    const second=integrateRegion(reverseLow,reverseUp,spec.reverseDomain,opposite,integrand,scope);
+    const second=integrateRegion(reverseLow,reverseUp,spec.reverseDomain,opposite,integrand,scope,resolution);
     out.comparison={label:"Integral con orden invertido",value:second.value,difference:Math.abs(second.value-calc.value)};
     const tolerance=Math.max(0.02,Math.abs(calc.value)*0.02,Math.abs(second.value)*0.02);
     if (Math.abs(second.value-calc.value)>tolerance ||
@@ -262,7 +263,7 @@ function revolution(spec: CalculusSpec, scope: Vars): CalculusVizResult {
     throw new Error("Cascarones para eje vertical; discos/arandelas para eje horizontal.");
   }
   const f=expression(spec.f,"f"),g=expression(spec.g,"g");
-  const n=64, tCount=40;
+  const n=Math.max(30,Math.min(180,Math.round(spec.samples??64))), tCount=40;
   const xs=samplesBetween(spec.domain[0],spec.domain[1],n);
   const values=xs.map(x=>[axisEval(f,"x",x,scope),axisEval(g,"x",x,scope)]);
   const invalidVertical=axis==="y" && spec.domain[0] < offset && spec.domain[1] > offset;
