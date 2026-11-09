@@ -851,7 +851,7 @@ export function BWJMStudio() {
       id: "insert-scientific-table",
       title: "Insertar tabla científica exportable",
       category: "Datos",
-      action: () => insertAtCursor("\\n\\n```datatable\\ncaption: Medición experimental\\ncolumns: [Tiempo, Posición, Velocidad]\\nunits: [s, m, m/s]\\nrows:\\n  - [0, 0, 0]\\n  - [1, 1.5, 3]\\n  - [2, 6, 6]\\nprecision: 3\\n```\\n"),
+      action: () => insertAtCursor("\n\n```datatable\ncaption: Medición experimental\ncolumns: [Tiempo, Posición, Velocidad]\nunits: [s, m, m/s]\nrows:\n  - [0, 0, 0]\n  - [1, 1.5, 3]\n  - [2, 6, 6]\nprecision: 3\n```\n"),
     },
     {
       id: "insert-formula",
@@ -1042,7 +1042,7 @@ export function BWJMStudio() {
           const formula = document.createElement("div");
           formula.className = "bwjm-node-equation";
           const latex = node.type === "curve3d"
-            ? String.raw`\\mathbf{r}(t)=\\left(\` + [node.x, node.y, node.z].map(expressionToLatex).join(",\\;") + String.raw`\\right)\`
+            ? "\\mathbf{r}(t)=\\left(" + [node.x, node.y, node.z].map(expressionToLatex).join(",\\;") + "\\right)"
             : (node.type === "surface3d" ? "z=" : "y=") + expressionToLatex(node.equation);
           formula.innerHTML = renderMathToString(latex, false);
           formula.title = node.type === "curve3d"

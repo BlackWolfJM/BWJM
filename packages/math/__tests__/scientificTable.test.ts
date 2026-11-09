@@ -4,13 +4,13 @@ import { expressionToLatex } from "../src/latex.js";
 
 describe("Scientific table exports", () => {
   it("exports UTF-8 CSV and escapes quotes, commas and newlines", () => {
-    const csv = serializeScientificTable(["Tiempo", "Dato"], [[0, 'valor, "citado"'], [1, "área\\nnueva"]], "csv");
+    const csv = serializeScientificTable(["Tiempo", "Dato"], [[0, 'valor, "citado"'], [1, "área\nnueva"]], "csv");
     expect(csv).toContain('"valor, ""citado"""');
-    expect(csv).toContain('"área\\nnueva"');
+    expect(csv).toContain('"área\nnueva"');
   });
   it("keeps numbers numeric in JSON", () => {
     const text = serializeScientificTable(["t", "x"], [[0, 1.5], [1, null]], "json");
-    expect(JSON.parse(text)).toEqual([{t:0,x:1.5},{t:1,x:null}]);
+    expect(JSON.parse(text)).toEqual([{ t: 0, x: 1.5 }, { t: 1, x: null }]);
   });
   it("protects CSV and TSV from spreadsheet injection", () => {
     expect(serializeScientificTable(["x"], [["=HYPERLINK(1)"]], "csv")).toContain("'=HYPERLINK");
@@ -24,7 +24,7 @@ describe("Scientific table exports", () => {
 describe("Scientific math labels", () => {
   it("produces mathematical TeX for a radial wave", () => {
     const latex = expressionToLatex("sin(sqrt(x^2 + y^2))");
-    expect(latex).toMatch(/sin|\\\\sin/);
+    expect(latex).toContain("sin");
     expect(latex).toContain("sqrt");
   });
 });

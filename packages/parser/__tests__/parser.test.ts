@@ -3,10 +3,10 @@ import { parseMathMD } from "../src/index.js";
 
 describe("MathMD Parser", () => {
   it("parses scientific data tables and rejects invalid row widths", () => {
-    const valid = parseMathMD("\\n```datatable\\ncolumns: [t, x]\\nunits: [s, m]\\nrows:\\n  - [0, 2]\\n  - [1, 3]\\n```\\n");
+    const valid = parseMathMD("\n```datatable\ncolumns: [t, x]\nunits: [s, m]\nrows:\n  - [0, 2]\n  - [1, 3]\n```\n");
     expect(valid.children).toHaveLength(1);
     expect(valid.children[0].type).toBe("datatable");
-    const invalid = parseMathMD("\\n```datatable\\ncolumns: [t, x]\\nrows:\\n  - [0]\\n```\\n");
+    const invalid = parseMathMD("\n```datatable\ncolumns: [t, x]\nrows:\n  - [0]\n```\n");
     expect(invalid.children).toHaveLength(0);
     expect(invalid.diagnostics.some(d => d.code === "MATHMD_TABLE_DIMENSIONS")).toBe(true);
   });
