@@ -1049,7 +1049,7 @@ export function BWJMStudio() {
             ["contours", "Curvas de nivel / cotas"],
             ["animated", "Animar (si la ecuación depende de t)"],
             ["showInfo", "Mostrar ficha de ecuación y dominio"],
-          ] : [
+          ] : node.type === "parametric2d" ? [
             ["animated", "Animar partícula"],
             ["showTrail", "Estela"],
             ["showVelocity", "Velocidad"],
