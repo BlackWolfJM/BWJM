@@ -1449,65 +1449,49 @@ body {
 .bwjm-export-svg:hover { background:#eff6ff; }
 
 
-/* Scientific animation controls: responsive, accessible, and independent of WebGL. */
-.bwjm-science-clock {
-  padding: 0.8rem 1.1rem;
-  display: grid;
-  gap: 0.55rem;
-  color: var(--text-main);
-  border-top: 1px solid var(--border);
-  background: var(--bg-panel);
+/* Compact transport lives WITH an animated chart, never below the whole document. */
+.bwjm-inline-playback {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:.7rem;
+  width:100%;
+  min-width:0;
+  padding:.55rem .65rem;
+  margin:.55rem 0 .2rem;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  color:#334155;
 }
-.bwjm-science-clock-top,
-.bwjm-science-actions,
-.bwjm-science-markers {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.55rem;
+.bwjm-inline-playback-toggle {
+  border:1px solid #c7d2fe;
+  border-radius:7px;
+  background:#eef2ff;
+  color:#4338ca;
+  padding:.45rem .7rem;
+  font-size:.78rem;
+  font-weight:650;
+  cursor:pointer;
 }
-.bwjm-science-clock-top { justify-content: space-between; }
-.bwjm-science-clock-top strong { font-size: 0.84rem; }
-.bwjm-science-clock-top label,
-.bwjm-science-actions label { display: inline-flex; gap: 0.4rem; align-items: center; font-size: 0.76rem; }
-.bwjm-science-clock-value {
-  font: 600 0.92rem var(--font-mono);
-  padding: 0.35rem 0.55rem;
-  color: #e0e7ff;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  font-variant-numeric: tabular-nums;
+.bwjm-inline-playback-toggle:hover { background:#e0e7ff; }
+.bwjm-inline-playback-seek,
+.bwjm-curve-layers .bwjm-inline-playback input[type="range"] {
+  min-width:95px;
+  width:auto;
+  flex:1 1 170px;
+  cursor:pointer;
+  accent-color:#6366f1;
 }
-.bwjm-science-clock button {
-  cursor: pointer;
-  background: var(--bg-elevated);
-  color: var(--text-main);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.77rem;
+.bwjm-inline-playback-value {
+  font:600 .76rem var(--font-mono);
+  color:#475569;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
 }
-.bwjm-science-clock button:hover:not(:disabled),
-.bwjm-science-clock button.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-.bwjm-science-clock button:disabled { opacity: 0.45; cursor: not-allowed; }
-.bwjm-science-scrub { width: 100%; cursor: pointer; accent-color: var(--primary); }
-.bwjm-science-ticks { display: flex; justify-content: space-between; font: 0.68rem var(--font-mono); color: var(--text-muted); }
-.bwjm-science-clock input[type="range"] { accent-color: var(--primary); }
-.bwjm-science-markers input[type="text"] {
-  min-width: 135px; flex: 1; max-width: 330px;
-  background: var(--bg-elevated);
-  color: var(--text-main);
-  padding: 0.42rem 0.55rem;
-  border-radius: 7px; border: 1px solid var(--border);
-}
-.bwjm-science-clock small { color: var(--text-muted); font-size: 0.7rem; }
-@media (max-width: 700px) {
-  .bwjm-science-clock { padding: 0.6rem; }
-  .bwjm-science-clock-top label { width: 100%; justify-content: space-between; }
+@media (max-width:550px) {
+  .bwjm-inline-playback { gap:.45rem; padding:.5rem; }
+  .bwjm-inline-playback-toggle { font-size:.73rem; }
 }
 
 .bwjm-curve-layers { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 0.75rem; color:#334155; font-size:0.8rem; }

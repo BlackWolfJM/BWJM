@@ -77,6 +77,8 @@ La interfaz científica usa una cinta desplegable: **Archivo, Inicio, Insertar, 
 
 ---
 
+**Reloj científico simplificado:** se eliminó el panel grande de reloj, fotogramas y marcadores que ocupaba una fila completa bajo el documento. Las opciones **Estela, Velocidad, Aceleración, Tangente, Normal** siguen junto a la gráfica y ya no se duplican. Los gráficos animados con bloque `timeline` disponen de un control compacto **Reproducir/Pausar + instante** dentro de la propia gráfica, que sigue sincronizando el tiempo de los demás gráficos. Los gráficos estáticos no muestran este control. El motor temporal de datos continúa disponible para futuros usos, pero no se muestra el panel redundante.
+
 ### Preferencias de gráficas (actualización de interfaz)
 
 La cinta **Insertar → Gráficos y superficies** abre el mismo asistente integral; se retiraron los dos botones redundantes para insertar directamente gráfica 2D o superficie 3D. Los tipos 2D/3D y todas las variantes de áreas, integrales y campos siguen disponibles dentro del asistente.

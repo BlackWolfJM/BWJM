@@ -3,6 +3,7 @@ import { initialWorkspace, updateActiveContent, openWorkspaceDocument,
   closeWorkspaceDocument, markDocumentSaved, renameWorkspaceDocument, normalizeFilename
 } from "../src/workspaceDocuments.js";
 import { updateGraphOption } from "../src/graphOptionSource.js";
+import { supportsInlinePlayback } from "../src/inlineGraphPlayback.js";
 import { RIBBON_GROUPS } from "../src/Ribbon.js";
 import { findTextMatches } from "../src/DocumentSearch.js";
 
@@ -102,5 +103,26 @@ describe("personalizable scientific graphs and filenames", () => {
     const code = fence+"surface3d\nequation: x+y\n"+fence;
     const range = { start:{line:1,column:1,offset:0}, end:{line:3,column:4,offset:code.length} };
     expect(updateGraphOption(code,range,"surface3d","constructor",true)).toBe(code);
+  });
+});
+
+
+describe("compact, non-duplicated chart animation UI", () => {
+  it("mounts playback only when an eligible curve or surface is animated", () => {
+    expect(supportsInlinePlayback({ type: "curve3d", animated: true })).toBe(true);
+    expect(supportsInlinePlayback({ type: "curve3d", animated: false })).toBe(false);
+    expect(supportsInlinePlayback({ type: "surface3d", animated: true })).toBe(true);
+    expect(supportsInlinePlayback({ type: "surface3d", animated: false })).toBe(false);
+  });
+  it("keeps the legacy animated 2D trajectory playable until explicitly made static", () => {
+    expect(supportsInlinePlayback({ type: "parametric2d" })).toBe(true);
+    expect(supportsInlinePlayback({ type: "parametric2d", animated: false })).toBe(false);
+    expect(supportsInlinePlayback({ type: "parametric2d", animated: true })).toBe(true);
+  });
+  it("does not add an animation transport to ordinary static graphs", () => {
+    expect(supportsInlinePlayback({ type: "plot2d" })).toBe(false);
+    expect(supportsInlinePlayback({ type: "vectorfield2d" })).toBe(false);
+    expect(supportsInlinePlayback({ type: "calculusviz" })).toBe(false);
+    expect(supportsInlinePlayback({ type: "trajectory" })).toBe(true);
   });
 });
