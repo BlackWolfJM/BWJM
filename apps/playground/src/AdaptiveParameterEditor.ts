@@ -8,6 +8,7 @@ export interface AdaptiveEditorCallbacks {
   save: (value: GraphParameterControls) => void;
   current: (name: string) => number | undefined;
   update: (name: string, value: number) => void;
+  updateMany: (changes: ReadonlyArray<readonly [string, number]>) => void;
 }
 export interface AdaptiveEditor {
   element: HTMLElement;
@@ -187,9 +188,16 @@ export function createAdaptiveParameterEditor(
       if (disposed || !container.isConnected) return;
       if (startedAt === null) startedAt = now;
       if (now - lastUpdate >= 170) { // cap expensive 3D recomputation to ~6 fps
+        const changes: Array<readonly [string, number]> = [];
         configured.parameters.forEach((parameter, index) => {
-          setLiveValue(parameter, autoParameterValue(parameter, now-startedAt!, index));
+          const value = autoParameterValue(parameter, now-startedAt!, index);
+          const output = numericOutputs.get(parameter.name);
+          if (output) output.textContent = String(value);
+          const slider = numericSliders.get(parameter.name);
+          if (slider) slider.value = String(value);
+          changes.push([parameter.name, value]);
         });
+        callbacks.updateMany(changes); // One recalculation per frame, not one per slider
         lastUpdate = now;
       }
       frameId = requestAnimationFrame(stepFrame);

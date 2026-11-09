@@ -1127,6 +1127,15 @@ export function BWJMStudio() {
                 refreshParameterizedGraph(node.id);
               }
             },
+            updateMany: changes => {
+              const engine = coreRef.current;
+              if (!engine) return;
+              let changed = false;
+              changes.forEach(([name, value]) => {
+                changed = engine.setGraphParameter(node.id, name, value) || changed;
+              });
+              if (changed) refreshParameterizedGraph(node.id);
+            },
           });
           parameterEditorDisposersRef.current.push(editor.dispose);
           controls.appendChild(editor.element);
