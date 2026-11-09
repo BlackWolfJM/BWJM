@@ -2072,3 +2072,58 @@ body {
 .bwjm-graph-settings-controls .bwjm-inline-playback {
   margin:.3rem 0 0;
 }
+
+
+/* Optional, graph-local coefficient sliders. Nested only under Personalizar gráfica. */
+.bwjm-adaptive-parameters {
+  display:flex;
+  flex-direction:column;
+  flex:1 1 100%;
+  min-width:0;
+  gap:.65rem;
+  margin-top:.4rem;
+  padding:.7rem .85rem;
+  border:1px solid #c7d2fe;
+  border-radius:9px;
+  background:#f8faff;
+  color:#334155;
+}
+.bwjm-adaptive-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; font-size:.8rem; }
+.bwjm-adaptive-heading span { color:#64748b; font-size:.72rem; }
+.bwjm-adaptive-checkbox { display:inline-flex; align-items:center; gap:.48rem; font-size:.78rem; cursor:pointer; }
+.bwjm-adaptive-checkbox input { accent-color:#6366f1; }
+.bwjm-adaptive-hint,.bwjm-adaptive-message { font-size:.72rem; color:#64748b; line-height:1.4; }
+.bwjm-adaptive-message:not(:empty) { color:#be123c; font-weight:600; }
+.bwjm-adaptive-parameter {
+  min-width:0; display:flex; flex-direction:column; gap:.4rem;
+  padding:.65rem .7rem;
+  background:white;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+}
+.bwjm-adaptive-parameter-header { display:flex; justify-content:space-between; gap:1rem; font-size:.82rem; }
+.bwjm-adaptive-parameter-header output { font:600 .78rem var(--font-mono); color:#4f46e5; }
+.bwjm-adaptive-range { width:100%; accent-color:#6366f1; cursor:pointer; }
+.bwjm-adaptive-configuration { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.45rem; }
+.bwjm-adaptive-configuration label { display:flex; flex-direction:column; gap:.2rem; min-width:0; font-size:.68rem; color:#64748b; }
+.bwjm-adaptive-configuration input {
+  box-sizing:border-box; width:100%; min-width:0;
+  padding:.36rem .3rem; font:.72rem var(--font-mono);
+  color:#334155; background:#f8fafc;
+  border:1px solid #cbd5e1; border-radius:5px;
+}
+.bwjm-adaptive-configuration input:focus-visible { outline:2px solid #818cf8; }
+.bwjm-adaptive-actions {
+  display:flex; gap:.7rem; flex-wrap:wrap; align-items:center; justify-content:space-between;
+}
+.bwjm-adaptive-actions button {
+  border:1px solid #c7d2fe; border-radius:6px;
+  color:#4338ca; background:#eef2ff;
+  font-size:.73rem; padding:.4rem .65rem;
+  cursor:pointer;
+}
+.bwjm-adaptive-actions button:hover { background:#e0e7ff; }
+@media(max-width:650px) {
+  .bwjm-adaptive-configuration { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .bwjm-adaptive-parameters { padding:.6rem; }
+}
