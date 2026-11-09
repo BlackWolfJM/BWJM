@@ -11,20 +11,20 @@
 
 ## Estado de implementación actual
 
-Primera entrega del PR: etiqueta de ecuaciones mediante LaTeX, tablas exportables CSV/TSV/JSON y mejoras al renderizado de superficies 3D. Todo lo demás se registra como pendiente hasta su prueba de aceptación.
+Primera entrega del PR: tipografía LaTeX, tablas y exportaciones. El lote 01 desarrolla SCI-001 a SCI-010 con alcances detallados en [LOTE_01_ANIMACION.md](LOTE_01_ANIMACION.md). SCI-007, SCI-008 y SCI-009 siguen **parciales**; los restantes están implementados en el alcance descrito. La verificación visual completa en navegador queda pendiente.
 
 ## 01. Motor visual y control
 
-- [ ] **SCI-001 · Reloj global sincronizado para escenas.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
-- [ ] **SCI-002 · Reproducción y pausa con estados reproducibles.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
-- [ ] **SCI-003 · Velocidad temporal ajustable de 0.1× a 8×.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
-- [ ] **SCI-004 · Avance cuadro a cuadro reversible.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
-- [ ] **SCI-005 · Bucle de intervalo con marcas de tiempo.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
-- [ ] **SCI-006 · Animación con rastro configurable.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
+- [x] **SCI-001 · Reloj global sincronizado para escenas.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
+- [x] **SCI-002 · Reproducción y pausa con estados reproducibles.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
+- [x] **SCI-003 · Velocidad temporal ajustable de 0.1× a 8×.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
+- [x] **SCI-004 · Avance cuadro a cuadro reversible.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
+- [x] **SCI-005 · Bucle de intervalo con marcas de tiempo.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
+- [x] **SCI-006 · Animación con rastro configurable.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
 - [ ] **SCI-007 · Cámara de seguimiento suave.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
 - [ ] **SCI-008 · Grabador local de secuencias en fotogramas.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
 - [ ] **SCI-009 · Capas ocultables por tipo de objeto.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
-- [ ] **SCI-010 · Marcadores y anotaciones ligados al tiempo.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
+- [x] **SCI-010 · Marcadores y anotaciones ligados al tiempo.** Implementar como objeto/acción reutilizable con vista 2D/3D o exportación, control de parámetros, verificación numérica y prueba de regresión.
 
 ## 02. Gráficas 2D
 

@@ -20,6 +20,7 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
    - 2.7. Arquitectura del Motor y Pipeline Zero-HTML
    - 2.8. Tablas cientificas y tipografia matematica
    - 2.9. Tablas generadas, graficas estadisticas y particulas 2D (fase 2)
+   - 2.10. Motor de animacion — lote 01 (SCI-001 a SCI-010)
 3. Manual de Usuario y Guia del Formato (.bwjm / .jm)
    - 3.1. Estructura Basica de un Documento .bwjm
    - 3.2. Manual de Bloques Cientificos Interactivos
@@ -179,6 +180,22 @@ En la misma rama de desarrollo se implementaron piezas reutilizables para docume
 **Ejemplo ejecutable:** [Laboratorio cientifico interactivo](examples/laboratorio-cientifico-interactivo.bwjm). Consulta tambien [Implementacion cientifica fase 2](docs/IMPLEMENTACION_CIENTIFICA_FASE_2.md).
 
 **Alcance:** estas implementaciones amplian el motor; el [roadmap de 200 funciones](docs/ROADMAP_200_FUNCIONALIDADES_CIENTIFICAS.md) sigue en desarrollo. No se afirma que todos sus puntos esten terminados.
+
+---
+
+### 2.10. Motor de animación — lote 01 (SCI-001 a SCI-010)
+
+El primer lote de diez mejoras añade un reloj global sincronizado, reproducción/pausa,
+velocidad entre 0.1× y 8×, avance y retroceso por fotogramas, reproducción inversa,
+intervalos repetibles, anotaciones temporales guardadas dentro de `.bwjm`, estelas
+configurables, seguimiento de partícula 2D y capas visibles/ocultas.
+
+**Alcance parcial:** la cámara sigue la partícula solo en 2D y todavía no se suaviza;
+la exportación de fotogramas produce **valores temporales JSON**, no imágenes ni videos;
+la selección de capas se limita por ahora a curvas `parametric2d`.
+
+- [Manual y pruebas del lote 01](docs/LOTE_01_ANIMACION.md)
+- [Documento interactivo de prueba](examples/lote-01-animacion.bwjm)
 
 ---
 

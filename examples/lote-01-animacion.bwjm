@@ -1,0 +1,73 @@
+# Lote 01 — Animación científica (BWJM)
+
+Esta lección muestra un **reloj común** para distintas representaciones del mismo parámetro temporal.
+Usa el reproductor inferior para ajustar velocidad, sentido, fotogramas, bucle y anotaciones.
+
+## Tiempo sincronizado y marcadores
+```timeline
+name: t
+domain: [0, 6.28]
+default: 0
+speed: 1
+loop: true
+markers:
+  - at: 1.57
+    label: "Primer cuarto de giro"
+  - at: 3.14
+    label: "Mitad de la vuelta"
+```
+
+## Curva paramétrica 2D con partícula
+
+La partícula recorre la circunferencia, con estela ajustable y vectores T, N, velocidad y aceleración.
+
+```parametric2d
+id: particula-circular
+x: cos(t)
+y: sin(t)
+tDomain: [0, 6.28]
+samples: 220
+color: '#0284c7'
+showTrail: true
+trailLength: 45
+followParticle: true
+showVelocity: true
+showAcceleration: true
+showTangent: true
+showNormal: true
+```
+
+## Campo vectorial rotacional
+
+Las líneas de corriente aproximan el movimiento de partículas transportadas por el campo F=(-y,x).
+
+```flow2d
+field: ['-y', 'x']
+seeds: [[1,0], [0,1], [-1,0], [0,-1]]
+x: [-3,3]
+y: [-3,3]
+tMax: 6.28
+stepSize: 0.04
+showVectors: true
+showParticles: true
+```
+
+## Curva en 3D con la misma variable temporal
+
+```curve3d
+x: cos(t)
+y: sin(t)
+z: t/3
+tDomain: [0, 6.28]
+color: '#6366f1'
+```
+
+## Pruebas recomendadas
+
+1. Pulsa Reproducir y comprueba que se actualizan las escenas.
+2. Cambia la velocidad entre 0.1× y 8× y activa la marcha inversa.
+3. Pausa y usa los botones para avanzar o retroceder un fotograma.
+4. Acota el tramo con Marcar inicio/fin y activa Repetir.
+5. En la curva 2D cambia Longitud estela, Seguir partícula y la visibilidad de vectores.
+6. Introduce una anotación y comprueba que aparece como `markers:` al guardar el `.bwjm`.
+7. Exporta 121 fotogramas como **datos JSON**; no son imágenes.
