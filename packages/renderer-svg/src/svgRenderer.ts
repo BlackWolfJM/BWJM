@@ -169,9 +169,15 @@ export class SVGRenderer {
     const minY = Math.min(...ys), maxY = Math.max(...ys);
     const span = Math.max(maxX - minX, maxY - minY, 0.001);
     const pad = span * 0.18;
-    const tx = this.createTransform(minX - pad, maxX + pad, minY - pad, maxY + pad);
-    this.renderGrid(tx, minX - pad, maxX + pad, minY - pad, maxY + pad, 0.3);
-    this.renderAxes(tx, minX - pad, maxX + pad, minY - pad, maxY + pad);
+    const pos = node.kinematics.position;
+    const finiteParticle = Number.isFinite(pos.x) && Number.isFinite(pos.y);
+    const xLow = node.followParticle && finiteParticle ? pos.x - span * 0.5 - pad : minX - pad;
+    const xHigh = node.followParticle && finiteParticle ? pos.x + span * 0.5 + pad : maxX + pad;
+    const yLow = node.followParticle && finiteParticle ? pos.y - span * 0.5 - pad : minY - pad;
+    const yHigh = node.followParticle && finiteParticle ? pos.y + span * 0.5 + pad : maxY + pad;
+    const tx = this.createTransform(xLow, xHigh, yLow, yHigh);
+    this.renderGrid(tx, xLow, xHigh, yLow, yHigh, 0.3);
+    this.renderAxes(tx, xLow, xHigh, yLow, yHigh);
     const makePath = (points: number[][]): SVGPathElement => {
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", points.map((p, i) => (i === 0 ? "M " : " L ") +
@@ -187,21 +193,21 @@ export class SVGRenderer {
       (node.tDomain[1] - node.tDomain[0])));
     if (node.showTrail) {
       const count = Math.max(1, Math.floor(frac * (pairs.length - 1)));
-      const trail = makePath(pairs.slice(0, count + 1));
+      const start = Math.max(0, count - (node.trailLength ?? pairs.length));
+      const trail = makePath(pairs.slice(start, count + 1));
       trail.setAttribute("stroke", "#e11d48");
       trail.setAttribute("stroke-width", "4");
       trail.setAttribute("stroke-linecap", "round");
       this.svgElement.appendChild(trail);
     }
-    const pos = node.kinematics.position;
-    if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
+    if (!finiteParticle) return;
     const px = tx.x(pos.x), py = tx.y(pos.y);
     const drawVector = (vec: { x: number; y: number }, color: string, name: string) => {
       const norm = Math.hypot(vec.x, vec.y);
       if (!Number.isFinite(norm) || norm < 1e-10) return;
       const distance = Math.min(span * 0.3, span * 0.2 * norm);
-      const ex = px + (vec.x / norm) * distance * (this.width / (span + 2 * pad));
-      const ey = py - (vec.y / norm) * distance * (this.height / (span + 2 * pad));
+      const ex = tx.x(pos.x + vec.x / norm * distance);
+      const ey = tx.y(pos.y + vec.y / norm * distance);
       const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("x1", String(px)); line.setAttribute("y1", String(py));
       line.setAttribute("x2", String(ex)); line.setAttribute("y2", String(ey));

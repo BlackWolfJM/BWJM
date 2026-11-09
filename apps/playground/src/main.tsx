@@ -15,7 +15,7 @@ import {
   expressionToLatex,
   serializeScientificTable,
 } from "@mathmd/math";
-import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode } from "@mathmd/ast";
+import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode, Parametric2DNode } from "@mathmd/ast";
 import { MenuBar } from "./MenuBar.js";
 import { ToolBar } from "./ToolBar.js";
 import { StatusBar } from "./StatusBar.js";
@@ -529,6 +529,7 @@ export function BWJMStudio() {
   const activeTimersRef = useRef<Map<string, number>>(new Map());
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
+  const sceneOptionsRef = useRef<Map<string, Partial<Parametric2DNode>>>(new Map());
   const liveAnalysisRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -822,7 +823,13 @@ export function BWJMStudio() {
     clearTimers();
     clearRenderers();
 
+    const previousVariables = coreRef.current?.getVariables() ?? {};
     coreRef.current = new MathMDCore(doc);
+    Object.entries(previousVariables).forEach(([name, value]) => {
+      if (coreRef.current?.getVariable(name) !== undefined && Number.isFinite(value)) {
+        coreRef.current.setVariable(name, value);
+      }
+    });
     const container = sheetRef.current;
     if (!container) return;
 
@@ -1075,7 +1082,54 @@ export function BWJMStudio() {
           cardBody.appendChild(mount);
           const renderer = new SVGRenderer(mount, 720, 380);
           svgRenderersRef.current.set(node.id, renderer);
-          renderer.render(coreRef.current.getNodeData(node.id));
+          const options = sceneOptionsRef.current.get(node.id) ?? {};
+          renderer.render({ ...coreRef.current.getNodeData(node.id), ...options });
+
+          const panel = document.createElement("div");
+          panel.className = "bwjm-curve-layers";
+          const controls = [
+            ["showTrail", "Estela"],
+            ["showVelocity", "Velocidad"],
+            ["showAcceleration", "Aceleración"],
+            ["showTangent", "Tangente"],
+            ["showNormal", "Normal"],
+            ["followParticle", "Seguir partícula"],
+          ] as const;
+          const redraw = () => {
+            const live = coreRef.current?.getNodeData(node.id);
+            if (live) renderer.render({ ...live, ...(sceneOptionsRef.current.get(node.id) ?? {}) });
+          };
+          controls.forEach(([prop, label]) => {
+            const wrapper = document.createElement("label");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = (options[prop] ?? node[prop] ?? false) as boolean;
+            checkbox.onchange = () => {
+              sceneOptionsRef.current.set(node.id, {
+                ...sceneOptionsRef.current.get(node.id), [prop]: checkbox.checked,
+              });
+              redraw();
+            };
+            wrapper.append(checkbox, document.createTextNode(label));
+            panel.appendChild(wrapper);
+          });
+          const lengthLabel = document.createElement("label");
+          lengthLabel.textContent = "Longitud estela";
+          const length = document.createElement("input");
+          length.type = "range";
+          length.min = "2";
+          length.max = String(Math.min(500, node.samples ?? 200));
+          length.step = "1";
+          length.value = String(options.trailLength ?? node.trailLength ?? 100);
+          length.oninput = () => {
+            sceneOptionsRef.current.set(node.id, {
+              ...sceneOptionsRef.current.get(node.id), trailLength: Number(length.value),
+            });
+            redraw();
+          };
+          lengthLabel.appendChild(length);
+          panel.appendChild(lengthLabel);
+          cardBody.appendChild(panel);
         } else if (node.type === "plot2d") {
           const mount = document.createElement("div");
           mount.id = `mount-${node.id}`;
@@ -1573,7 +1627,10 @@ export function BWJMStudio() {
 
       const svgRenderer = svgRenderersRef.current.get(nodeId);
       if (svgRenderer) {
-        svgRenderer.render(nodeData);
+        svgRenderer.render({
+          ...nodeData,
+          ...(nodeData.type === "parametric2d" ? sceneOptionsRef.current.get(nodeId) ?? {} : {}),
+        });
       }
 
       const plotlyRenderer = plotlyRenderersRef.current.get(nodeId);

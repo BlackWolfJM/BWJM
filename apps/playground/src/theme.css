@@ -1509,3 +1509,8 @@ body {
   .bwjm-science-clock { padding: 0.6rem; }
   .bwjm-science-clock-top label { width: 100%; justify-content: space-between; }
 }
+
+.bwjm-curve-layers { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 0.75rem; color:#334155; font-size:0.8rem; }
+.bwjm-curve-layers label { display:inline-flex; gap:0.35rem; align-items:center; cursor:pointer; background:#f1f5f9; padding:0.4rem 0.6rem; border-radius:6px; }
+.bwjm-curve-layers input { accent-color:var(--primary); }
+.bwjm-curve-layers input[type=range] { width:95px; }

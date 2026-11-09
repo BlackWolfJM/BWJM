@@ -298,6 +298,8 @@ export interface Parametric2DNode extends MathMDNodeBase {
   timelineRef?: string;
   color?: string;
   showTrail?: boolean;
+  trailLength?: number;
+  followParticle?: boolean;
   showVelocity?: boolean;
   showAcceleration?: boolean;
   showTangent?: boolean;
@@ -802,6 +804,8 @@ export const parametric2dSchema = mathmdNodeBaseSchema.extend({
   timelineRef: z.string().optional(),
   color: z.string().max(64).optional(),
   showTrail: z.boolean().optional(),
+  trailLength: z.number().int().min(2).max(500).optional(),
+  followParticle: z.boolean().optional(),
   showVelocity: z.boolean().optional(),
   showAcceleration: z.boolean().optional(),
   showTangent: z.boolean().optional(),

@@ -926,6 +926,8 @@ function buildMathMDNode(
         timelineRef: data.timelineRef,
         color: data.color,
         showTrail: data.showTrail ?? true,
+        trailLength: data.trailLength ?? 100,
+        followParticle: data.followParticle ?? false,
         showVelocity: data.showVelocity ?? true,
         showAcceleration: data.showAcceleration ?? false,
         showTangent: data.showTangent ?? true,
