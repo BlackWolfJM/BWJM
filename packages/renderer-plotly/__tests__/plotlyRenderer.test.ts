@@ -130,6 +130,40 @@ describe('PlotlyRenderer', () => {
     expect(newPlot).toHaveBeenCalledOnce();
   });
 
+  it('renders a 3D curve without particles, legend or duplicate plot title when static', () => {
+    renderer.render({
+      type: 'curve3d',
+      x: 'cos(t)', y: 'sin(t)', z: 't/3',
+      tDomain: [0, 6.28],
+      animated: false, showVectors: true, showTNB: true,
+      showLegend: false,
+    } as never);
+    const args = vi.mocked(newPlot).mock.calls[0];
+    const traces = args[1] as Array<{ name?: string }>;
+    const layout = args[2] as { title?: { text?: string }; showlegend?: boolean };
+    expect(traces).toHaveLength(1);
+    expect(layout.title?.text).toBe('');
+    expect(layout.showlegend).toBe(false);
+  });
+
+  it('shows particle, Frenet vectors and legend when animation is explicitly enabled', () => {
+    renderer.render({
+      type: 'curve3d',
+      x: 'cos(t)', y: 'sin(t)', z: 't/3',
+      tDomain: [0, 6.28], currentT: 1,
+      animated: true, showVectors: true, showTNB: true,
+      showLegend: true,
+    } as never);
+    const args = vi.mocked(newPlot).mock.calls[0];
+    const traces = args[1] as Array<{ name?: string }>;
+    const layout = args[2] as { title?: { text?: string }; showlegend?: boolean };
+    expect(traces.length).toBeGreaterThan(1);
+    expect(traces.some(trace => trace.name === 'Particula')).toBe(true);
+    expect(traces.some(trace => trace.name === 'T')).toBe(true);
+    expect(layout.showlegend).toBe(true);
+    expect(layout.title?.text).toBe('');
+  });
+
   it('should handle unsupported node types', () => {
     const unsupportedNode = {
       type: 'unsupportedType'

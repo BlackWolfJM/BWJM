@@ -77,6 +77,37 @@ La interfaz científica usa una cinta desplegable: **Archivo, Inicio, Insertar, 
 
 ---
 
+### Preferencias de gráficas (actualización de interfaz)
+
+La cinta **Insertar → Gráficos y superficies** abre el mismo asistente integral; se retiraron los dos botones redundantes para insertar directamente gráfica 2D o superficie 3D. Los tipos 2D/3D y todas las variantes de áreas, integrales y campos siguen disponibles dentro del asistente.
+
+Para cada gráfica, **Personalizar gráfica** permite mostrar u ocultar propiedades. Los cambios se guardan editando el bloque científico correspondiente dentro del documento .bwjm, en vez de perderse al cambiar de pestaña.
+
+- \`curve3d\`: \`animated\`, \`showVectors\`, \`showTNB\`, \`showLegend\`, \`showInfo\`.
+- \`surface3d\`: \`contours\`, \`animated\`, \`showInfo\`.
+- \`parametric2d\`: \`animated\` (opción de curva estática o con partícula), junto con estela y vectores.
+- Con \`animated: true\` se necesita un control temporal (\`timeline\` o \`slider\`) para avanzar; en \`surface3d\` la ecuación debe depender de \`t\` para que cambie de forma.
+- Los paneles de resumen científico son **opcionales** (\`showInfo: true\`); no aparecen de forma obligatoria debajo de las gráficas.
+- Se eliminó el título duplicado **dentro** de las curvas Plotly 3D y el encabezado decorativo de cada página del lector.
+- El archivo se puede renombrar mediante el lápiz de su pestaña. El nuevo nombre aparece al guardar/descargar y conserva la extensión .bwjm o .jm.
+
+Ejemplo:
+\`\`\`curve3d
+x: cos(t)
+y: sin(t)
+z: t/3
+tDomain: [0, 6.28]
+animated: true
+showVectors: true
+showTNB: false
+showLegend: false
+showInfo: false
+\`\`\`
+
+Las opciones no cambian las ecuaciones ni los resultados matemáticos; afectan a la presentación. La cinemática y los cálculos originales permanecen disponibles.
+
+---
+
 ## 2. Funcionalidades Implementadas
 
 Cada funcionalidad se encuentra desarrollada en TypeScript estricto, cubierta por pruebas unitarias automatizadas y respaldada por su correspondiente diagrama tecnico.
