@@ -21,7 +21,8 @@ export function initialWorkspace(filename: string, content: string, lessonKey: s
   return { documents: [document], activeId: document.id };
 }
 export function normalizeFilename(filename: string): string | null {
-  const cleaned = filename.trim().replace(/[\\/]/g, "").replace(/[\u0000-\u001f\u007f]/g, "");
+  const cleaned = filename.trim().replace(/[\\/]/g, "").split("")
+    .filter(character => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127).join("");
   if (!cleaned || cleaned.length > 140 || cleaned === "." || cleaned === "..") return null;
   return /\.(bwjm|jm)$/i.test(cleaned) ? cleaned : cleaned + ".bwjm";
 }
