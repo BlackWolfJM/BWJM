@@ -19,6 +19,10 @@ import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNo
 import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
+import { createAdaptiveParameterEditor } from "./AdaptiveParameterEditor.js";
+import {
+  supportsAdaptiveParameters, writeGraphParameterControls,
+} from "./adaptiveGraphParameters.js";
 import { updateGraphOption, updateGraphNumericOption } from "./graphOptionSource.js";
 import { DocumentSearch, type TextMatch } from "./DocumentSearch.js";
 import { useDocumentWorkspace } from "./workspaceDocuments.js";
@@ -541,6 +545,7 @@ export function BWJMStudio() {
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
   const openGraphSettingsRef = useRef<Set<string>>(new Set());
+  const parameterEditorDisposersRef = useRef<Array<() => void>>([]);
   const playbackRef = useRef<InlinePlaybackController | null>(null);
   const liveAnalysisRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -566,6 +571,8 @@ export function BWJMStudio() {
   };
 
   const clearRenderers = () => {
+    parameterEditorDisposersRef.current.forEach(dispose => dispose());
+    parameterEditorDisposersRef.current = [];
     playbackRef.current?.dispose();
     playbackRef.current = null;
     plotlyRenderersRef.current.forEach((renderer) => renderer.destroy());
@@ -904,7 +911,19 @@ export function BWJMStudio() {
     clearRenderers();
 
     const previousVariables = coreRef.current?.getVariables() ?? {};
+    const previousCore = coreRef.current;
     coreRef.current = new MathMDCore(doc);
+    // Keep local values after unrelated text edits when the chart ID stays stable.
+    doc.children.forEach(node => {
+      if (!supportsAdaptiveParameters(node) || !node.paramControls?.enabled) return;
+      const previous = previousCore?.getGraphParameters(node.id) ?? {};
+      node.paramControls.parameters.forEach(parameter => {
+        const value = previous[parameter.name];
+        if (value !== undefined && value >= parameter.min && value <= parameter.max) {
+          coreRef.current?.setGraphParameter(node.id, parameter.name, value);
+        }
+      });
+    });
     Object.entries(previousVariables).forEach(([name, value]) => {
       if (coreRef.current?.getVariable(name) !== undefined && Number.isFinite(value)) {
         coreRef.current.setVariable(name, value);
@@ -920,6 +939,56 @@ export function BWJMStudio() {
 
     const segments = parseDocumentSegments(markdown, doc.children, doc.diagnostics);
     let inlinePlaybackMounted = false;
+
+    /** Recompute only the affected chart, not the editor or all other graphs. */
+    const refreshParameterizedGraph = (id: string): void => {
+      const engine = coreRef.current;
+      if (!engine) return;
+      const data = engine.getNodeData(id);
+      const svg = svgRenderersRef.current.get(id);
+      if (svg) svg.render(data);
+      const plotly = plotlyRenderersRef.current.get(id);
+      if (plotly) {
+        const scope = engine.getGraphScope(id);
+        const currentT = scope["t"] ?? data.tDomain?.[1] ?? data.tDomain?.[0];
+        const extra = data.type === "curve3d" ? {
+          particle: data.animated === true,
+          showVectors: data.animated === true && data.showVectors === true,
+          showTNB: data.animated === true && data.showTNB === true,
+          showLegend: data.showLegend === true,
+        } : {};
+        plotly.render({ ...data, scope, currentT, ...extra });
+      }
+      if (data.type === "calculusviz") {
+        const report = sheet.querySelector<HTMLElement>("#node-" + id + " .bwjm-calculus-report");
+        if (report) {
+          const result = document.createElement("strong");
+          result.textContent = data.error ? "Error: " + data.error
+            : data.valueLabel + ": " + (Number.isFinite(data.value)
+              ? Number(data.value.toPrecision(8)) : "No determinado") +
+              (data.unit === "valor" ? "" : " " + data.unit);
+          report.replaceChildren(result);
+          if (!data.error) {
+            const method = document.createElement("small");
+            method.textContent = data.method + " · resultado numérico aproximado";
+            report.appendChild(method);
+            if (data.comparison) {
+              const second = document.createElement("div");
+              second.textContent = data.comparison.label + ": " +
+                Number(data.comparison.value.toPrecision(8)) +
+                " · Diferencia: " + Number(data.comparison.difference.toPrecision(4));
+              report.appendChild(second);
+            }
+            (data.warnings ?? []).forEach((message: string) => {
+              const line = document.createElement("p");
+              line.className = "bwjm-calculus-warning";
+              line.textContent = "⚠ " + message;
+              report.appendChild(line);
+            });
+          }
+        }
+      }
+    };
 
     for (const segment of segments) {
       if (segment.kind === "prose" && segment.content) {
@@ -969,7 +1038,7 @@ export function BWJMStudio() {
         cardBody.className = "bwjm-node-body";
 
         // Graph settings persist in the selected code fence, avoiding transient-only UI state.
-        if (node.type === "curve3d" || node.type === "surface3d" || node.type === "parametric2d") {
+        if (supportsAdaptiveParameters(node)) {
           const options: Array<[string, string]> = node.type === "curve3d" ? [
             ["animated", "Animar partícula"],
             ["showVectors", "Vectores velocidad y aceleración"],
@@ -988,7 +1057,7 @@ export function BWJMStudio() {
             ["showTangent", "Tangente"],
             ["showNormal", "Normal"],
             ["followParticle", "Seguir partícula"],
-          ];
+          ] : [];
           const details = document.createElement("details");
           details.className = "bwjm-graph-settings";
           const settingsKey = node.type + ":" + node.range.start.offset;
@@ -1044,6 +1113,21 @@ export function BWJMStudio() {
             trailRow.append(textLabel, trailRange, trailValue);
             controls.appendChild(trailRow);
           }
+          const editor = createAdaptiveParameterEditor(node, {
+            save: config => {
+              openGraphSettingsRef.current.add(settingsKey);
+              setMarkdown(previous => writeGraphParameterControls(
+                previous, node.range, node.type, config));
+            },
+            current: name => coreRef.current?.getGraphParameters(node.id)[name],
+            update: (name, value) => {
+              if (coreRef.current?.setGraphParameter(node.id, name, value)) {
+                refreshParameterizedGraph(node.id);
+              }
+            },
+          });
+          parameterEditorDisposersRef.current.push(editor.dispose);
+          controls.appendChild(editor.element);
           details.appendChild(controls);
           cardBody.appendChild(details);
         }
