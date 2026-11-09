@@ -147,5 +147,16 @@ describe("Cálculo Vectorial: Cinemática, Curvas y Campos (200 Funcionalidades 
     expect(res.doubleIntegral).toBeCloseTo(2 * Math.PI, 1);
     expect(res.relativeError).toBeLessThan(0.05);
   });
+
+  it("rechaza regiones custom no implementadas con error explícito en computeGreensTheorem (P1-08)", () => {
+    expect(() =>
+      computeGreensTheorem({
+        field: { P: "-y", Q: "x" },
+        boundaryCurve: { x: "cos(t)", y: "sin(t)" },
+        domain: [0, 2 * Math.PI],
+        region: { type: "custom" },
+      })
+    ).toThrow(/Custom region type not supported/);
+  });
 });
 

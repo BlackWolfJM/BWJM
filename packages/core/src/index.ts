@@ -9,7 +9,6 @@ import {
 } from "@mathmd/math";
 import type { Vector3D } from "@mathmd/math";
 
-// Core MathMD runtime with reactivity system
 export class MathMDCore {
   private document: MathMDDocument;
   private variables: Map<string, number> = new Map();
@@ -23,7 +22,6 @@ export class MathMDCore {
   }
   
   private initialize() {
-    // Extract initial state from slider, checkbox, and timeline nodes
     this.document.children.forEach(node => {
       if (node.type === "slider") {
         this.variables.set(node.name, node.default);
@@ -36,29 +34,23 @@ export class MathMDCore {
       }
     });
     
-    // Build dependency graph
     this.buildDependencyGraph();
   }
   
   private buildDependencyGraph() {
-    // Clear existing maps
     this.dependencyMap.clear();
     this.reverseDependencyMap.clear();
     
-    // Initialize dependency sets for each variable
     this.variables.forEach((_, name) => {
       this.dependencyMap.set(name, new Set());
     });
     
-    // Analyze each node to build dependencies
     this.document.children.forEach(node => {
       const nodeId = node.id;
       const dependencies = this.extractDependencies(node);
       
-      // Store reverse dependencies (node -> variables)
       this.reverseDependencyMap.set(nodeId, new Set(dependencies));
       
-      // Store forward dependencies (variable -> nodes)
       dependencies.forEach(dep => {
         if (!this.dependencyMap.has(dep)) {
           this.dependencyMap.set(dep, new Set());
@@ -71,9 +63,7 @@ export class MathMDCore {
   private extractDependencies(node: MathMDNode): string[] {
     const deps: string[] = [];
     
-    // Extract variables from equations and expressions
     const extractVarsFromStr = (str: string) => {
-      // Simple regex to find variable names (letters, possibly with numbers)
       const varMatches = str.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
       return varMatches.filter(name => this.variables.has(name));
     };
@@ -88,7 +78,6 @@ export class MathMDCore {
         break;
         
       case "vector2d":
-        // Check origin and vector components
         if (Array.isArray(node.origin)) {
           node.origin.forEach(val => {
             if (typeof val === 'string') {
@@ -106,7 +95,6 @@ export class MathMDCore {
         break;
         
       case "vector3d":
-        // Check origin and vector components
         if (Array.isArray(node.origin)) {
           node.origin.forEach(val => {
             if (typeof val === 'string') {
@@ -170,30 +158,48 @@ export class MathMDCore {
         break;
         
       case "particle":
-      case "frame":
+      case "frame": {
+        let timeVar = "t";
+        if (node.timelineRef) {
+          if (this.variables.has(node.timelineRef)) {
+            timeVar = node.timelineRef;
+          } else {
+            const tl = this.document.children.find(c => c.type === "timeline" && c.id === node.timelineRef) as any;
+            if (tl && tl.name) {
+              timeVar = tl.name;
+            }
+          }
+        }
+        if (this.variables.has(timeVar)) {
+          deps.push(timeVar);
+        }
+
+        if (node.trajectoryRef) {
+          const traj = this.document.children.find(c => c.id === node.trajectoryRef);
+          if (traj) {
+            deps.push(...this.extractDependencies(traj));
+          }
+        }
+        break;
+      }
       case "region":
       case "camera":
-        // These reference other nodes, not direct variable dependencies
         break;
         
       case "timeline":
-        // Timeline controls its own variable
         break;
         
       default:
-        // slider, checkbox, etc. don't have dependencies in their definitions
         break;
     }
     
     return [...new Set(deps)]; // Remove duplicates
   }
   
-  // Get current variable value
   getVariable(name: string): number | undefined {
     return this.variables.get(name);
   }
   
-  // Set variable value and return affected nodes
   setVariable(name: string, value: number): string[] {
     if (!this.variables.has(name)) {
       throw new Error(`Unknown variable: ${name}`);
@@ -206,7 +212,6 @@ export class MathMDCore {
     
     this.variables.set(name, value);
     
-    // Clear cache for affected nodes
     const affectedNodes = this.dependencyMap.get(name) || new Set();
     affectedNodes.forEach(nodeId => {
       this.nodeCache.delete(nodeId);
@@ -215,9 +220,7 @@ export class MathMDCore {
     return Array.from(affectedNodes);
   }
   
-  // Get processed node data (with variables substituted)
   getNodeData(nodeId: string): any {
-    // Check cache first
     if (this.nodeCache.has(nodeId)) {
       return this.nodeCache.get(nodeId);
     }
@@ -233,7 +236,6 @@ export class MathMDCore {
   }
   
   private processNode(node: MathMDNode): any {
-    // Create a scope with current variable values
     const scope: Record<string, number> = {};
     this.variables.forEach((value, name) => {
       scope[name] = value;
@@ -276,7 +278,6 @@ export class MathMDCore {
       }
       
       case "vector2d": {
-        // Resolve origin and vector with variables
         const origin = this.resolveArray(node.origin, scope);
         const vector = this.resolveArray(node.vector, scope);
         
@@ -293,7 +294,6 @@ export class MathMDCore {
       }
       
       case "vector3d": {
-        // Resolve origin and vector with variables
         const origin = this.resolveArray(node.origin, scope);
         const vector = this.resolveArray(node.vector, scope);
         
@@ -311,7 +311,6 @@ export class MathMDCore {
       }
       
       case "curve3d": {
-        // Sample parametric curve
         const tCount = 100;
         const [tMin, tMax] = node.tDomain;
         const points: number[][] = [];
@@ -344,7 +343,6 @@ export class MathMDCore {
           vector: [number, number];
         }[] = [];
         
-        // Create grid
         const cols = density;
         const rows = density;
         
@@ -376,15 +374,12 @@ export class MathMDCore {
         const [x, y] = node.point;
         const scopeWithPoint = { ...scope, x, y };
         
-        // Compute partial derivatives numerically
         const h = 1e-5;
         
-        // df/dx
         const fxPlus = evaluateExpression(compileExpression(node.function), { ...scopeWithPoint, x: x + h });
         const fxMinus = evaluateExpression(compileExpression(node.function), { ...scopeWithPoint, x: x - h });
         const dfdx = (fxPlus - fxMinus) / (2 * h);
         
-        // df/dy
         const fyPlus = evaluateExpression(compileExpression(node.function), { ...scopeWithPoint, y: y + h });
         const fyMinus = evaluateExpression(compileExpression(node.function), { ...scopeWithPoint, y: y - h });
         const dfdy = (fyPlus - fyMinus) / (2 * h);
@@ -405,29 +400,24 @@ export class MathMDCore {
         const [x0, y0] = node.point;
         const scopeWithPoint = { ...scope, x: x0, y: y0 };
         
-        // Compute partial derivatives numerically
         const h = 1e-5;
         
-        // df/dx
         const fxPlus = evaluateExpression(compileExpression(node.function), { ...scopeWithPoint, x: x0 + h });
         const fxMinus = evaluateExpression(compileExpression(node.function), { ...scopeWithPoint, x: x0 - h });
         const dfdx = (fxPlus - fxMinus) / (2 * h);
         
-        // df/dy
         const fyPlus = evaluateExpression(compileExpression(node.function), { ...scopeWithPoint, y: y0 + h });
         const fyMinus = evaluateExpression(compileExpression(node.function), { ...scopeWithPoint, y: y0 - h });
         const dfdy = (fyPlus - fyMinus) / (2 * h);
         
         const fValue = evaluateExpression(compileExpression(node.function), scopeWithPoint);
         
-        // Tangent plane: z = f(x0,y0) + fx*(x-x0) + fy*(y-y0)
         return {
           ...node,
           type: "tangentplane",
           point: [x0, y0],
           functionValue: fValue,
           gradient: [dfdx, dfdy],
-          // Returns function: (x, y) => fValue + dfdx*(x-x0) + dfdy*(y-y0)
           tangentPlaneFunc: (x: number, y: number) => 
             fValue + dfdx * (x - x0) + dfdy * (y - y0)
         };
@@ -492,7 +482,6 @@ export class MathMDCore {
       
       case "diagram":
       case "geometry":
-        // These don't need variable substitution in their basic form
         return {
           ...node,
           type: node.type
@@ -513,12 +502,11 @@ export class MathMDCore {
       }
 
       case "particle": {
-        // Find the referenced trajectory
         const trajectoryNode = this.document.children.find(
           n => n.id === node.trajectoryRef && (n.type === "trajectory" || n.type === "curve3d")
         );
         if (!trajectoryNode) {
-          return { ...node, type: "particle", position: [0, 0, 0], trail: [] };
+          return { ...node, type: "particle", position: { x: 0, y: 0, z: 0 }, trail: [] };
         }
 
         const tVal = this.variables.get(node.timelineRef ?? "t") ?? 
@@ -528,7 +516,6 @@ export class MathMDCore {
         const trajectoryData = this.getNodeData(trajectoryNode.id);
         const points = trajectoryData.points || [];
         
-        // Find closest point to current t
         let position: Vector3D = { x: 0, y: 0, z: 0 };
         if (trajectoryNode.type === "trajectory") {
           const kin = computeKinematics({ x: trajectoryNode.x, y: trajectoryNode.y, z: trajectoryNode.z ?? "0" }, tVal, scope);
@@ -538,12 +525,21 @@ export class MathMDCore {
           position = kin.position;
         }
 
-        // Generate trail if enabled
         const trail: Vector3D[] = [];
         if (node.showTrail && points.length > 0) {
           const trailLength = node.trailLength ?? 50;
-          const startIdx = Math.max(0, points.length - trailLength);
-          for (let i = startIdx; i < points.length; i++) {
+          
+          const tDomain = trajectoryNode.type === "trajectory" ? trajectoryNode.tDomain : (trajectoryNode as any).tDomain;
+          const tMin = tDomain?.[0] ?? 0;
+          const tMax = tDomain?.[1] ?? 1;
+          const tRange = tMax - tMin;
+          const tNormalized = tRange > 0 ? Math.max(0, Math.min(1, (tVal - tMin) / tRange)) : 0;
+          const currentIdx = Math.floor(tNormalized * (points.length - 1));
+          
+          const startIdx = Math.max(0, currentIdx - trailLength + 1);
+          const endIdx = Math.min(currentIdx + 1, points.length);
+          
+          for (let i = startIdx; i < endIdx; i++) {
             const p = points[i];
             trail.push(typeof p === 'object' && 'x' in p ? p : { x: p[0], y: p[1], z: p[2] || 0 });
           }
@@ -571,14 +567,12 @@ export class MathMDCore {
           origin[2] + vector[2] * scale
         ];
 
-        // Calculate arrow tip points
         const tipSize = node.tipSize ?? 0.15;
         const vecMag = Math.sqrt(vector[0]**2 + vector[1]**2 + vector[2]**2);
         let tipPoints: number[][] = [];
         if (node.showTip !== false && vecMag > 0) {
           const dir = [vector[0]/vecMag, vector[1]/vecMag, vector[2]/vecMag];
           const tipBase = [end[0] - dir[0] * tipSize, end[1] - dir[1] * tipSize, end[2] - dir[2] * tipSize];
-          // Simple cone tip - two side points
           const ortho = Math.abs(dir[0]) > 0.9 ? [0, 1, 0] : [1, 0, 0];
           const side1 = [
             tipBase[0] + ortho[0] * tipSize * 0.5,
@@ -607,7 +601,6 @@ export class MathMDCore {
       }
 
       case "frame": {
-        // Find referenced trajectory
         const trajectoryNode = this.document.children.find(
           n => n.id === node.trajectoryRef && (n.type === "trajectory" || n.type === "curve3d")
         );
@@ -629,7 +622,6 @@ export class MathMDCore {
         const frameLen = node.frameLength ?? 0.8;
         const colors = node.colors ?? { T: "#06b6d4", N: "#a855f7", B: "#ec4899" };
 
-        // Determine if curvature/torsion are symbolic, numerical, or undefined
         const isStationary = kin.isStationary || kin.speed < 1e-7;
         const crossMag = Math.sqrt(
           (kin.tangent.y * kin.binormal.z - kin.tangent.z * kin.binormal.y)**2 +
@@ -680,6 +672,11 @@ export class MathMDCore {
         const rows = density;
         const layers = is3D ? density : 1;
 
+        const components = node.components as [string, string, string];
+        const compiledX = compileExpression(components[0]);
+        const compiledY = compileExpression(components[1]);
+        const compiledZ = is3D && components[2] ? compileExpression(components[2]) : null;
+
         for (let layer = 0; layer < layers; layer++) {
           for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
@@ -688,11 +685,10 @@ export class MathMDCore {
               const z = is3D ? zMin + (layer / (layers - 1)) * (zMax - zMin) : 0;
 
               const scopeWithXYZ = { ...scope, x, y, z };
-              const components = node.components as [string, string, string];
 
-              const fx = evaluateExpression(compileExpression(components[0]), scopeWithXYZ);
-              const fy = evaluateExpression(compileExpression(components[1]), scopeWithXYZ);
-              const fz = is3D ? evaluateExpression(compileExpression(components[2]), scopeWithXYZ) : 0;
+              const fx = evaluateExpression(compiledX, scopeWithXYZ);
+              const fy = evaluateExpression(compiledY, scopeWithXYZ);
+              const fz = compiledZ ? evaluateExpression(compiledZ, scopeWithXYZ) : 0;
 
               vectors.push({
                 position: [x, y, z],
@@ -712,8 +708,6 @@ export class MathMDCore {
       }
 
       case "region": {
-        // For now, return the region data for rendering
-        // Actual region rendering would need boundary curve sampling
         return {
           ...node,
           type: "region",
@@ -783,7 +777,6 @@ export class MathMDCore {
           return resolved;
         }
       } catch (e) {
-        // Try comma-separated string
         const parts = value.split(',').map(part => part.trim());
         const resolved: number[] = [];
         for (const part of parts) {
@@ -804,7 +797,6 @@ export class MathMDCore {
     return null;
   }
   
-  // Get all current variables
   getVariables(): Record<string, number> {
     const result: Record<string, number> = {};
     this.variables.forEach((value, name) => {
@@ -813,13 +805,11 @@ export class MathMDCore {
     return result;
   }
   
-  // Clear node cache
   clearCache() {
     this.nodeCache.clear();
   }
 }
 
-// Export the core class
 export default MathMDCore;
 
 export * from "./container.js";

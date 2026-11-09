@@ -28,6 +28,8 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
      - 3.2.5. Curvas Parametricas Espaciales y Marco TNB (curve3d)
      - 3.2.6. Campos Vectoriales 2D y Circulacion (vectorfield2d)
      - 3.2.7. Flechas Vectoriales Tridimensionales (vectorarrow)
+     - 3.2.8. Linea de Tiempo y Reloj Global (timeline)
+     - 3.2.9. Composicion de Escenas Cinematicas (trajectory, particle, frame)
    - 3.3. Manual de Operacion de BWJM Studio
      - 3.3.1. Modos de Vista: Editor, Split y Lector
      - 3.3.2. Carga de Lecciones y Navegacion de Esquema
@@ -363,6 +365,66 @@ origin: [0, 1, 0]
 vector: [0, -2, 0]
 label: "a_N"
 color: "#10b981"
+```
+
+---
+
+#### 3.2.8. Linea de Tiempo y Reloj Global (`timeline`)
+
+Permite declarar un reloj maestro continuo para sincronizar la animacion de multiples trayectorias, particulas y vectores en el documento, con control de velocidad, bucle y reproduccion automatica.
+
+**Sintaxis:**
+```timeline
+name: <nombre_variable_temporal>
+domain: [<t_min>, <t_max>]
+default: <valor_inicial>
+speed: <multiplicador_velocidad>
+loop: <true | false>
+autoplay: <true | false>
+```
+
+**Ejemplo de uso:**
+```timeline
+name: t
+domain: [0, 6.28]
+default: 0
+speed: 1.0
+loop: true
+```
+
+---
+
+#### 3.2.9. Composicion de Escenas Cinematicas (`trajectory`, `particle`, `frame`)
+
+Permite desacoplar y enlazar objetos geometricos en una misma escena mediante referencias de identificador (`id` y `ref`):
+
+1. **`trajectory`**: Define la curva parametrica espacial $(x(t), y(t), z(t))$ y su dominio temporal.
+2. **`particle`**: Ubica una particula movil sobre la trayectoria con estela historica configurable (`showTrail`, `trailLength`).
+3. **`frame`**: Dibuja el triedro de Frenet-Serret ($\mathbf{T}, \mathbf{N}, \mathbf{B}$) anclado a la particula, actualizado reactivamente en cada instante temporal.
+
+**Ejemplo de composicion:**
+```trajectory
+id: helice-principal
+x: cos(t)
+y: sin(t)
+z: t / 3
+tDomain: [0, 6.28]
+samples: 100
+```
+
+```particle
+trajectoryRef: helice-principal
+timelineRef: t
+showTrail: true
+trailLength: 25
+```
+
+```frame
+trajectoryRef: helice-principal
+timelineRef: t
+showT: true
+showN: true
+showB: true
 ```
 
 ---

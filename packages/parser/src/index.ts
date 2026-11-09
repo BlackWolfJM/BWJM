@@ -894,9 +894,7 @@ function buildMathMDNode(
       payload = {
         ...base,
         name: data.name,
-        min: minVal,
-        max: maxVal,
-        step: "step" in data ? data.step : 0.01,
+        domain: [minVal, maxVal] as [number, number],
         default: defaultVal,
         speed: speedVal,
         loop: loopVal,

@@ -341,4 +341,105 @@ x: [0, 5]
     // evaluating an equation with an undefined symbol must throw Undefined symbol
     expect(() => core.getNodeData(doc.children[1].id)).toThrow(/Undefined symbol unknown/);
   });
+
+  it("should initialize timeline variable and update particle and frame reactively on setVariable (P0-03)", () => {
+    const markdown = `
+\`\`\`timeline
+name: t
+domain: [0, 6.28]
+default: 0
+\`\`\`
+
+\`\`\`trajectory
+id: traj-helix
+x: cos(t)
+y: sin(t)
+z: t
+tDomain: [0, 6.28]
+samples: 50
+\`\`\`
+
+\`\`\`particle
+id: part-1
+trajectoryRef: traj-helix
+timelineRef: t
+showTrail: true
+trailLength: 10
+\`\`\`
+
+\`\`\`frame
+id: frame-1
+trajectoryRef: traj-helix
+timelineRef: t
+showT: true
+showN: true
+showB: true
+\`\`\`
+`;
+
+    const doc = parseMathMD(markdown);
+    const core = new MathMDCore(doc);
+
+    expect(core.getVariable("t")).toBe(0);
+
+    const partInitial = core.getNodeData("part-1");
+    expect(partInitial.position.x).toBeCloseTo(1, 2);
+    expect(partInitial.position.y).toBeCloseTo(0, 2);
+
+    const frameInitial = core.getNodeData("frame-1");
+    expect(frameInitial.T).toBeDefined();
+    expect(frameInitial.N).toBeDefined();
+
+    const affected = core.setVariable("t", Math.PI / 2);
+    expect(affected).toContain("part-1");
+    expect(affected).toContain("frame-1");
+
+    const partMoved = core.getNodeData("part-1");
+    expect(partMoved.position.x).toBeCloseTo(0, 2);
+    expect(partMoved.position.y).toBeCloseTo(1, 2);
+    expect(partMoved.currentT).toBeCloseTo(Math.PI / 2, 2);
+  });
+
+  it("should compute particle trail that does not anticipate future points (P1-05)", () => {
+    const markdown = `
+\`\`\`timeline
+name: t
+domain: [0, 10]
+default: 2
+\`\`\`
+
+\`\`\`trajectory
+id: traj-line
+x: t
+y: "0"
+z: "0"
+tDomain: [0, 10]
+samples: 11
+\`\`\`
+
+\`\`\`particle
+id: part-line
+trajectoryRef: traj-line
+timelineRef: t
+showTrail: true
+trailLength: 5
+\`\`\`
+`;
+
+    const doc = parseMathMD(markdown);
+    const core = new MathMDCore(doc);
+
+    const partAt2 = core.getNodeData("part-line");
+    expect(partAt2.position.x).toBeCloseTo(2, 1);
+    for (const pt of partAt2.trail) {
+      expect(pt.x).toBeLessThanOrEqual(2.05);
+    }
+
+    core.setVariable("t", 5);
+    const partAt5 = core.getNodeData("part-line");
+    expect(partAt5.position.x).toBeCloseTo(5, 1);
+    for (const pt of partAt5.trail) {
+      expect(pt.x).toBeLessThanOrEqual(5.05);
+    }
+  });
 });

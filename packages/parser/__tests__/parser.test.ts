@@ -545,4 +545,103 @@ color: #0284c7
       expect(plot.color).toBe("#0284c7");
     }
   });
+
+  it("should parse timeline block with min and max normalized to domain (P0-01)", () => {
+    const markdown = `
+\`\`\`timeline
+name: t
+min: 0
+max: 6.28
+default: 0
+speed: 1.0
+loop: true
+\`\`\`
+`;
+    const doc = parseMathMD(markdown);
+    expect(doc.children.length).toBe(1);
+    expect(doc.diagnostics.length).toBe(0);
+    const node = doc.children[0];
+    expect(node.type).toBe("timeline");
+    if (node.type === "timeline") {
+      expect(node.name).toBe("t");
+      expect(node.domain).toEqual([0, 6.28]);
+      expect(node.default).toBe(0);
+      expect(node.speed).toBe(1.0);
+      expect(node.loop).toBe(true);
+    }
+  });
+
+  it("should parse timeline block with explicit domain: [min, max]", () => {
+    const markdown = `
+\`\`\`timeline
+name: u
+domain: [1, 10]
+default: 2
+speed: 2.0
+loop: false
+\`\`\`
+`;
+    const doc = parseMathMD(markdown);
+    expect(doc.children.length).toBe(1);
+    expect(doc.diagnostics.length).toBe(0);
+    const node = doc.children[0];
+    expect(node.type).toBe("timeline");
+    if (node.type === "timeline") {
+      expect(node.name).toBe("u");
+      expect(node.domain).toEqual([1, 10]);
+      expect(node.default).toBe(2);
+      expect(node.speed).toBe(2.0);
+      expect(node.loop).toBe(false);
+    }
+  });
+
+  it("should parse scene blocks trajectory, particle, frame, vectorarrow, and field", () => {
+    const markdown = `
+\`\`\`trajectory
+id: traj-1
+x: cos(t)
+y: sin(t)
+z: t
+tDomain: [0, 6.28]
+\`\`\`
+
+\`\`\`particle
+trajectoryRef: traj-1
+showTrail: true
+trailLength: 20
+\`\`\`
+
+\`\`\`frame
+trajectoryRef: traj-1
+showT: true
+showN: true
+showB: true
+\`\`\`
+
+\`\`\`vectorarrow
+origin: [0, 0, 0]
+vector: [1, 2, 3]
+label: v
+color: #10b981
+\`\`\`
+
+\`\`\`field
+dimensions: 2
+components: ["-y", "x"]
+xDomain: [-3, 3]
+yDomain: [-3, 3]
+density: 10
+\`\`\`
+`;
+    const doc = parseMathMD(markdown);
+    expect(doc.children.length).toBe(5);
+    expect(doc.diagnostics.length).toBe(0);
+    expect(doc.children.map((c) => c.type)).toEqual([
+      "trajectory",
+      "particle",
+      "frame",
+      "vectorarrow",
+      "field",
+    ]);
+  });
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, ChangeEvent } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { parseMathMD } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
@@ -101,7 +101,6 @@ export function formatInlineMarkdown(text: string): string {
   return sanitized;
 }
 
-// --- Timeline Controller for Shared Clock/Animation ---
 
 interface TimelineControllerProps {
   core: MathMDCore | null;
@@ -110,6 +109,8 @@ interface TimelineControllerProps {
   onVariableChange: (name: string, value: number) => void;
   activeTimers: Map<string, number>;
   setActiveTimers: React.Dispatch<React.SetStateAction<Map<string, number>>>;
+  getVariables: () => Record<string, number>;
+  subscribe: (callback: () => void) => () => void;
 }
 
 function TimelineController({
@@ -119,24 +120,39 @@ function TimelineController({
   onVariableChange,
   activeTimers: _activeTimers,
   setActiveTimers: _setActiveTimers,
+  getVariables,
+  subscribe,
 }: TimelineControllerProps) {
   const [masterPlaying, setMasterPlaying] = useState(false);
+  const masterPlayingRef = useRef(masterPlaying);
+  masterPlayingRef.current = masterPlaying;
   const [masterSpeed, setMasterSpeed] = useState(1.0);
   const [scrubValue, setScrubValue] = useState(0);
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
 
-  // Get all timeline-controlled variables
+  const reactiveVariables = useSyncExternalStore(
+    subscribe,
+    getVariables,
+    getVariables
+  );
+
   const timelineVars = useMemo(() => {
     const vars = new Set<string>();
     timelines.forEach(tl => {
       vars.add(tl.name);
-      tl.controls?.forEach(c => vars.add(c));
+      tl.controls?.forEach(nodeId => {
+        if (core) {
+          const nodeData = core.getNodeData(nodeId);
+          if (nodeData && nodeData.variables) {
+            Object.keys(nodeData.variables).forEach(v => vars.add(v));
+          }
+        }
+      });
     });
     return Array.from(vars);
-  }, [timelines]);
+  }, [timelines, core]);
 
-  // Compute global time domain from all timelines
   const globalDomain = useMemo(() => {
     if (timelines.length === 0) return [0, 1] as [number, number];
     let min = Infinity, max = -Infinity;
@@ -150,6 +166,8 @@ function TimelineController({
   const step = useCallback(() => {
     if (!core || timelineVars.length === 0) return;
     
+    if (!masterPlayingRef.current) return;
+    
     const now = performance.now();
     const dt = (now - lastTimeRef.current) / 1000 * masterSpeed; // seconds * speed
     lastTimeRef.current = now;
@@ -159,7 +177,7 @@ function TimelineController({
       const tl = timelines.find(t => t.name === varName);
       if (!tl) return;
       
-      const currentVal = variables[varName] ?? tl.default ?? tl.domain[0];
+      const currentVal = reactiveVariables[varName] ?? tl.default ?? tl.domain[0];
       const stepSize = (tl.domain[1] - tl.domain[0]) / 100 * dt * 30; // ~30 steps per second at 1x
       let nextVal = currentVal + stepSize;
       
@@ -168,7 +186,7 @@ function TimelineController({
           nextVal = tl.domain[0] + (nextVal - tl.domain[1]);
         } else {
           nextVal = tl.domain[1];
-          if (masterPlaying) setMasterPlaying(false);
+          if (masterPlayingRef.current) setMasterPlaying(false);
         }
       }
       
@@ -178,19 +196,18 @@ function TimelineController({
       }
     });
 
-    // Update scrub position
     if (anyChanged) {
       const firstTl = timelines[0];
       if (firstTl) {
-        const val = variables[firstTl.name] ?? firstTl.default ?? firstTl.domain[0];
+        const val = reactiveVariables[firstTl.name] ?? firstTl.default ?? firstTl.domain[0];
         setScrubValue((val - globalDomain[0]) / (globalDomain[1] - globalDomain[0]));
       }
     }
 
-    if (masterPlaying) {
+    if (masterPlayingRef.current) {
       animationFrameRef.current = requestAnimationFrame(step);
     }
-  }, [core, timelines, timelineVars, variables, masterSpeed, masterPlaying, globalDomain, onVariableChange]);
+  }, [core, timelines, timelineVars, reactiveVariables, masterSpeed, globalDomain, onVariableChange]);
 
   const togglePlay = useCallback(() => {
     setMasterPlaying(prev => {
@@ -213,7 +230,6 @@ function TimelineController({
     timelineVars.forEach(varName => {
       const tl = timelines.find(t => t.name === varName);
       if (!tl) return;
-      // Scale to this timeline's domain
       const scaledVal = tl.domain[0] + val * (tl.domain[1] - tl.domain[0]);
       onVariableChange(varName, Math.min(Math.max(scaledVal, tl.domain[0]), tl.domain[1]));
     });
@@ -224,7 +240,6 @@ function TimelineController({
     setMasterSpeed(speed);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (animationFrameRef.current) {
@@ -686,7 +701,6 @@ export function BWJMStudio() {
   const doc = useMemo(() => parseMathMD(markdown), [markdown]);
   const outline = useMemo(() => extractOutline(markdown), [markdown]);
   
-  // Extract timeline nodes from document
   const timelines = useMemo(() => 
     doc.children.filter(node => node.type === "timeline") as TimelineNode[], 
   [doc]);
@@ -1181,6 +1195,104 @@ export function BWJMStudio() {
             ...nodeData,
             scope: currentVars,
           } as any);
+        } else if (node.type === "trajectory") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.height = "420px";
+          cardBody.appendChild(mount);
+
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          const currentVars = coreRef.current.getVariables();
+          const currentT = currentVars["t"] ?? (node as any).tDomain?.[0] ?? 0;
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+            currentT,
+          } as any);
+        } else if (node.type === "particle") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.height = "420px";
+          cardBody.appendChild(mount);
+
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          const currentVars = coreRef.current.getVariables();
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+          } as any);
+        } else if (node.type === "frame") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.height = "420px";
+          cardBody.appendChild(mount);
+
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          const currentVars = coreRef.current.getVariables();
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+          } as any);
+        } else if (node.type === "field") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.height = "420px";
+          cardBody.appendChild(mount);
+
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          const currentVars = coreRef.current.getVariables();
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+          } as any);
+        } else if (node.type === "region") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.height = "420px";
+          cardBody.appendChild(mount);
+
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          const currentVars = coreRef.current.getVariables();
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+          } as any);
+        } else if (node.type === "camera") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.height = "420px";
+          cardBody.appendChild(mount);
+
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          const currentVars = coreRef.current.getVariables();
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+          } as any);
         } else if (node.type === "vectorfield2d") {
           const mount = document.createElement("div");
           mount.id = `mount-${node.id}`;
@@ -1205,7 +1317,6 @@ export function BWJMStudio() {
     sheet.appendChild(livePanel);
 
     const updateLiveScientificAnalysis = () => {
-      // Check if there are any visualizable nodes in the document
       const hasVisualNodes = doc.children.some(node => 
         ["curve3d", "trajectory", "surface3d", "vectorfield2d", "field", "plot2d", "region", "frame", "particle", "vectorarrow"].includes(node.type)
       );
@@ -1217,7 +1328,6 @@ export function BWJMStudio() {
 
       const vars = coreRef.current?.getVariables() || {};
 
-      // Find trajectory/curve3d nodes for kinematics
       const trajectoryNode = doc.children.find(n => n.type === "trajectory" || n.type === "curve3d");
       const fieldNode = doc.children.find(n => n.type === "vectorfield2d" || n.type === "field");
       const surfaceNode = doc.children.find(n => n.type === "surface3d");
@@ -1225,7 +1335,6 @@ export function BWJMStudio() {
       const regionNode = doc.children.find(n => n.type === "region");
       const frameNode = doc.children.find(n => n.type === "frame");
 
-      // Case 1: Trajectory/Curve3D with kinematics
       if (trajectoryNode) {
         const tVal = vars["t"] ?? (trajectoryNode as any).tDomain?.[0] ?? 0;
         const x = (trajectoryNode as any).x ?? "cos(t)";
@@ -1233,7 +1342,6 @@ export function BWJMStudio() {
         const z = (trajectoryNode as any).z ?? "0";
         const kin = computeKinematics({ x, y, z }, tVal, vars);
         
-        // Determine if curvature/torsion are symbolic, numerical, or undefined
         const isStationary = kin.isStationary || kin.speed < 1e-7;
         const crossMag = Math.sqrt(
           (kin.tangent.y * kin.binormal.z - kin.tangent.z * kin.binormal.y)**2 +
@@ -1292,14 +1400,12 @@ export function BWJMStudio() {
         return;
       }
 
-      // Case 2: Vector field analysis (2D or 3D)
       if (fieldNode) {
         const is3D = (fieldNode as any).dimensions === 3 || (fieldNode as any).type === "field" && (fieldNode as any).dimensions === 3;
         const components = (fieldNode as any).components || (fieldNode as any).field || ["-y", "x"];
         
         let fieldAnalysis = "";
         if (!is3D) {
-          // 2D field - can compute divergence, curl
           const sampleRes = sampleVectorField2D({ P: components[0], Q: components[1] }, [-3, 3], [-3, 3], 5, vars);
           const curlVal = sampleRes.curlAt(0, 0);
           const divVal = sampleRes.divergenceAt(0, 0);
@@ -1334,11 +1440,8 @@ export function BWJMStudio() {
           `;
         }
         
-        // Check for region for Green's theorem
         let greensAnalysis = "";
         if (regionNode && !is3D) {
-          // Could compute line integral and compare with double integral
-          // For now, just show region info
           greensAnalysis = `
             <div class="bwjm-panel-col">
               <div class="bwjm-col-title">Región para Teorema de Green</div>
@@ -1367,7 +1470,6 @@ export function BWJMStudio() {
         return;
       }
 
-      // Case 3: Surface 3D
       if (surfaceNode) {
         const equation = (surfaceNode as any).equation;
         livePanel.innerHTML = `
@@ -1399,7 +1501,6 @@ export function BWJMStudio() {
         return;
       }
 
-      // Case 4: 2D plots (Riemann, area, revolution)
       if (plot2dNodes.length > 0) {
         const aVal = vars["a"] ?? 1.0;
         const nVal = Math.round(vars["n"] ?? 10);
@@ -1458,7 +1559,6 @@ export function BWJMStudio() {
         return;
       }
 
-      // Default: no specific analysis
       livePanel.innerHTML = `
         <div class="bwjm-panel-header">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -1515,22 +1615,27 @@ export function BWJMStudio() {
     plotlyRenderersRef.current.forEach((renderer, nodeId) => {
       if (dirtyNodeIds.includes(nodeId)) return;
       const nodeData = coreRef.current?.getNodeData(nodeId);
-      if (nodeData && ((nodeData as any).type === "curve3d" || (nodeData as any).type === "vectorarrow")) {
-        const currentT = currentVars["t"] ?? (nodeData as any).tDomain?.[1];
-        renderer.render({
-          ...nodeData,
-          scope: currentVars,
-          currentT,
-          particle: (nodeData as any).type === "curve3d",
-          showTNB: (nodeData as any).type === "curve3d",
-          showVectors: (nodeData as any).type === "curve3d",
-        } as any);
+      if (nodeData) {
+        const nodeType = (nodeData as any).type;
+        if (["curve3d", "trajectory", "particle", "frame", "field", "region", "camera", "vectorarrow"].includes(nodeType)) {
+          const currentT = currentVars["t"] ?? (nodeData as any).tDomain?.[1] ?? (nodeData as any).tDomain?.[0] ?? 0;
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+            currentT,
+            particle: nodeType === "curve3d",
+            showTNB: nodeType === "curve3d",
+            showVectors: nodeType === "curve3d",
+          } as any);
+        }
       }
     });
 
     if (liveAnalysisRef.current) {
       liveAnalysisRef.current();
     }
+    
+    window.dispatchEvent(new CustomEvent('bwjm-variable-change'));
   };
 
   const currentVariables = coreRef.current ? coreRef.current.getVariables() : {};
@@ -1650,6 +1755,12 @@ export function BWJMStudio() {
           onVariableChange={handleVariableChange}
           activeTimers={activeTimersRef.current}
           setActiveTimers={() => {}}
+          getVariables={() => coreRef.current?.getVariables() ?? {}}
+          subscribe={(callback) => {
+            const handler = () => callback();
+            window.addEventListener('bwjm-variable-change', handler);
+            return () => window.removeEventListener('bwjm-variable-change', handler);
+          }}
         />
       )}
 

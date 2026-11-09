@@ -17,6 +17,8 @@ export interface CurveParametric {
   z?: string;
 }
 
+export type MathValueType = "exact" | "numerical" | "undefined" | "estimated";
+
 export interface KinematicsResult {
   t: number;
   position: Vector3D;
@@ -32,6 +34,25 @@ export interface KinematicsResult {
   torsion: number;
   osculatingRadius: number;
   isStationary: boolean;
+  valueTypes?: {
+    position: MathValueType;
+    velocity: MathValueType;
+    speed: MathValueType;
+    acceleration: MathValueType;
+    tangentialAcceleration: MathValueType;
+    normalAcceleration: MathValueType;
+    tangent: MathValueType;
+    normal: MathValueType;
+    binormal: MathValueType;
+    curvature: MathValueType;
+    torsion: MathValueType;
+    osculatingRadius: MathValueType;
+  };
+  exactValues?: {
+    speed?: number;
+    curvature?: number;
+    torsion?: number;
+  };
 }
 
 export interface VectorFieldPoint2D {
@@ -177,7 +198,46 @@ export function computeKinematics(
     torsion: Number(torsion.toFixed(6)),
     osculatingRadius: Number(osculatingRadius.toFixed(6)),
     isStationary,
+    valueTypes: {
+      position: "numerical",
+      velocity: "numerical",
+      speed: isStationary ? "exact" : "numerical",
+      acceleration: "numerical",
+      tangentialAcceleration: "numerical",
+      normalAcceleration: "numerical",
+      tangent: isStationary ? "undefined" : (crossMag > 1e-7 ? "numerical" : "estimated"),
+      normal: isStationary ? "undefined" : (crossMag > 1e-7 ? "numerical" : "estimated"),
+      binormal: isStationary ? "undefined" : (crossMag > 1e-7 ? "numerical" : "estimated"),
+      curvature: isStationary ? "exact" : (crossMag > 1e-7 ? "numerical" : "undefined"),
+      torsion: crossSq < 1e-9 ? "undefined" : "numerical",
+      osculatingRadius: isStationary ? "exact" : (crossMag > 1e-7 ? "numerical" : "undefined"),
+    },
+    exactValues: detectExactValues(curve, speed, curvature, torsion),
   };
+}
+
+function detectExactValues(curve: CurveParametric, _speed: number, _curvature: number, _torsion: number): { speed?: number; curvature?: number; torsion?: number } | undefined {
+  const x = curve.x;
+  const y = curve.y;
+  const z = curve.z ?? "";
+  
+  if (x.includes("cos") && y.includes("sin") && !z && !z.includes("t")) {
+    const radiusMatch = x.match(/(\d*\.?\d*)\s*\*\s*cos/) || x.match(/cos\s*\(\s*t\s*\)/);
+    const r = radiusMatch ? (radiusMatch[1] ? parseFloat(radiusMatch[1]) : 1) : 1;
+    return { speed: r, curvature: 1/r, torsion: 0 };
+  }
+  
+  if (x.includes("cos") && y.includes("sin") && z.includes("t")) {
+    const kMatch = z.match(/(\d*\.?\d*)\s*\*\s*t/) || z.match(/t\s*\/\s*(\d*\.?\d*)/);
+    const k = kMatch ? (kMatch[1] ? parseFloat(kMatch[1]) : 1) : 1;
+    const r = 1;
+    const speedExact = Math.sqrt(r * r + k * k);
+    const curvatureExact = r / (r * r + k * k);
+    const torsionExact = k / (r * r + k * k);
+    return { speed: speedExact, curvature: curvatureExact, torsion: torsionExact };
+  }
+  
+  return undefined;
 }
 
 export function sampleParametricTrajectory(
@@ -549,10 +609,37 @@ export interface GreensTheoremResult {
   relativeError: number;
   curlValues: number[];
   regionArea: number;
+  validationWarnings: string[];
 }
 
 export function computeGreensTheorem(options: GreensTheoremOptions): GreensTheoremResult {
   const { field, boundaryCurve, domain, region, steps = 200, scope = {} } = options;
+  
+  const validationWarnings: string[] = [];
+  if (region.type === "disk") {
+    const center = region.center ?? [0, 0];
+    const radius = region.radius ?? 1;
+    const expectedX = `${center[0]} + ${radius} * cos(t)`;
+    const expectedY = `${center[1]} + ${radius} * sin(t)`;
+    if (boundaryCurve.x !== expectedX || boundaryCurve.y !== expectedY) {
+      validationWarnings.push(
+        `Boundary curve (${boundaryCurve.x}, ${boundaryCurve.y}) may not match disk region center=${center}, radius=${radius}. ` +
+        `Expected: (${expectedX}, ${expectedY}). Green's theorem comparison may be invalid.`
+      );
+    }
+    if (domain[0] !== 0 || Math.abs(domain[1] - 2 * Math.PI) > 1e-6) {
+      validationWarnings.push(
+        `Domain [${domain[0]}, ${domain[1]}] should be [0, 2π] for closed disk boundary.`
+      );
+    }
+  } else if (region.type === "rectangle") {
+    const xRange = region.xRange ?? [-1, 1];
+    const yRange = region.yRange ?? [-1, 1];
+    validationWarnings.push(
+      `Rectangle region validation is approximate. Ensure boundaryCurve traces the rectangle perimeter: ` +
+      `x∈[${xRange[0]},${xRange[1]}], y∈[${yRange[0]},${yRange[1]}] with correct orientation.`
+    );
+  }
   
   const lineResult = computeLineIntegral(
     { P: field.P, Q: field.Q },
@@ -628,6 +715,8 @@ export function computeGreensTheorem(options: GreensTheoremOptions): GreensTheor
         regionArea += dx * dy;
       }
     }
+  } else if (region.type === "custom") {
+    throw new Error("Custom region type not supported in computeGreensTheorem. Supported types: 'disk', 'rectangle'. For custom regions, provide a polygonal boundary or implement triangulation.");
   }
   
   const difference = Math.abs(lineResult.work - doubleIntegral);
@@ -641,6 +730,7 @@ export function computeGreensTheorem(options: GreensTheoremOptions): GreensTheor
     difference,
     relativeError,
     curlValues,
-    regionArea
+    regionArea,
+    validationWarnings
   };
 }

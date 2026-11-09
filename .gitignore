@@ -39,6 +39,7 @@ AUDITORIA_*.md
 BWJM_200_*.md
 ESTADO_IMPLEMENTACION_*.md
 MEJORAS_BWJM.md
+REVISION_*.md
 
 # Environment and logs
 *.log
