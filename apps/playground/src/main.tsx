@@ -19,7 +19,7 @@ import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNo
 import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
-import { updateGraphOption } from "./graphOptionSource.js";
+import { updateGraphOption, updateGraphNumericOption } from "./graphOptionSource.js";
 import { DocumentSearch, type TextMatch } from "./DocumentSearch.js";
 import { useDocumentWorkspace } from "./workspaceDocuments.js";
 import { IconAtom, IconCheck } from "./icons.js";
@@ -541,7 +541,6 @@ export function BWJMStudio() {
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
   const openGraphSettingsRef = useRef<Set<string>>(new Set());
-  const sceneOptionsRef = useRef<Map<string, Partial<Parametric2DNode>>>(new Map());
   const playbackRef = useRef<InlinePlaybackController | null>(null);
   const liveAnalysisRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -983,10 +982,12 @@ export function BWJMStudio() {
             ["showInfo", "Mostrar ficha de ecuación y dominio"],
           ] : [
             ["animated", "Animar partícula"],
-            ["showTrail", "Mostrar estela"],
-            ["showVelocity", "Mostrar velocidad"],
-            ["showTangent", "Mostrar tangente"],
-            ["showNormal", "Mostrar normal"],
+            ["showTrail", "Estela"],
+            ["showVelocity", "Velocidad"],
+            ["showAcceleration", "Aceleración"],
+            ["showTangent", "Tangente"],
+            ["showNormal", "Normal"],
+            ["followParticle", "Seguir partícula"],
           ];
           const details = document.createElement("details");
           details.className = "bwjm-graph-settings";
@@ -1016,6 +1017,33 @@ export function BWJMStudio() {
             if (details.open) openGraphSettingsRef.current.add(settingsKey);
             else openGraphSettingsRef.current.delete(settingsKey);
           });
+          // A single source of truth: all curve layers and numeric preferences
+          // are edited here and persisted in the selected .bwjm block.
+          if (node.type === "parametric2d") {
+            const trailRow = document.createElement("label");
+            trailRow.className = "bwjm-graph-trail-length";
+            const textLabel = document.createElement("span");
+            textLabel.textContent = "Longitud de estela";
+            const trailRange = document.createElement("input");
+            trailRange.type = "range";
+            trailRange.min = "2";
+            trailRange.max = String(Math.min(500, node.samples ?? 200));
+            trailRange.step = "1";
+            trailRange.value = String(Math.min(Number(trailRange.max),
+              Math.max(2, node.trailLength ?? 100)));
+            trailRange.setAttribute("aria-label", "Longitud de estela");
+            const trailValue = document.createElement("output");
+            trailValue.textContent = trailRange.value;
+            trailRange.oninput = () => { trailValue.textContent = trailRange.value; };
+            trailRange.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              setMarkdown(previous => updateGraphNumericOption(
+                previous, node.range, "parametric2d", "trailLength",
+                Number(trailRange.value)));
+            };
+            trailRow.append(textLabel, trailRange, trailValue);
+            controls.appendChild(trailRow);
+          }
           details.appendChild(controls);
           cardBody.appendChild(details);
         }
@@ -1207,54 +1235,7 @@ export function BWJMStudio() {
           cardBody.appendChild(mount);
           const renderer = new SVGRenderer(mount, 720, 380);
           svgRenderersRef.current.set(node.id, renderer);
-          const options = sceneOptionsRef.current.get(node.id) ?? {};
-          renderer.render({ ...coreRef.current.getNodeData(node.id), ...options });
-
-          const panel = document.createElement("div");
-          panel.className = "bwjm-curve-layers";
-          const controls = [
-            ["showTrail", "Estela"],
-            ["showVelocity", "Velocidad"],
-            ["showAcceleration", "Aceleración"],
-            ["showTangent", "Tangente"],
-            ["showNormal", "Normal"],
-            ["followParticle", "Seguir partícula"],
-          ] as const;
-          const redraw = () => {
-            const live = coreRef.current?.getNodeData(node.id);
-            if (live) renderer.render({ ...live, ...(sceneOptionsRef.current.get(node.id) ?? {}) });
-          };
-          controls.forEach(([prop, label]) => {
-            const wrapper = document.createElement("label");
-            const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
-            checkbox.checked = (options[prop] ?? node[prop] ?? false) as boolean;
-            checkbox.onchange = () => {
-              sceneOptionsRef.current.set(node.id, {
-                ...sceneOptionsRef.current.get(node.id), [prop]: checkbox.checked,
-              });
-              redraw();
-            };
-            wrapper.append(checkbox, document.createTextNode(label));
-            panel.appendChild(wrapper);
-          });
-          const lengthLabel = document.createElement("label");
-          lengthLabel.textContent = "Longitud estela";
-          const length = document.createElement("input");
-          length.type = "range";
-          length.min = "2";
-          length.max = String(Math.min(500, node.samples ?? 200));
-          length.step = "1";
-          length.value = String(options.trailLength ?? node.trailLength ?? 100);
-          length.oninput = () => {
-            sceneOptionsRef.current.set(node.id, {
-              ...sceneOptionsRef.current.get(node.id), trailLength: Number(length.value),
-            });
-            redraw();
-          };
-          lengthLabel.appendChild(length);
-          panel.appendChild(lengthLabel);
-          cardBody.appendChild(panel);
+          renderer.render(coreRef.current.getNodeData(node.id));
         } else if (node.type === "calculusviz") {
           const data = coreRef.current.getNodeData(node.id);
           const mount = document.createElement("div");
@@ -1483,9 +1464,8 @@ export function BWJMStudio() {
             () => coreRef.current?.getVariables() ?? {},
             (name, value) => handleVariableChange(name, value),
           );
-          const layerPanel = node.type === "parametric2d"
-            ? cardBody.querySelector(".bwjm-curve-layers") : null;
-          if (layerPanel) layerPanel.prepend(transport.element);
+          const settingsControls = cardBody.querySelector(".bwjm-graph-settings-controls");
+          if (settingsControls) settingsControls.appendChild(transport.element);
           else cardBody.appendChild(transport.element);
           playbackRef.current = transport;
           inlinePlaybackMounted = true;
@@ -1816,7 +1796,6 @@ export function BWJMStudio() {
       if (svgRenderer) {
         svgRenderer.render({
           ...nodeData,
-          ...(nodeData.type === "parametric2d" ? sceneOptionsRef.current.get(nodeId) ?? {} : {}),
         });
       }
 
