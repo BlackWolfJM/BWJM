@@ -1134,6 +1134,7 @@ export function BWJMStudio() {
           cardBody.appendChild(details);
         }
 
+        try {
         if (node.type === "datatable" || node.type === "functiontable") {
           const tableNode = coreRef.current?.getNodeData(node.id) as DataTableNode | FunctionTableNode & { rows: Array<Array<string | number | boolean | null>> };
           const tableWrapper = document.createElement("div");
@@ -1576,6 +1577,17 @@ export function BWJMStudio() {
             URL.revokeObjectURL(url);
           };
           cardBody.appendChild(exportButton);
+        }
+        } catch (error) {
+          // An unbound coefficient must not crash the whole scientific document.
+          // The user can activate its local slider in Personalizar gráfica.
+          const warning = document.createElement("div");
+          warning.className = "bwjm-graph-runtime-warning";
+          const description = error instanceof Error ? error.message : String(error);
+          warning.textContent = "No se pudo graficar: " + description +
+            (supportsAdaptiveParameters(node)
+              ? ". Activa los parámetros interactivos para asignar coeficientes." : "");
+          cardBody.appendChild(warning);
         }
         card.appendChild(cardBody);
         sheet.appendChild(card);
