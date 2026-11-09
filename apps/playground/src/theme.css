@@ -1627,3 +1627,24 @@ body {
 .bwjm-calculus-report small { font-size:0.76rem; color:#64748b; }
 .bwjm-calculus-report .bwjm-calculus-warning { font-size:0.78rem; color:#9a3412; }
 .bwjm-calculus-report.has-error { background:#fff1f2; border-color:#fecdd3; color:#be123c; }
+
+/* Mode-specific scientific calculation assistant: organized without adding 10 tabs. */
+.bwjm-calculus-wizard { display:grid; gap:1rem; width:100%; min-width:0; color:var(--text-main); }
+.bwjm-calculus-wizard-header { display:grid; gap:0.65rem; padding:0.85rem 1rem; border:1px solid var(--border); border-radius:9px; background:var(--bg-card); }
+.bwjm-calculus-wizard-header > label { font-weight:700; font-size:0.87rem; }
+.bwjm-calculus-wizard select, .bwjm-calculus-wizard input { padding:0.62rem 0.7rem; background:var(--bg-app); border:1px solid var(--border); border-radius:6px; color:var(--text-main); font:0.88rem var(--font-mono); min-width:0; width:100%; }
+.bwjm-calculus-wizard select:focus-visible, .bwjm-calculus-wizard input:focus-visible { outline:2px solid var(--primary); outline-offset:1px; }
+.bwjm-calculus-wizard-header p { font-size:0.83rem; color:var(--text-secondary); line-height:1.5; }
+.bwjm-calculus-formula { font:600 1rem "Cambria Math",Georgia,serif; color:var(--accent-math); padding:0.45rem 0.6rem; background:var(--bg-elevated); border-radius:6px; }
+.bwjm-calculus-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0.8rem 1rem; }
+.bwjm-calculus-field { display:flex; flex-direction:column; gap:0.4rem; min-width:0; }
+.bwjm-calculus-field span { color:var(--text-secondary); font-size:0.78rem; font-weight:600; }
+.bwjm-calculus-code { background:var(--bg-app); border:1px solid var(--border); border-radius:8px; padding:0.8rem; min-width:0; }
+.bwjm-calculus-code strong { font-size:0.78rem; }
+.bwjm-calculus-code pre { margin-top:0.55rem; overflow:auto; color:#a5b4fc; font:0.8rem/1.5 var(--font-mono); }
+.bwjm-calculus-error { color:#fda4af; font-size:0.84rem; }
+.bwjm-calculus-controls { display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.7rem; align-items:center; }
+.bwjm-calculus-controls small { color:var(--text-muted); font-size:0.77rem; flex:1; }
+.bwjm-calculus-controls button { background:var(--primary); color:white; border:none; padding:0.68rem 1rem; font-weight:700; border-radius:8px; cursor:pointer; }
+.bwjm-calculus-controls button:disabled { opacity:0.45; cursor:not-allowed; }
+@media (max-width:680px) { .bwjm-calculus-fields { grid-template-columns:minmax(0,1fr); } }

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { IconX, IconCheck, IconBarChart } from "./icons.js";
+import { CalculusWizard } from "./CalculusWizard.js";
 
 interface ChartModalProps {
   isOpen: boolean;
@@ -7,7 +8,7 @@ interface ChartModalProps {
   onInsert: (codeBlock: string) => void;
 }
 
-type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider" | "parametric2d" | "experiment" | "flow2d";
+type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider" | "parametric2d" | "experiment" | "flow2d" | "calculus";
 
 export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInsert }) => {
   const [kind, setKind] = useState<ChartKind>("plot2d");
@@ -151,6 +152,12 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
               Experimento + tablas
             </button>
             <button
+              className={`bwjm-tab-item ${kind === "calculus" ? "active" : ""}`}
+              onClick={() => setKind("calculus")}
+            >
+              Áreas e integrales (10)
+            </button>
+            <button
               className={`bwjm-tab-item ${kind === "vectorfield2d" ? "active" : ""}`}
               onClick={() => setKind("vectorfield2d")}
             >
@@ -164,6 +171,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
             </button>
           </div>
 
+          {kind === "calculus" && (
+            <CalculusWizard onInsert={(block) => { onInsert(block); onClose(); }} />
+          )}
           {kind === "flow2d" && (
             <div className="bwjm-modal-grid">
               <p style={{ gridColumn: "1 / -1", color: "#475569" }}>
@@ -527,22 +537,22 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
             </div>
           )}
 
-          <div className="bwjm-modal-field full-width">
+          {kind !== "calculus" && <div className="bwjm-modal-field full-width">
             <label className="bwjm-modal-label">Bloque de Código Generado</label>
             <pre className="bwjm-code-preview">
               <code>{generatedCode}</code>
             </pre>
-          </div>
+          </div>}
         </div>
 
         <div className="bwjm-modal-footer">
           <button className="bwjm-btn-secondary" onClick={onClose}>
             Cancelar
           </button>
-          <button className="bwjm-btn-primary" onClick={handleConfirm}>
+          {kind !== "calculus" && <button className="bwjm-btn-primary" onClick={handleConfirm}>
             <IconCheck size={14} />
             <span>Insertar en el Editor</span>
-          </button>
+          </button>}
         </div>
       </div>
     </div>

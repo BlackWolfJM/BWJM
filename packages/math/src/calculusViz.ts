@@ -126,8 +126,12 @@ function betweenPair(
     out.value += simpson(t => Math.abs(axisEval(f, axis, t, scope) - axisEval(g, axis, t, scope)), [a, b]);
     addBoundedRegion(out, lower, upper, [a, b], scope, axis, Math.max(20, Math.floor(n / (endpoints.length - 1))),
       splitCrossings ? (firstHigher ? "#93c5fd" : "#fda4af") : "#a5b4fc");
-    if (k > 0) out.guides.push({a: axis === "x" ? [a, 0] : [0, a],
-      b: axis === "x" ? [a, axisEval(f, axis, a, scope)] : [axisEval(f, axis, a, scope), a], label:"Intersección"});
+    if (k > 0) {
+      const first: [number,number] = axis === "x" ? [a,0] : [0,a];
+      const second: [number,number] = axis === "x"
+        ? [a,axisEval(f,axis,a,scope)] : [axisEval(f,axis,a,scope),a];
+      out.guides.push({a:first,b:second,label:"Intersección"});
+    }
   }
   if (splitCrossings) {
     out.warnings.push("Las intersecciones se detectan por cambios de signo: tangencias sin cruce pueden requerir inspección.");
