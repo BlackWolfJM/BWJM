@@ -1075,6 +1075,8 @@ export function BWJMStudio() {
             checkbox.checked = key === "animated" && node.type === "parametric2d"
               ? configured !== false : configured === true;
             checkbox.onchange = () => {
+              if (node.type !== "curve3d" && node.type !== "surface3d" &&
+                node.type !== "parametric2d") return;
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, key, checkbox.checked));
