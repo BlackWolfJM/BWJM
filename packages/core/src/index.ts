@@ -1,4 +1,4 @@
-import { MathMDDocument, MathMDNode } from "@mathmd/ast";
+import { MathMDDocument, MathMDNode, type GraphParameter } from "@mathmd/ast";
 import { 
   compileExpression, 
   evaluateExpression, 
@@ -21,6 +21,8 @@ export class MathMDCore {
   private dependencyMap: Map<string, Set<string>> = new Map(); // variable -> nodes that depend on it
   private reverseDependencyMap: Map<string, Set<string>> = new Map(); // node -> variables it depends on
   private nodeCache: Map<string, any> = new Map(); // cached rendered results
+  /** Local graph parameters never leak into a different chart with the same symbol. */
+  private localParameters: Map<string, Map<string, number>> = new Map();
   
   constructor(document: MathMDDocument) {
     this.document = document;
@@ -29,6 +31,10 @@ export class MathMDCore {
   
   private initialize() {
     this.document.children.forEach(node => {
+      if ("paramControls" in node && node.paramControls?.enabled) {
+        this.localParameters.set(node.id, new Map(
+          node.paramControls.parameters.map(parameter => [parameter.name, parameter.default])));
+      }
       if (node.type === "slider") {
         this.variables.set(node.name, node.default);
       }
@@ -260,6 +266,30 @@ export class MathMDCore {
     return Array.from(affectedNodes);
   }
   
+  /** Parameter values for a single graph, independent of document-wide sliders. */
+  getGraphParameters(nodeId: string): Record<string, number> {
+    return Object.fromEntries(this.localParameters.get(nodeId) ?? new Map<string, number>());
+  }
+
+  getGraphScope(nodeId: string): Record<string, number> {
+    return { ...this.getVariables(), ...this.getGraphParameters(nodeId) };
+  }
+
+  setGraphParameter(nodeId: string, name: string, value: number): boolean {
+    const node = this.document.children.find(item => item.id === nodeId);
+    const config = node && "paramControls" in node ? node.paramControls : undefined;
+    const parameter: GraphParameter | undefined = config?.enabled
+      ? config.parameters.find(item => item.name === name) : undefined;
+    if (!parameter || !Number.isFinite(value) ||
+      value < parameter.min || value > parameter.max) return false;
+    if (parameter.integer && !Number.isInteger(value)) return false;
+    const locals = this.localParameters.get(nodeId);
+    if (!locals || locals.get(name) === value) return false;
+    locals.set(name,value);
+    this.nodeCache.delete(nodeId);
+    return true;
+  }
+
   getNodeData(nodeId: string): any {
     if (this.nodeCache.has(nodeId)) {
       return this.nodeCache.get(nodeId);
@@ -280,13 +310,20 @@ export class MathMDCore {
     this.variables.forEach((value, name) => {
       scope[name] = value;
     });
-    
+    this.localParameters.get(node.id)?.forEach((value, name) => {
+      scope[name] = value;
+    });
+
     switch (node.type) {
       case "calculusviz":
         try {
-          return { ...node, ...computeCalculusViz(node, scope) };
+          const samples = this.localParameters.get(node.id)?.get("n");
+          const input = samples === undefined ? node : {
+            ...node, samples: Math.max(30, Math.min(300, Math.round(samples))),
+          };
+          return { ...node, ...computeCalculusViz(input, scope), scope };
         } catch (error) {
-          return { ...node, error: error instanceof Error ? error.message : String(error) };
+          return { ...node, scope, error: error instanceof Error ? error.message : String(error) };
         }
 
       case "flow2d": {
@@ -306,7 +343,7 @@ export class MathMDCore {
           this.variables.get(timeName) ?? node.tDomain[0]));
         return { ...node, ...sampleParametric2D(
           { x: node.x, y: node.y, domain: node.tDomain, samples: node.samples ?? 200 }, currentT, scope),
-          currentT };
+          currentT, scope };
       }
 
       case "datatable":
@@ -364,7 +401,8 @@ export class MathMDCore {
           ...node,
           type: "plot2d",
           points: sampled.x.map((x, i) => [x, sampled.y[i]]),
-          compiledExpression: compiled
+          compiledExpression: compiled,
+          scope
         };
       }
       
@@ -382,7 +420,8 @@ export class MathMDCore {
           ...node,
           type: "surface3d",
           points: sampled,
-          compiledExpression: compileExpression(node.equation)
+          compiledExpression: compileExpression(node.equation),
+          scope
         };
       }
       
@@ -438,7 +477,8 @@ export class MathMDCore {
         return {
           ...node,
           type: "curve3d",
-          points
+          points,
+          scope
         };
       }
       
