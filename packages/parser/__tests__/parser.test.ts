@@ -2,6 +2,39 @@ import { describe, it, expect } from "vitest";
 import { parseMathMD } from "../src/index.js";
 
 describe("MathMD Parser", () => {
+  it("parses all ten calculus visualization types from valid .bwjm blocks", () => {
+    const modes = [
+      "area-dx","area-dy","area-pieces","area-parametric","area-polar",
+      "double-region","change-order","double-polar","revolution","green",
+    ];
+    const fence = String.fromCharCode(96).repeat(3);
+    const common = ["f: x","g: 0","domain: [0, 1]","integrand: 1",
+      "paramX: cos(t)","paramY: sin(t)","fieldP: -y","fieldQ: x",
+      "reverseLower: 0","reverseUpper: 1","reverseDomain: [0, 1]",
+      "axis: x","method: washers"];
+    const markdown = modes.map(mode => [fence+"calculusviz","mode: "+mode,...common,fence].join("\n")).join("\n\n");
+    const doc = parseMathMD(markdown);
+    expect(doc.diagnostics).toEqual([]);
+    expect(doc.children).toHaveLength(10);
+    expect(doc.children.every(node => node.type === "calculusviz")).toBe(true);
+  });
+
+  it("rejects an incomplete Green visualization", () => {
+    const fence=String.fromCharCode(96).repeat(3);
+    const doc=parseMathMD([fence+"calculusviz","mode: green",
+      "domain: [0, 6.28]","paramX: cos(t)","paramY: sin(t)",fence].join("\n"));
+    expect(doc.children).toHaveLength(0);
+    expect(doc.diagnostics.some(d=>d.code==="MATHMD_CALCULUS_MODE_INVALID")).toBe(true);
+  });
+
+  it("rejects the vertical-axis disk method combination", () => {
+    const fence=String.fromCharCode(96).repeat(3);
+    const doc=parseMathMD([fence+"calculusviz","mode: revolution",
+      "domain: [0, 1]","f: x","g: 0","axis: y","method: disks",fence].join("\n"));
+    expect(doc.children).toHaveLength(0);
+    expect(doc.diagnostics.some(d=>d.code==="MATHMD_CALCULUS_MODE_INVALID")).toBe(true);
+  });
+
   it("parses persisted time markers and moving-curve display options", () => {
     const fence = String.fromCharCode(96).repeat(3);
     const source = [
