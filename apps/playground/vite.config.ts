@@ -5,6 +5,9 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // GitHub Pages serves a project at /BWJM/, not the domain root.
+  // Keep the local development server rooted at /.
+  base: process.env.BWJM_BASE_PATH || '/',
   server: {
     port: 3000
   },
