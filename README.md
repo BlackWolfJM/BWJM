@@ -18,7 +18,8 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
    - 2.5. Calculo Vectorial y Cinematica Espacial 3D (Marco Frenet-Serret)
    - 2.6. Campos Vectoriales 2D, Rotacional y Teorema de Green
    - 2.7. Arquitectura del Motor y Pipeline Zero-HTML
-   - 2.8. Tablas cientificas y tipografia matematica (nueva entrega)
+   - 2.8. Tablas cientificas y tipografia matematica
+   - 2.9. Tablas generadas, graficas estadisticas y particulas 2D (fase 2)
 3. Manual de Usuario y Guia del Formato (.bwjm / .jm)
    - 3.1. Estructura Basica de un Documento .bwjm
    - 3.2. Manual de Bloques Cientificos Interactivos
@@ -32,6 +33,8 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
      - 3.2.8. Linea de Tiempo y Reloj Global (timeline)
      - 3.2.9. Composicion de Escenas Cinematicas (trajectory, particle, frame)
      - 3.2.10. Tablas cientificas exportables (datatable)
+     - 3.2.11. Experimentos desde ecuaciones (functiontable, datachart, statistics)
+     - 3.2.12. Curvas parametricas animadas en el plano (parametric2d)
    - 3.3. Manual de Operacion de BWJM Studio
      - 3.3.1. Modos de Vista: Editor, Split y Lector
      - 3.3.2. Carga de Lecciones y Navegacion de Esquema
@@ -157,6 +160,23 @@ En la rama de desarrollo del [Pull Request #1](https://github.com/BlackWolfJM/BW
 Estos cambios cuentan con pruebas automatizadas de validacion y exportacion. La validacion en navegador real de la interfaz 3D sigue siendo un paso adicional.
 
 Documentacion: [Tablas cientificas y formulas](docs/CIENCIA_TABLAS_Y_FORMULAS_BWJM.md).
+
+---
+
+### 2.9. Tablas generadas, graficas estadisticas y particulas 2D (fase 2)
+
+En la misma rama de desarrollo se implementaron piezas reutilizables para documentos cientificos experimentales:
+
+- `functiontable`: muestrea expresiones de una variable y crea columnas de datos sin necesidad de calculos manuales.
+- `datachart`: genera graficas conectadas a una tabla por `tableRef`, con modos `scatter`, `line`, `bar`, `area`, `step`, `histogram`, `box` y `pie`. La regresion lineal opcional se representa sobre dispersion o linea.
+- `statistics`: calcula tamaño muestral, media, mediana, suma, minimo, maximo, cuartiles, varianza muestral y desviacion estandar; puede calcular correlacion y regresion lineal entre columnas.
+- `parametric2d`: representa curvas 2D arbitrarias con particula movil, estela y vectores velocidad, aceleracion, tangente y normal.
+- Las graficas SVG admiten exportacion vectorial y las tablas generadas pueden exportarse a CSV/TSV/JSON.
+- La interfaz de insercion `ChartModal` incluye asistentes para curvas 2D animadas y experimentos con datos.
+
+**Ejemplo ejecutable:** [Laboratorio cientifico interactivo](examples/laboratorio-cientifico-interactivo.bwjm). Consulta tambien [Implementacion cientifica fase 2](docs/IMPLEMENTACION_CIENTIFICA_FASE_2.md).
+
+**Alcance:** estas implementaciones amplian el motor; el [roadmap de 200 funciones](docs/ROADMAP_200_FUNCIONALIDADES_CIENTIFICAS.md) sigue en desarrollo. No se afirma que todos sus puntos esten terminados.
 
 ---
 
@@ -473,6 +493,62 @@ rows:
 - Las tablas no son por ahora una hoja de calculo con evaluacion automatica de formulas.
 
 **Formatos:** CSV y TSV (aplicaciones de hojas de calculo), JSON (datos estructurados). XLSX directo y tablas reactivas se encuentran en la hoja de ruta.
+
+---
+
+#### 3.2.11. Experimentos desde ecuaciones (`functiontable`, `datachart`, `statistics`)
+
+Un mismo archivo puede generar una tabla, graficar sus resultados y producir un resumen estadistico.
+
+```functiontable
+id: mi-experimento
+variable: t
+domain: [0, 4]
+samples: 41
+columns: [t, x, v]
+expressions: ["t^2", "2*t"]
+precision: 4
+```
+
+```datachart
+tableRef: mi-experimento
+kind: scatter
+x: t
+y: x
+title: Posicion versus tiempo
+```
+
+```statistics
+tableRef: mi-experimento
+column: x
+pairedColumn: v
+```
+
+Los bloques se conectan por `tableRef` al ID de una tabla declarativa. El muestreo numerico no constituye una solucion simbolica exacta.
+
+#### 3.2.12. Curvas parametricas animadas en el plano (`parametric2d`)
+
+```slider
+name: t
+min: 0
+max: 6.28
+step: 0.05
+default: 0
+```
+
+```parametric2d
+x: cos(t)
+y: sin(t)
+tDomain: [0, 6.28]
+samples: 200
+showTrail: true
+showVelocity: true
+showAcceleration: true
+showTangent: true
+showNormal: true
+```
+
+La particula se mueve con el deslizador, mientras los vectores cambian de posicion y orientacion. La grafica se puede guardar como SVG.
 
 ---
 
