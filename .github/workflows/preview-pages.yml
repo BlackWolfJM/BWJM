@@ -47,6 +47,8 @@ jobs:
         run: pnpm --filter @mathmd/playground run build -- --base=/BWJM/
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Upload Studio site
         uses: actions/upload-pages-artifact@v4
         with:
