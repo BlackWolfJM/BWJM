@@ -333,37 +333,37 @@ $$
 
 Ajusta el número de particiones rectangulares para observar la convergencia:
 
-```slider
+\`\`\`slider
 name: n
 min: 2
 max: 50
 step: 1
 default: 10
-```
+\`\`\`
 
-```slider
+\`\`\`slider
 name: a
 min: 0.1
 max: 2.0
 step: 0.1
 default: 1.0
-```
+\`\`\`
 
 ## Gráfica de la Curva Superior e Inferior
 
-```plot2d
+\`\`\`plot2d
 equation: a * x
 x: [0, 1.2]
 grid: true
 color: "#0284c7"
-```
+\`\`\`
 
-```plot2d
+\`\`\`plot2d
 equation: x^2
 x: [0, 1.2]
 grid: true
 color: "#ea580c"
-```
+\`\`\`
 `,
   },
   revolution: {
@@ -383,23 +383,23 @@ $$
 
 Pulsa **Play** para observar el barrido en el espacio tridimensional de $0$ a $3\\pi$:
 
-```slider
+\`\`\`slider
 name: alpha
 min: 0.1
 max: 9.42
 step: 0.15
 default: 6.28
-```
+\`\`\`
 
 ## Vista Tridimensional del Sólido
 
-```surface3d
+\`\`\`surface3d
 equation: sqrt(x^2 + y^2) * sin(alpha * 0.1)
 x: [-2, 2]
 y: [-2, 2]
 samples: 50
 contours: true
-```
+\`\`\`
 `,
   },
   surface: {
@@ -413,29 +413,29 @@ $$
 z(x, y) = A \\cdot \\frac{\\sin(\\omega \\sqrt{x^2 + y^2})}{\\sqrt{x^2 + y^2}}
 $$
 
-```slider
+\`\`\`slider
 name: amplitud
 min: 0.2
 max: 3.0
 step: 0.1
 default: 1.5
-```
+\`\`\`
 
-```slider
+\`\`\`slider
 name: frecuencia
 min: 0.5
 max: 4.0
 step: 0.25
 default: 1.5
-```
+\`\`\`
 
-```surface3d
+\`\`\`surface3d
 equation: amplitud * sin(frecuencia * sqrt(x^2 + y^2 + 0.1))
 x: [-6, 6]
 y: [-6, 6]
 samples: 55
 contours: true
-```
+\`\`\`
 `,
   },
   vector_calculus: {
@@ -453,23 +453,23 @@ $$
 
 Ajusta el parámetro temporal $t$ o pulsa Play para activar la cinemática animada:
 
-```slider
+\`\`\`slider
 name: t
 min: 0.0
 max: 6.28
 step: 0.05
 default: 1.57
-```
+\`\`\`
 
 ## Visualización Tridimensional de la Curva y Triedro Móvil
 
-```curve3d
+\`\`\`curve3d
 x: cos(t)
 y: sin(t)
 z: t / 3
 tDomain: [0, 6.28]
 color: "#0284c7"
-```
+\`\`\`
 `,
   },
   vector_field: {
@@ -485,13 +485,13 @@ $$
 
 ## Visualización del Campo Vectorial 2D
 
-```vectorfield2d
+\`\`\`vectorfield2d
 field: ["-y", "x"]
 xDomain: [-3, 3]
 yDomain: [-3, 3]
 density: 12
 color: "#0284c7"
-```
+\`\`\`
 `,
   },
 };
