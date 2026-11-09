@@ -1,4 +1,4 @@
-import { compileExpression, evaluateExpression, sample1D, sampleSurface } from "./mathEngine.js";
+import { compileExpression, evaluateExpression, sample1D, sampleSurface, extractFreeParameters } from "./mathEngine.js";
 import {
   computeExactArea,
   computePiecewiseArea,
