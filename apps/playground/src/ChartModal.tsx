@@ -101,7 +101,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
 
   return (
     <div className="bwjm-modal-overlay" onClick={onClose}>
-      <div className="bwjm-modal-container" onClick={(e) => e.stopPropagation()}>
+      <div className="bwjm-modal-container bwjm-chart-modal" role="dialog" aria-modal="true" aria-label="Asistente para insertar gráficas" onClick={(e) => e.stopPropagation()}>
         <div className="bwjm-modal-header">
           <div className="bwjm-modal-title">
             <IconBarChart size={18} />
