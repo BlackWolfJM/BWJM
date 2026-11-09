@@ -7,7 +7,7 @@ interface ChartModalProps {
   onInsert: (codeBlock: string) => void;
 }
 
-type ChartKind = "plot2d" | "surface3d" | "slider";
+type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider";
 
 export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInsert }) => {
   const [kind, setKind] = useState<ChartKind>("plot2d");
@@ -26,6 +26,21 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
   const [samples3d, setSamples3d] = useState<string>("40");
   const [contours3d, setContours3d] = useState<boolean>(true);
 
+  const [curveX, setCurveX] = useState<string>("cos(t)");
+  const [curveY, setCurveY] = useState<string>("sin(t)");
+  const [curveZ, setCurveZ] = useState<string>("t / 3");
+  const [curveTMin, setCurveTMin] = useState<string>("0");
+  const [curveTMax, setCurveTMax] = useState<string>("6.28");
+  const [curveColor, setCurveColor] = useState<string>("#0284c7");
+
+  const [fieldX, setFieldX] = useState<string>("-y");
+  const [fieldY, setFieldY] = useState<string>("x");
+  const [fieldXMin, setFieldXMin] = useState<string>("-3");
+  const [fieldXMax, setFieldXMax] = useState<string>("3");
+  const [fieldYMin, setFieldYMin] = useState<string>("-3");
+  const [fieldYMax, setFieldYMax] = useState<string>("3");
+  const [fieldDensity, setFieldDensity] = useState<string>("12");
+
   const [sliderName, setSliderName] = useState<string>("a");
   const [sliderMin, setSliderMin] = useState<string>("0.1");
   const [sliderMax, setSliderMax] = useState<string>("5");
@@ -39,6 +54,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
     generatedCode = `\`\`\`plot2d\nequation: ${eq2d}\nx: [${xMin2d}, ${xMax2d}]\ngrid: ${grid2d}\ncolor: "${color2d}"\n\`\`\``;
   } else if (kind === "surface3d") {
     generatedCode = `\`\`\`surface3d\nequation: ${eq3d}\nx: [${xMin3d}, ${xMax3d}]\ny: [${yMin3d}, ${yMax3d}]\nsamples: ${samples3d}\ncontours: ${contours3d}\n\`\`\``;
+  } else if (kind === "curve3d") {
+    generatedCode = `\`\`\`curve3d\nx: ${curveX}\ny: ${curveY}\nz: ${curveZ}\ntDomain: [${curveTMin}, ${curveTMax}]\ncolor: "${curveColor}"\n\`\`\``;
+  } else if (kind === "vectorfield2d") {
+    generatedCode = `\`\`\`vectorfield2d\nfield: ["${fieldX}", "${fieldY}"]\nxDomain: [${fieldXMin}, ${fieldXMax}]\nyDomain: [${fieldYMin}, ${fieldYMax}]\ndensity: ${fieldDensity}\n\`\`\``;
   } else {
     generatedCode = `\`\`\`slider\nname: ${sliderName}\nmin: ${sliderMin}\nmax: ${sliderMax}\nstep: ${sliderStep}\ndefault: ${sliderDefault}\n\`\`\``;
   }
@@ -74,6 +93,18 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
               onClick={() => setKind("surface3d")}
             >
               Superficie 3D (surface3d)
+            </button>
+            <button
+              className={`bwjm-tab-item ${kind === "curve3d" ? "active" : ""}`}
+              onClick={() => setKind("curve3d")}
+            >
+              Curva 3D (curve3d)
+            </button>
+            <button
+              className={`bwjm-tab-item ${kind === "vectorfield2d" ? "active" : ""}`}
+              onClick={() => setKind("vectorfield2d")}
+            >
+              Campo 2D (vectorfield2d)
             </button>
             <button
               className={`bwjm-tab-item ${kind === "slider" ? "active" : ""}`}
@@ -207,6 +238,135 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
                   />
                   <span>Curvas de nivel</span>
                 </label>
+              </div>
+            </div>
+          )}
+
+          {kind === "curve3d" && (
+            <div className="bwjm-modal-grid">
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">x(t)</label>
+                <input
+                  type="text"
+                  className="bwjm-modal-input"
+                  value={curveX}
+                  onChange={(e) => setCurveX(e.target.value)}
+                  placeholder="cos(t)"
+                />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">y(t)</label>
+                <input
+                  type="text"
+                  className="bwjm-modal-input"
+                  value={curveY}
+                  onChange={(e) => setCurveY(e.target.value)}
+                  placeholder="sin(t)"
+                />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">z(t)</label>
+                <input
+                  type="text"
+                  className="bwjm-modal-input"
+                  value={curveZ}
+                  onChange={(e) => setCurveZ(e.target.value)}
+                  placeholder="t / 3"
+                />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">Color de la curva</label>
+                <input
+                  type="text"
+                  className="bwjm-modal-input"
+                  value={curveColor}
+                  onChange={(e) => setCurveColor(e.target.value)}
+                />
+              </div>
+              <div className="bwjm-modal-field full-width">
+                <label className="bwjm-modal-label">Dominio del parámetro t [mín, máx]</label>
+                <div className="bwjm-modal-range-group">
+                  <input
+                    type="text"
+                    className="bwjm-modal-input"
+                    value={curveTMin}
+                    onChange={(e) => setCurveTMin(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="bwjm-modal-input"
+                    value={curveTMax}
+                    onChange={(e) => setCurveTMax(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {kind === "vectorfield2d" && (
+            <div className="bwjm-modal-grid">
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">Componente P(x, y)</label>
+                <input
+                  type="text"
+                  className="bwjm-modal-input"
+                  value={fieldX}
+                  onChange={(e) => setFieldX(e.target.value)}
+                  placeholder="-y"
+                />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">Componente Q(x, y)</label>
+                <input
+                  type="text"
+                  className="bwjm-modal-input"
+                  value={fieldY}
+                  onChange={(e) => setFieldY(e.target.value)}
+                  placeholder="x"
+                />
+              </div>
+              <div className="bwjm-modal-field full-width">
+                <label className="bwjm-modal-label">Dominio X [mín, máx]</label>
+                <div className="bwjm-modal-range-group">
+                  <input
+                    type="text"
+                    className="bwjm-modal-input"
+                    value={fieldXMin}
+                    onChange={(e) => setFieldXMin(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="bwjm-modal-input"
+                    value={fieldXMax}
+                    onChange={(e) => setFieldXMax(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="bwjm-modal-field full-width">
+                <label className="bwjm-modal-label">Dominio Y [mín, máx]</label>
+                <div className="bwjm-modal-range-group">
+                  <input
+                    type="text"
+                    className="bwjm-modal-input"
+                    value={fieldYMin}
+                    onChange={(e) => setFieldYMin(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="bwjm-modal-input"
+                    value={fieldYMax}
+                    onChange={(e) => setFieldYMax(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">Densidad de flechas</label>
+                <input
+                  type="number"
+                  className="bwjm-modal-input"
+                  value={fieldDensity}
+                  onChange={(e) => setFieldDensity(e.target.value)}
+                />
               </div>
             </div>
           )}

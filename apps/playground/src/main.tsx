@@ -10,6 +10,8 @@ import {
   computeRiemannPartition,
   computeRevolutionVolume,
   computeCrossSection,
+  computeKinematics,
+  computeLineIntegral,
 } from "@mathmd/math";
 import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode } from "@mathmd/ast";
 import { MenuBar } from "./MenuBar.js";
@@ -225,6 +227,62 @@ x: [-6, 6]
 y: [-6, 6]
 samples: 55
 contours: true
+\`\`\`
+`,
+  },
+  vector_calculus: {
+    title: "4. Cinemática Espacial & Marco Frenet (TNB) en Hélice 3D",
+    filename: "cinematica_helice_3d.bwjm",
+    content: `# Cinemática Espacial y Triedro de Frenet-Serret
+
+> **Geometría Diferencial de Curvas:** Para una partícula con trayectoria $\\mathbf{r}(t) = (\\cos t, \\sin t, t/3)$, el vector tangente $\\mathbf{T}$, la normal principal $\\mathbf{N}$ y la binormal $\\mathbf{B} = \\mathbf{T} \\times \\mathbf{N}$ constituyen un marco ortonormal móvil. La curvatura $\\kappa = 0.9$ y la torsión $\\tau = 0.3$ describen cómo la curva se flexiona y escapa de su plano osculador.
+
+$$
+\\mathbf{r}(t) = \\left( \\cos(t), \\sin(t), \\frac{t}{3} \\right), \\quad |\\mathbf{v}(t)| = \\frac{\\sqrt{10}}{3} \\approx 1.054, \\quad \\kappa = \\frac{9}{10} = 0.9, \\quad \\tau = \\frac{3}{10} = 0.3
+$$
+
+## Control de Tiempo y Movimiento
+
+Ajusta el parámetro temporal $t$ o pulsa Play para activar la cinemática animada:
+
+\`\`\`slider
+name: t
+min: 0.0
+max: 6.28
+step: 0.05
+default: 1.57
+\`\`\`
+
+## Visualización Tridimensional de la Curva y Triedro Móvil
+
+\`\`\`curve3d
+x: cos(t)
+y: sin(t)
+z: t / 3
+tDomain: [0, 6.28]
+color: "#0284c7"
+\`\`\`
+`,
+  },
+  vector_field: {
+    title: "5. Campos Vectoriales 2D & Teorema de Green",
+    filename: "campo_vectorial_green.bwjm",
+    content: `# Campos Vectoriales, Circulación y Teorema de Green
+
+> **Cálculo Vectorial:** Para el campo de velocidades en rotación rígida $\\mathbf{F}(x, y) = (-y, x)$, el rotacional mide la velocidad angular local $(\\nabla \\times \\mathbf{F})_z = 2$. Por el Teorema de Green, la circulación a lo largo de la frontera circular $C$ es igual a la integral doble del rotacional sobre el disco encerrado:
+
+$$
+\\oint_C \\mathbf{F} \\cdot d\\mathbf{r} = \\iint_D (\\nabla \\times \\mathbf{F})_z\\,dA = 2 \\cdot \\text{Área}(D) = 2\\pi \\approx 6.28318
+$$
+
+## Visualización del Campo Vectorial 2D
+
+\`\`\`vectorfield2d
+field: ["-y", "x"]
+xDomain: [-3, 3]
+yDomain: [-3, 3]
+density: 12
+color: "#0284c7"
 \`\`\`
 `,
   },
@@ -688,6 +746,26 @@ export function BWJMStudio() {
         setFilename(SAMPLE_LESSONS.surface.filename);
       },
     },
+    {
+      id: "load-lesson-4",
+      title: "Cargar Lección: Cinemática Espacial & Marco Frenet (TNB)",
+      category: "Lecciones",
+      action: () => {
+        setSelectedTemplate("vector_calculus");
+        setMarkdown(SAMPLE_LESSONS.vector_calculus.content);
+        setFilename(SAMPLE_LESSONS.vector_calculus.filename);
+      },
+    },
+    {
+      id: "load-lesson-5",
+      title: "Cargar Lección: Campos Vectoriales 2D & Teorema de Green",
+      category: "Lecciones",
+      action: () => {
+        setSelectedTemplate("vector_field");
+        setMarkdown(SAMPLE_LESSONS.vector_field.content);
+        setFilename(SAMPLE_LESSONS.vector_field.filename);
+      },
+    },
   ];
 
   useEffect(() => {
@@ -870,6 +948,39 @@ export function BWJMStudio() {
           if (nodeData) {
             renderer.render(nodeData);
           }
+        } else if (node.type === "curve3d") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.height = "420px";
+          cardBody.appendChild(mount);
+
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          const currentVars = coreRef.current.getVariables();
+          const currentT = currentVars["t"] ?? (node as any).tDomain?.[1];
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+            currentT,
+            particle: true,
+            showTNB: true,
+            showVectors: true,
+          } as any);
+        } else if (node.type === "vectorfield2d") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.minHeight = "360px";
+          cardBody.appendChild(mount);
+
+          const renderer = new SVGRenderer(mount, 720, 360);
+          svgRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          renderer.render(nodeData);
         }
 
         card.appendChild(cardBody);
@@ -882,8 +993,12 @@ export function BWJMStudio() {
     sheet.appendChild(livePanel);
 
     const updateLiveScientificAnalysis = () => {
-      // Panel de análisis científico solo para lecciones demo; evitar mostrar resultados hardcodeados en documentos arbitrarios
-      const isDemo = filename === "area_riemann.bwjm" || filename === "solido_revolucion.bwjm" || filename === "onda_armonica.bwjm";
+      const isDemo =
+        filename === "area_riemann.bwjm" ||
+        filename === "solido_revolucion.bwjm" ||
+        filename === "onda_armonica.bwjm" ||
+        filename === "cinematica_helice_3d.bwjm" ||
+        filename === "campo_vectorial_green.bwjm";
       if (!isDemo) {
         livePanel.style.display = "none";
         return;
@@ -891,6 +1006,110 @@ export function BWJMStudio() {
       livePanel.style.display = "block";
 
       const vars = coreRef.current?.getVariables() || {};
+
+      if (filename === "cinematica_helice_3d.bwjm") {
+        const tVal = vars["t"] ?? 1.57;
+        const kin = computeKinematics({ x: "cos(t)", y: "sin(t)", z: "t / 3" }, tVal, vars);
+        livePanel.innerHTML = `
+          <div class="bwjm-panel-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <strong>Motor Científico BWJM • Cinemática Espacial & Triedro Frenet-Serret</strong>
+          </div>
+          <div class="bwjm-panel-grid">
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Posición & Velocidad (t = ${tVal.toFixed(2)})</div>
+              <div class="bwjm-metric-row">
+                <span>Posición r(t):</span>
+                <strong>(${kin.position.x.toFixed(3)}, ${kin.position.y.toFixed(3)}, ${kin.position.z.toFixed(3)})</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Rapidez |v(t)|:</span>
+                <strong style="color: #0284c7;">${kin.speed.toFixed(4)} (Exacta: √10/3 ≈ 1.0541)</strong>
+              </div>
+            </div>
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Descomposición de Aceleración</div>
+              <div class="bwjm-metric-row">
+                <span>Tangencial a_T:</span>
+                <strong style="color: #10b981;">${kin.tangentialAcceleration.toFixed(4)}</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Normal a_N:</span>
+                <strong style="color: #f59e0b;">${kin.normalAcceleration.toFixed(4)}</strong>
+              </div>
+            </div>
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Geometría Diferencial Intrínseca</div>
+              <div class="bwjm-metric-row">
+                <span>Curvatura κ:</span>
+                <strong style="color: #6366f1;">${kin.curvature.toFixed(4)} (Exacta: 9/10 = 0.9)</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Torsión τ:</span>
+                <strong style="color: #ec4899;">${kin.torsion.toFixed(4)} (Exacta: 3/10 = 0.3)</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Radio osculador R:</span>
+                <strong>${kin.osculatingRadius.toFixed(4)}</strong>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (filename === "campo_vectorial_green.bwjm") {
+        const lineInt = computeLineIntegral(
+          { P: "-y", Q: "x" },
+          { x: "cos(t)", y: "sin(t)" },
+          [0, 2 * Math.PI],
+          200,
+          vars
+        );
+        livePanel.innerHTML = `
+          <div class="bwjm-panel-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <strong>Motor Científico BWJM • Análisis de Campos Vectoriales & Teorema de Green</strong>
+          </div>
+          <div class="bwjm-panel-grid">
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Campo Vectorial F(x, y) = (-y, x)</div>
+              <div class="bwjm-metric-row">
+                <span>Tipo:</span>
+                <strong style="color: #0284c7;">Vórtice Rígido</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Divergencia ∇ · F:</span>
+                <strong style="color: #10b981;">0.0000 (Incompresible)</strong>
+              </div>
+            </div>
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Rotacional Local (∇ × F)_z</div>
+              <div class="bwjm-metric-row">
+                <span>Rotacional Escalar:</span>
+                <strong style="color: #ea580c;">2.0000 k</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Propiedad:</span>
+                <strong style="color: #f59e0b;">No Conservativo</strong>
+              </div>
+            </div>
+            <div class="bwjm-panel-col">
+              <div class="bwjm-col-title">Teorema de Green (∮ F · dr = ∬ rot F dA)</div>
+              <div class="bwjm-metric-row">
+                <span>Circulación cerrada:</span>
+                <strong style="color: #6366f1;">${lineInt.work.toFixed(5)} (2π ≈ 6.28319)</strong>
+              </div>
+              <div class="bwjm-metric-row">
+                <span>Integral Doble:</span>
+                <strong style="color: #10b981;">2 · Área(Disco) = 2π</strong>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       const aVal = vars["a"] ?? 1.0;
       const nVal = Math.round(vars["n"] ?? 10);
       const alphaVal = vars["alpha"] ?? 2 * Math.PI;
@@ -956,6 +1175,7 @@ export function BWJMStudio() {
   const handleVariableChange = (name: string, value: number) => {
     if (!coreRef.current) return;
     const dirtyNodeIds = coreRef.current.setVariable(name, value);
+    const currentVars = coreRef.current.getVariables();
 
     dirtyNodeIds.forEach((nodeId) => {
       const nodeData = coreRef.current?.getNodeData(nodeId);
@@ -968,7 +1188,31 @@ export function BWJMStudio() {
 
       const plotlyRenderer = plotlyRenderersRef.current.get(nodeId);
       if (plotlyRenderer) {
-        plotlyRenderer.render(nodeData);
+        const currentT = currentVars["t"] ?? (nodeData as any).tDomain?.[1];
+        plotlyRenderer.render({
+          ...nodeData,
+          scope: currentVars,
+          currentT,
+          particle: true,
+          showTNB: true,
+          showVectors: true,
+        } as any);
+      }
+    });
+
+    plotlyRenderersRef.current.forEach((renderer, nodeId) => {
+      if (dirtyNodeIds.includes(nodeId)) return;
+      const nodeData = coreRef.current?.getNodeData(nodeId);
+      if (nodeData && (nodeData as any).type === "curve3d") {
+        const currentT = currentVars["t"] ?? (nodeData as any).tDomain?.[1];
+        renderer.render({
+          ...nodeData,
+          scope: currentVars,
+          currentT,
+          particle: true,
+          showTNB: true,
+          showVectors: true,
+        } as any);
       }
     });
 

@@ -10,10 +10,22 @@ import {
   computeRevolutionVolume,
   sampleRevolutionMesh,
 } from "./solidRevolution.js";
+import {
+  computeKinematics,
+  computeLineIntegral,
+  sampleParametricTrajectory,
+  sampleVectorField2D,
+} from "./vectorCalculus.js";
 
 export { compileExpression, evaluateExpression, sample1D, sampleSurface };
 export { computeExactArea, computePiecewiseArea, computeRiemannPartition, findIntersections };
 export { computeCrossSection, computeRevolutionVolume, sampleRevolutionMesh };
+export {
+  computeKinematics,
+  computeLineIntegral,
+  sampleParametricTrajectory,
+  sampleVectorField2D,
+};
 
 export type {
   ExactAreaResult,
@@ -29,6 +41,15 @@ export type {
   RevolutionMeshResult,
   RevolutionVolumeResult,
 } from "./solidRevolution.js";
+export type {
+  CurveParametric,
+  KinematicsResult,
+  LineIntegralResult,
+  Vector2D,
+  Vector3D,
+  VectorFieldAnalysis2D,
+  VectorFieldPoint2D,
+} from "./vectorCalculus.js";
 
 export default {
   compileExpression,
@@ -42,4 +63,9 @@ export default {
   computeRevolutionVolume,
   computeCrossSection,
   sampleRevolutionMesh,
+  computeKinematics,
+  sampleParametricTrajectory,
+  sampleVectorField2D,
+  computeLineIntegral,
 };
+

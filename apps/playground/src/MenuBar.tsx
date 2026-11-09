@@ -159,6 +159,18 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               >
                 <span>Deslizador de parámetro</span>
               </button>
+              <button
+                className="bwjm-dropdown-item"
+                onClick={() => handleAction(() => onInsertMarkdown("```curve3d\nx: cos(t)\ny: sin(t)\nz: t / 3\ntDomain: [0, 6.28]\n```\n"))}
+              >
+                <span>Curva 3D Paramétrica</span>
+              </button>
+              <button
+                className="bwjm-dropdown-item"
+                onClick={() => handleAction(() => onInsertMarkdown("```vectorfield2d\nfield: [\"-y\", \"x\"]\nxDomain: [-3, 3]\nyDomain: [-3, 3]\ndensity: 12\n```\n"))}
+              >
+                <span>Campo Vectorial 2D</span>
+              </button>
             </div>
           )}
         </div>

@@ -114,6 +114,22 @@ describe('PlotlyRenderer', () => {
     );
   });
 
+  it('renders curve3d node with trajectory line and particle', () => {
+    const curveNode = {
+      type: 'curve3d',
+      x: 'cos(t)',
+      y: 'sin(t)',
+      z: 't / 3',
+      tDomain: [0, 6.28],
+      currentT: 1.5,
+      showVectors: true,
+      showTNB: true
+    } as any;
+
+    expect(() => renderer.render(curveNode)).not.toThrow();
+    expect(newPlot).toHaveBeenCalledOnce();
+  });
+
   it('should handle unsupported node types', () => {
     const unsupportedNode = {
       type: 'unsupportedType'

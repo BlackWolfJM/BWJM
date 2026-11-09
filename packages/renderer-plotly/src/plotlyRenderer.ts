@@ -1,5 +1,5 @@
 import type { MathMDNode } from "@mathmd/ast";
-import { sampleSurface } from "@mathmd/math";
+import { sampleSurface, sampleParametricTrajectory, computeKinematics } from "@mathmd/math";
 
 export interface PlotlyApi {
   newPlot(element: HTMLElement, data: unknown[], layout: object, config: object): Promise<unknown>;
@@ -9,8 +9,15 @@ export interface PlotlyApi {
   Plots: { resize(element: HTMLElement): void };
 }
 
-type SurfaceSamples = ReturnType<typeof sampleSurface>;
-type PlotlyRenderNode = MathMDNode & { points?: SurfaceSamples };
+type PlotlyRenderNode = MathMDNode & {
+  points?: any;
+  scope?: Record<string, number>;
+  currentT?: number;
+  particle?: boolean;
+  showVectors?: boolean;
+  showTNB?: boolean;
+  samples?: number;
+};
 
 /**
  * Plotly Renderer for MathMD 3D visualizations
@@ -67,22 +74,136 @@ export class PlotlyRenderer {
    * Render a MathMD node to Plotly
    */
   render(node: PlotlyRenderNode): void {
-    // Clear previous data
     this.data = [];
-    
+
     switch (node.type) {
       case "surface3d":
-        this.renderSurface3D(node);
+        this.renderSurface3D(node as any);
         break;
-        
+
+      case "curve3d":
+        this.renderCurve3D(node as any);
+        break;
+
       default:
-        // For unsupported node types, render error message
         this.renderError(`Unsupported 3D node type: ${node.type}`);
         break;
     }
-    
-    // Update the plot
+
     void this.updatePlot();
+  }
+
+  private renderCurve3D(node: Extract<PlotlyRenderNode, { type: "curve3d" }>): void {
+    const { x, y, z, tDomain, color } = node;
+    const samples = node.samples || 200;
+    const scope = node.scope || {};
+    try {
+      const trajectory = node.points ?? sampleParametricTrajectory(
+        { x, y, z },
+        tDomain,
+        samples,
+        scope
+      );
+
+      const xs = trajectory.map((p: any) => Array.isArray(p) ? p[0] : p.x);
+      const ys = trajectory.map((p: any) => Array.isArray(p) ? p[1] : p.y);
+      const zs = trajectory.map((p: any) => Array.isArray(p) ? p[2] : p.z);
+
+      const curveTrace = {
+        type: "scatter3d",
+        mode: "lines",
+        x: xs,
+        y: ys,
+        z: zs,
+        line: {
+          color: color || "#38bdf8",
+          width: 5
+        },
+        name: `r(t)`
+      };
+
+      const traces: any[] = [curveTrace];
+
+      if (node.currentT !== undefined || node.particle) {
+        const particleT = node.currentT ?? tDomain[1];
+        const kin = computeKinematics({ x, y, z }, particleT, scope);
+        traces.push({
+          type: "scatter3d",
+          mode: "markers",
+          x: [kin.position.x],
+          y: [kin.position.y],
+          z: [kin.position.z],
+          marker: {
+            size: 8,
+            color: "#f43f5e"
+          },
+          name: "Particula"
+        });
+
+        if (node.showVectors) {
+          const vScale = 0.5;
+          traces.push({
+            type: "scatter3d",
+            mode: "lines",
+            x: [kin.position.x, kin.position.x + kin.velocity.x * vScale],
+            y: [kin.position.y, kin.position.y + kin.velocity.y * vScale],
+            z: [kin.position.z, kin.position.z + kin.velocity.z * vScale],
+            line: { color: "#10b981", width: 4 },
+            name: "v(t)"
+          });
+          traces.push({
+            type: "scatter3d",
+            mode: "lines",
+            x: [kin.position.x, kin.position.x + kin.acceleration.x * vScale],
+            y: [kin.position.y, kin.position.y + kin.acceleration.y * vScale],
+            z: [kin.position.z, kin.position.z + kin.acceleration.z * vScale],
+            line: { color: "#f59e0b", width: 4 },
+            name: "a(t)"
+          });
+        }
+
+        if (node.showTNB) {
+          const frameLen = 0.8;
+          traces.push({
+            type: "scatter3d",
+            mode: "lines",
+            x: [kin.position.x, kin.position.x + kin.tangent.x * frameLen],
+            y: [kin.position.y, kin.position.y + kin.tangent.y * frameLen],
+            z: [kin.position.z, kin.position.z + kin.tangent.z * frameLen],
+            line: { color: "#06b6d4", width: 5 },
+            name: "T"
+          });
+          traces.push({
+            type: "scatter3d",
+            mode: "lines",
+            x: [kin.position.x, kin.position.x + kin.normal.x * frameLen],
+            y: [kin.position.y, kin.position.y + kin.normal.y * frameLen],
+            z: [kin.position.z, kin.position.z + kin.normal.z * frameLen],
+            line: { color: "#a855f7", width: 5 },
+            name: "N"
+          });
+          traces.push({
+            type: "scatter3d",
+            mode: "lines",
+            x: [kin.position.x, kin.position.x + kin.binormal.x * frameLen],
+            y: [kin.position.y, kin.position.y + kin.binormal.y * frameLen],
+            z: [kin.position.z, kin.position.z + kin.binormal.z * frameLen],
+            line: { color: "#ec4899", width: 5 },
+            name: "B"
+          });
+        }
+      }
+
+      this.data = traces;
+      this.layout.title = {
+        text: `Curva Parametrica 3D r(t) = (${x}, ${y}, ${z})`,
+        x: 0.5,
+        xanchor: "center"
+      };
+      this.layout.scene.aspectmode = "data";
+    } catch (error: any) {
+      this.renderError(`Error rendering curve3d: ${error?.message || String(error)}`);
+    }
   }
 
   /**
