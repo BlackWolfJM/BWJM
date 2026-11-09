@@ -960,6 +960,56 @@ export function BWJMStudio() {
         const cardBody = document.createElement("div");
         cardBody.className = "bwjm-node-body";
 
+        // Graph settings persist in the selected code fence, avoiding transient-only UI state.
+        if (node.type === "curve3d" || node.type === "surface3d" || node.type === "parametric2d") {
+          const options: Array<[string, string]> = node.type === "curve3d" ? [
+            ["animated", "Animar partícula"],
+            ["showVectors", "Vectores velocidad y aceleración"],
+            ["showTNB", "Triedro de Frenet (T, N, B)"],
+            ["showLegend", "Mostrar leyenda"],
+            ["showInfo", "Mostrar panel científico"],
+          ] : node.type === "surface3d" ? [
+            ["contours", "Curvas de nivel / cotas"],
+            ["animated", "Animar (si la ecuación depende de t)"],
+            ["showInfo", "Mostrar ficha de ecuación y dominio"],
+          ] : [
+            ["animated", "Animar partícula"],
+            ["showTrail", "Mostrar estela"],
+            ["showVelocity", "Mostrar velocidad"],
+            ["showTangent", "Mostrar tangente"],
+            ["showNormal", "Mostrar normal"],
+          ];
+          const details = document.createElement("details");
+          details.className = "bwjm-graph-settings";
+          details.open = openGraphSettingsRef.current.has(node.id);
+          const summary = document.createElement("summary");
+          summary.textContent = "Personalizar gráfica";
+          details.appendChild(summary);
+          const controls = document.createElement("div");
+          controls.className = "bwjm-graph-settings-controls";
+          options.forEach(([key, label]) => {
+            const wrapper = document.createElement("label");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            const configured = (node as unknown as Record<string, unknown>)[key];
+            checkbox.checked = key === "animated" && node.type === "parametric2d"
+              ? configured !== false : configured === true;
+            checkbox.onchange = () => {
+              openGraphSettingsRef.current.add(node.id);
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, key, checkbox.checked));
+            };
+            wrapper.append(checkbox, document.createTextNode(label));
+            controls.appendChild(wrapper);
+          });
+          details.addEventListener("toggle", () => {
+            if (details.open) openGraphSettingsRef.current.add(node.id);
+            else openGraphSettingsRef.current.delete(node.id);
+          });
+          details.appendChild(controls);
+          cardBody.appendChild(details);
+        }
+
         if (node.type === "datatable" || node.type === "functiontable") {
           const tableNode = coreRef.current?.getNodeData(node.id) as DataTableNode | FunctionTableNode & { rows: Array<Array<string | number | boolean | null>> };
           const tableWrapper = document.createElement("div");
@@ -1281,12 +1331,11 @@ export function BWJMStudio() {
           const currentVars = coreRef.current.getVariables();
           const currentT = currentVars["t"] ?? (node as any).tDomain?.[1];
           renderer.render({
-            ...nodeData,
-            scope: currentVars,
-            currentT,
-            particle: true,
-            showTNB: true,
-            showVectors: true,
+            ...nodeData, scope: currentVars, currentT,
+            particle: node.animated === true,
+            showTNB: node.animated === true && node.showTNB === true,
+            showVectors: node.animated === true && node.showVectors === true,
+            showLegend: node.showLegend === true,
           } as any);
         } else if (node.type === "vectorarrow") {
           const mount = document.createElement("div");
@@ -1446,8 +1495,9 @@ export function BWJMStudio() {
     sheet.appendChild(livePanel);
 
     const updateLiveScientificAnalysis = () => {
-      const hasVisualNodes = doc.children.some(node => 
-        ["curve3d", "trajectory", "surface3d", "vectorfield2d", "field", "plot2d", "region", "frame", "particle", "vectorarrow"].includes(node.type)
+      const hasVisualNodes = doc.children.some(node =>
+        ["curve3d", "trajectory", "surface3d", "field", "plot2d"].includes(node.type) &&
+        (node as unknown as { showInfo?: boolean }).showInfo === true
       );
       if (!hasVisualNodes) {
         livePanel.style.display = "none";
@@ -1457,10 +1507,12 @@ export function BWJMStudio() {
 
       const vars = coreRef.current?.getVariables() || {};
 
-      const trajectoryNode = doc.children.find(n => n.type === "trajectory" || n.type === "curve3d");
-      const fieldNode = doc.children.find(n => n.type === "vectorfield2d" || n.type === "field");
-      const surfaceNode = doc.children.find(n => n.type === "surface3d");
-      const plot2dNodes = doc.children.filter(n => n.type === "plot2d");
+      const wantsInfo = (n: typeof doc.children[number]) =>
+        (n as unknown as { showInfo?: boolean }).showInfo === true;
+      const trajectoryNode = doc.children.find(n => (n.type === "trajectory" || n.type === "curve3d") && wantsInfo(n));
+      const fieldNode = doc.children.find(n => (n.type === "vectorfield2d" || n.type === "field") && wantsInfo(n));
+      const surfaceNode = doc.children.find(n => n.type === "surface3d" && wantsInfo(n));
+      const plot2dNodes = doc.children.filter(n => n.type === "plot2d" && wantsInfo(n));
       const regionNode = doc.children.find(n => n.type === "region");
       const frameNode = doc.children.find(n => n.type === "frame");
 
@@ -1611,7 +1663,7 @@ export function BWJMStudio() {
               <div class="bwjm-col-title">Ecuación</div>
               <div class="bwjm-metric-row">
                 <span>z =</span>
-                <strong>${equation}</strong>
+                <strong>${escapeHtml(equation)}</strong>
               </div>
             </div>
             <div class="bwjm-panel-col">
