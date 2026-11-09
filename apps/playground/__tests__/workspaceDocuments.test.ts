@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { initialWorkspace, updateActiveContent, openWorkspaceDocument,
   closeWorkspaceDocument, markDocumentSaved, renameWorkspaceDocument, normalizeFilename
 } from "../src/workspaceDocuments.js";
-import { updateGraphOption } from "../src/graphOptionSource.js";
+import { updateGraphOption, updateGraphNumericOption } from "../src/graphOptionSource.js";
 import { supportsInlinePlayback } from "../src/inlineGraphPlayback.js";
 import { RIBBON_GROUPS } from "../src/Ribbon.js";
 import { findTextMatches } from "../src/DocumentSearch.js";
@@ -124,5 +124,44 @@ describe("compact, non-duplicated chart animation UI", () => {
     expect(supportsInlinePlayback({ type: "vectorfield2d" })).toBe(false);
     expect(supportsInlinePlayback({ type: "calculusviz" })).toBe(false);
     expect(supportsInlinePlayback({ type: "trajectory" })).toBe(true);
+  });
+});
+
+
+describe("single expandable editor for parametric graphs", () => {
+  const fence = String.fromCharCode(96).repeat(3);
+  const block = [
+    fence + "parametric2d", "x: cos(t)", "y: sin(t)",
+    "tDomain: [0, 6.283185307]", "samples: 180", fence,
+  ].join("\n");
+  const range = {
+    start: { line: 1, column: 1, offset: 0 },
+    end: { line: 6, column: 4, offset: block.length },
+  };
+  it("persists the formerly duplicated acceleration and camera controls", () => {
+    const accelerated = updateGraphOption(block, range, "parametric2d", "showAcceleration", true);
+    expect(accelerated).toContain("showAcceleration: true");
+    const updatedRange = { ...range, end: { ...range.end, offset: accelerated.length } };
+    const following = updateGraphOption(accelerated, updatedRange, "parametric2d", "followParticle", true);
+    expect(following).toContain("followParticle: true");
+    expect(following).toContain("x: cos(t)");
+    expect(following).toContain("y: sin(t)");
+  });
+  it("stores trail length in the same block and validates its parser limits", () => {
+    const next = updateGraphNumericOption(block, range, "parametric2d", "trailLength", 85);
+    expect(next).toContain("trailLength: 85");
+    expect(updateGraphNumericOption(block, range, "parametric2d", "trailLength", 501))
+      .toBe(block);
+    expect(updateGraphNumericOption(block, range, "parametric2d", "trailLength", 1.5))
+      .toBe(block);
+    expect(updateGraphNumericOption(block, range, "parametric2d", "trailLength", Number.NaN))
+      .toBe(block);
+  });
+  it("updates an existing trail length without generating duplicate YAML properties", () => {
+    const first = updateGraphNumericOption(block, range, "parametric2d", "trailLength", 70);
+    const secondRange = { ...range, end: { ...range.end, offset: first.length } };
+    const second = updateGraphNumericOption(first, secondRange, "parametric2d", "trailLength", 140);
+    expect(second.match(/trailLength:/g)).toHaveLength(1);
+    expect(second).toContain("trailLength: 140");
   });
 });
