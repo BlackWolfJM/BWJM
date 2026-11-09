@@ -33,6 +33,9 @@ import {
   cameraSchema,
   timelineSchema,
   dataTableSchema,
+  functionTableSchema,
+  dataChartSchema,
+  statisticsSchema,
 } from "@mathmd/ast";
 
 interface MdastPosition {
@@ -73,6 +76,9 @@ const SUPPORTED_MATHMD_TYPES = new Set([
   "camera",
   "timeline",
   "datatable",
+  "functiontable",
+  "datachart",
+  "statistics",
 ]);
 
 const VALID_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -878,6 +884,72 @@ function buildMathMDNode(
             path: issue.path,
           });
         }
+        return null;
+      }
+      return result.data;
+    }
+
+    case "functiontable": {
+      const payload = {
+        ...base,
+        caption: data.caption,
+        variable: data.variable ?? "t",
+        domain: data.domain ?? data.t ?? [0, 10],
+        samples: data.samples ?? 51,
+        expressions: data.expressions,
+        columns: data.columns,
+        units: data.units,
+        precision: data.precision ?? 6,
+      };
+      const result = functionTableSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) diagnostics.push({
+          severity: "error", code: "MATHMD_SCHEMA_INVALID", message: issue.message,
+          range, blockType: type, blockId: id, path: issue.path,
+        });
+        return null;
+      }
+      if (result.data.columns.length !== result.data.expressions.length + 1 ||
+        (result.data.units && result.data.units.length !== result.data.columns.length)) {
+        diagnostics.push({ severity: "error", code: "MATHMD_TABLE_DIMENSIONS",
+          message: "Columns must match sampled variable and expressions", range, blockType: type, blockId: id });
+        return null;
+      }
+      return result.data;
+    }
+
+    case "datachart": {
+      const payload = {
+        ...base,
+        tableRef: data.tableRef,
+        kind: data.kind ?? "scatter",
+        xColumn: data.xColumn ?? data.x,
+        yColumn: data.yColumn ?? data.y,
+        title: data.title,
+        color: data.color,
+        bins: data.bins,
+        trendline: data.trendline ?? false,
+      };
+      const result = dataChartSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) diagnostics.push({
+          severity: "error", code: "MATHMD_SCHEMA_INVALID", message: issue.message,
+          range, blockType: type, blockId: id, path: issue.path,
+        });
+        return null;
+      }
+      return result.data;
+    }
+
+    case "statistics": {
+      const payload = { ...base, tableRef: data.tableRef,
+        column: data.column, pairedColumn: data.pairedColumn };
+      const result = statisticsSchema.safeParse(payload);
+      if (!result.success) {
+        for (const issue of result.error.issues) diagnostics.push({
+          severity: "error", code: "MATHMD_SCHEMA_INVALID", message: issue.message,
+          range, blockType: type, blockId: id, path: issue.path,
+        });
         return null;
       }
       return result.data;

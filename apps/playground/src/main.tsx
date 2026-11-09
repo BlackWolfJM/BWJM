@@ -15,7 +15,7 @@ import {
   expressionToLatex,
   serializeScientificTable,
 } from "@mathmd/math";
-import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode } from "@mathmd/ast";
+import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode } from "@mathmd/ast";
 import { MenuBar } from "./MenuBar.js";
 import { ToolBar } from "./ToolBar.js";
 import { StatusBar } from "./StatusBar.js";
@@ -1055,8 +1055,8 @@ export function BWJMStudio() {
         const cardBody = document.createElement("div");
         cardBody.className = "bwjm-node-body";
 
-        if (node.type === "datatable") {
-          const tableNode = node as DataTableNode;
+        if (node.type === "datatable" || node.type === "functiontable") {
+          const tableNode = coreRef.current?.getNodeData(node.id) as DataTableNode | FunctionTableNode & { rows: Array<Array<string | number | boolean | null>> };
           const tableWrapper = document.createElement("div");
           tableWrapper.className = "bwjm-table-scroll";
           const table = document.createElement("table");
@@ -1128,6 +1128,39 @@ export function BWJMStudio() {
           toolbar.appendChild(copy);
           cardBody.appendChild(toolbar);
           cardBody.appendChild(tableWrapper);
+        } else if (node.type === "statistics") {
+          const data = coreRef.current?.getNodeData(node.id);
+          const report = document.createElement("div");
+          report.className = "bwjm-statistics-panel";
+          if (data?.error) {
+            report.textContent = data.error;
+          } else if (data?.summary) {
+            const metrics = Object.entries(data.summary).map(([key, value]) =>
+              [key, typeof value === "number" ? Number(value.toPrecision(8)) : value]);
+            if (data.regression) {
+              Object.entries(data.regression).forEach(([key, value]) =>
+                metrics.push([key, typeof value === "number" ? Number(value.toPrecision(8)) : value]));
+            }
+            metrics.forEach(([key, value]) => {
+              const item = document.createElement("div");
+              item.className = "bwjm-statistic";
+              const label = document.createElement("span");
+              label.textContent = String(key);
+              const number = document.createElement("strong");
+              number.textContent = String(value);
+              item.append(label, number);
+              report.appendChild(item);
+            });
+          }
+          cardBody.appendChild(report);
+        } else if (node.type === "datachart") {
+          const mount = document.createElement("div");
+          mount.style.width = "100%";
+          mount.style.height = "400px";
+          cardBody.appendChild(mount);
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+          renderer.render(coreRef.current.getNodeData(node.id) as any);
         } else if (node.type === "slider") {
           const sliderNode = node as SliderNode;
           const row = document.createElement("div");

@@ -2,6 +2,27 @@ import { describe, it, expect } from "vitest";
 import { parseMathMD } from "../src/index.js";
 
 describe("MathMD Parser", () => {
+  it("parses portable generated tables and charts from a single document", () => {
+    const markdown = [
+      "```functiontable", "id: movement", "variable: t", "domain: [0, 3]",
+      "samples: 4", "columns: [t, pos, speed]", "expressions: [t^2, 2*t]", "```",
+      "```datachart", "tableRef: movement", "kind: scatter",
+      "x: t", "y: pos", "trendline: true", "```",
+      "```statistics", "tableRef: movement", "column: pos",
+      "pairedColumn: speed", "```",
+    ].join("\n");
+    const result = parseMathMD(markdown);
+    expect(result.children.map(node => node.type)).toEqual(["functiontable", "datachart", "statistics"]);
+    expect(result.diagnostics).toHaveLength(0);
+  });
+  it("rejects function tables with mismatched columns", () => {
+    const markdown = ["```functiontable", "columns: [t]",
+      "expressions: [sin(t)]", "domain: [0, 2]", "```"].join("\n");
+    const result = parseMathMD(markdown);
+    expect(result.children).toHaveLength(0);
+    expect(result.diagnostics.some(d => d.code === "MATHMD_TABLE_DIMENSIONS")).toBe(true);
+  });
+
   it("parses scientific data tables and rejects invalid row widths", () => {
     const valid = parseMathMD("\n```datatable\ncolumns: [t, x]\nunits: [s, m]\nrows:\n  - [0, 2]\n  - [1, 3]\n```\n");
     expect(valid.children).toHaveLength(1);

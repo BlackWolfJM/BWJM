@@ -5,7 +5,10 @@ import {
   sample1D, 
   sampleSurface,
   sampleParametricTrajectory,
-  computeKinematics
+  computeKinematics,
+  generateFunctionTable,
+  summarizeColumn,
+  fitLinearRegression
 } from "@mathmd/math";
 import type { Vector3D } from "@mathmd/math";
 
@@ -157,6 +160,17 @@ export class MathMDCore {
         }
         break;
         
+      case "functiontable":
+        node.expressions.forEach(expression => deps.push(...extractVarsFromStr(expression)));
+        break;
+
+      case "datachart":
+      case "statistics": {
+        const table = this.document.children.find(c => c.id === node.tableRef);
+        if (table?.type === "functiontable") deps.push(...this.extractDependencies(table));
+        break;
+      }
+
       case "particle":
       case "frame": {
         let timeVar = "t";
@@ -242,6 +256,48 @@ export class MathMDCore {
     });
     
     switch (node.type) {
+      case "datatable":
+        return node;
+
+      case "functiontable":
+        return { ...node, ...generateFunctionTable(node, scope) };
+
+      case "datachart": {
+        const tableNode = this.document.children.find(item => item.id === node.tableRef);
+        if (!tableNode || (tableNode.type !== "datatable" && tableNode.type !== "functiontable")) {
+          return { ...node, error: "Referenced data table does not exist" };
+        }
+        const table = this.getNodeData(tableNode.id);
+        const xIdx = table.columns.indexOf(node.xColumn);
+        const yIdx = node.yColumn ? table.columns.indexOf(node.yColumn) : -1;
+        if (xIdx < 0 || (node.yColumn && yIdx < 0)) return { ...node, error: "Requested column does not exist" };
+        const rows: Array<Array<string | number | boolean | null>> = table.rows;
+        const x = rows.map(row => row[xIdx]);
+        const y = yIdx >= 0 ? rows.map(row => row[yIdx]) : [];
+        const pairs = rows.map(row => [row[xIdx], yIdx >= 0 ? row[yIdx] : null]);
+        const numbers = pairs.filter(pair => typeof pair[0] === "number" && typeof pair[1] === "number") as number[][];
+        const trend = node.trendline && numbers.length >= 2
+          ? fitLinearRegression(numbers.map(pair => pair[0]), numbers.map(pair => pair[1])) : null;
+        return { ...node, x, y, trend };
+      }
+
+      case "statistics": {
+        const tableNode = this.document.children.find(item => item.id === node.tableRef);
+        if (!tableNode || (tableNode.type !== "datatable" && tableNode.type !== "functiontable")) {
+          return { ...node, error: "Referenced data table does not exist" };
+        }
+        const table = this.getNodeData(tableNode.id);
+        const column = table.columns.indexOf(node.column);
+        const second = node.pairedColumn ? table.columns.indexOf(node.pairedColumn) : -1;
+        if (column < 0 || (node.pairedColumn && second < 0)) return { ...node, error: "Requested column does not exist" };
+        const numbers = table.rows.map((r: Array<string | number | boolean | null>) => r[column]).filter((v: unknown): v is number => typeof v === "number" && Number.isFinite(v));
+        const pair = second >= 0 ? table.rows.filter((r: Array<string | number | boolean | null>) =>
+          typeof r[column] === "number" && typeof r[second] === "number") : [];
+        const regression = second >= 0 && pair.length >= 2
+          ? fitLinearRegression(pair.map((r: number[]) => r[column]), pair.map((r: number[]) => r[second])) : null;
+        return { ...node, summary: summarizeColumn(numbers), regression };
+      }
+
       case "plot2d": {
         const compiled = compileExpression(node.equation);
         const sampled = sample1D(

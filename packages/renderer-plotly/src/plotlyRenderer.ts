@@ -42,6 +42,10 @@ type PlotlyRenderNode = MathMDNode & {
   isDegenerate?: boolean;
   vectors?: { position: number[]; vector: number[]; magnitude: number }[];
   dimensions?: 2 | 3;
+  x?: Array<string | number | boolean | null>;
+  y?: Array<string | number | boolean | null>;
+  trend?: { slope: number; intercept: number; r2: number } | null;
+  error?: string;
 };
 
 /**
@@ -99,6 +103,10 @@ export class PlotlyRenderer {
     this.data = [];
 
     switch (node.type) {
+      case "datachart":
+        this.renderDataChart(node as any);
+        break;
+
       case "surface3d":
         this.renderSurface3D(node as any);
         break;
@@ -141,6 +149,66 @@ export class PlotlyRenderer {
     }
 
     void this.updatePlot();
+  }
+
+  private renderDataChart(node: Extract<PlotlyRenderNode, { type: "datachart" }>): void {
+    if (node.error) {
+      this.renderError(node.error);
+      return;
+    }
+    const x = node.x ?? [];
+    const y = node.y ?? [];
+    const kind = node.kind;
+    const color = node.color ?? "#2563eb";
+    const name = node.title ?? node.yColumn ?? node.xColumn;
+    const trace: any = {
+      name,
+      x: [...x],
+      y: [...y],
+      marker: { color },
+      line: { color, width: 2.5 },
+    };
+    if (kind === "scatter") {
+      trace.type = "scatter";
+      trace.mode = "markers";
+    } else if (kind === "line" || kind === "area" || kind === "step") {
+      trace.type = "scatter";
+      trace.mode = "lines+markers";
+      if (kind === "area") trace.fill = "tozeroy";
+      if (kind === "step") trace.line.shape = "hv";
+    } else if (kind === "bar") {
+      trace.type = "bar";
+    } else if (kind === "histogram") {
+      trace.type = "histogram";
+      trace.nbinsx = node.bins ?? 20;
+      delete trace.y;
+    } else if (kind === "box") {
+      trace.type = "box";
+      trace.y = [...x];
+      delete trace.x;
+    } else if (kind === "pie") {
+      trace.type = "pie";
+      trace.labels = [...x];
+      trace.values = [...y];
+      delete trace.x;
+      delete trace.y;
+    }
+    this.data = [trace];
+    if (node.trend && (kind === "scatter" || kind === "line")) {
+      const nums = x.filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+      if (nums.length >= 2) {
+        const xMin = Math.min(...nums);
+        const xMax = Math.max(...nums);
+        this.data.push({ type: "scatter", mode: "lines", name: "Regresión lineal",
+          x: [xMin, xMax], y: [node.trend.intercept + node.trend.slope * xMin, node.trend.intercept + node.trend.slope * xMax],
+          line: { color: "#e11d48", dash: "dash", width: 2 } });
+      }
+    }
+    this.layout.title = { text: name, x: 0.5 };
+    this.layout.xaxis = { title: node.xColumn, zeroline: true, showgrid: true };
+    this.layout.yaxis = { title: node.yColumn ?? "", zeroline: true, showgrid: true };
+    this.layout.margin = { l: 55, r: 18, b: 55, t: 54 };
+    this.layout.showlegend = this.data.length > 1;
   }
 
   private renderCurve3D(node: Extract<PlotlyRenderNode, { type: "curve3d" }>): void {

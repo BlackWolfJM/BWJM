@@ -288,6 +288,39 @@ export interface DataTableNode extends MathMDNodeBase {
   precision?: number;
 }
 
+export interface FunctionTableNode extends MathMDNodeBase {
+  type: "functiontable";
+  caption?: string;
+  variable: string;
+  domain: [number, number];
+  samples: number;
+  expressions: string[];
+  columns: string[];
+  units?: string[];
+  precision?: number;
+}
+
+export type DataChartKind = "scatter" | "line" | "bar" | "area" | "step" | "histogram" | "box" | "pie";
+
+export interface DataChartNode extends MathMDNodeBase {
+  type: "datachart";
+  tableRef: string;
+  kind: DataChartKind;
+  xColumn: string;
+  yColumn?: string;
+  title?: string;
+  color?: string;
+  bins?: number;
+  trendline?: boolean;
+}
+
+export interface StatisticsNode extends MathMDNodeBase {
+  type: "statistics";
+  tableRef: string;
+  column: string;
+  pairedColumn?: string;
+}
+
 // TextNode preserved for legacy consumers
 export interface TextNode extends MathMDNodeBase {
   type: "text";
@@ -319,7 +352,10 @@ export type MathMDNode =
   | RegionNode
   | CameraNode
   | TimelineNode
-  | DataTableNode;
+  | DataTableNode
+  | FunctionTableNode
+  | DataChartNode
+  | StatisticsNode;
 
 // --- Deterministic & Unicode-Safe ID Helper ---
 
@@ -700,7 +736,38 @@ export const dataTableSchema = mathmdNodeBaseSchema.extend({
   precision: z.number().int().min(0).max(12).optional(),
 });
 
-// Discriminated union of all 24 MathMD block schemas
+export const functionTableSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("functiontable"),
+  caption: z.string().max(256).optional(),
+  variable: controlNameSchema,
+  domain: domainSchema,
+  samples: z.number().int().min(2).max(500),
+  expressions: z.array(z.string().min(1).max(1024)).min(1).max(12),
+  columns: z.array(z.string().min(1).max(100)).min(2).max(13),
+  units: z.array(z.string().max(32)).max(13).optional(),
+  precision: z.number().int().min(0).max(12).optional(),
+});
+
+export const dataChartSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("datachart"),
+  tableRef: z.string().min(1),
+  kind: z.enum(["scatter", "line", "bar", "area", "step", "histogram", "box", "pie"]),
+  xColumn: z.string().min(1),
+  yColumn: z.string().optional(),
+  title: z.string().max(120).optional(),
+  color: z.string().max(64).optional(),
+  bins: z.number().int().min(2).max(80).optional(),
+  trendline: z.boolean().optional(),
+});
+
+export const statisticsSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("statistics"),
+  tableRef: z.string().min(1),
+  column: z.string().min(1),
+  pairedColumn: z.string().optional(),
+});
+
+// Discriminated union of all 27 MathMD block schemas
 const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   plot2dSchema,
   surface3dSchema,
@@ -726,6 +793,9 @@ const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   cameraSchema,
   timelineNodeSchema,
   dataTableSchema,
+  functionTableSchema,
+  dataChartSchema,
+  statisticsSchema,
 ]);
 
 export const mathmdNodeSchema = mathmdNodeDiscriminatedUnion.superRefine((node, context) => {
@@ -734,6 +804,12 @@ export const mathmdNodeSchema = mathmdNodeDiscriminatedUnion.superRefine((node, 
   }
   if (node.type === "timeline") {
     validateTimelineBounds(node, context);
+  }
+  if (node.type === "functiontable") {
+    if (node.columns.length !== node.expressions.length + 1 ||
+      (node.units && node.units.length !== node.columns.length)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "column count must be expressions + 1, with matching units", path: ["columns"] });
+    }
   }
   if (node.type === "datatable") {
     if (node.units && node.units.length !== node.columns.length) {
