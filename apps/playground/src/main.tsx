@@ -19,6 +19,7 @@ import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNo
 import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
+import { updateGraphOption } from "./graphOptionSource.js";
 import { DocumentSearch, type TextMatch } from "./DocumentSearch.js";
 import { useDocumentWorkspace } from "./workspaceDocuments.js";
 import { IconAtom, IconCheck } from "./icons.js";
@@ -513,7 +514,7 @@ function renderProseText(content: string, container: HTMLElement): void {
 export function BWJMStudio() {
   const {
     documents, activeId, markdown, filename, selectedTemplate, setMarkdown,
-    openDocument, createDocument, selectDocument, closeDocument, markSaved,
+    openDocument, createDocument, selectDocument, closeDocument, markSaved, renameDocument,
   } = useDocumentWorkspace(SAMPLE_LESSONS.riemann.filename, SAMPLE_LESSONS.riemann.content, "riemann");
   const [viewMode, setViewMode] = useState<ViewMode>("split");
 
@@ -534,6 +535,7 @@ export function BWJMStudio() {
   const activeTimersRef = useRef<Map<string, number>>(new Map());
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
+  const openGraphSettingsRef = useRef<Set<string>>(new Set());
   const sceneOptionsRef = useRef<Map<string, Partial<Parametric2DNode>>>(new Map());
   const liveAnalysisRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -730,12 +732,6 @@ export function BWJMStudio() {
         insertAtCursor("\n| Columna 1 | Columna 2 |\n|---|---|\n| Dato 1 | Dato 2 |\n");
         break;
       case "picture": insertAtCursor("\n![Descripción de la imagen](ruta-a-la-imagen.png)\n"); break;
-      case "plot2d":
-        insertAtCursor("\n" + fence + "plot2d\nequation: sin(x)\nx: [-5, 5]\n" + fence + "\n");
-        break;
-      case "surface3d":
-        insertAtCursor("\n" + fence + "surface3d\nequation: sin(sqrt(x^2 + y^2))\nx: [-4, 4]\ny: [-4, 4]\n" + fence + "\n");
-        break;
       case "equation": insertAtCursor("\n$\n\\int_0^1 f(x)\\,dx\n$\n"); break;
       case "inline-math": insertAtCursor("$", "$"); break;
       case "matrix": insertAtCursor("\n$\n\\begin{bmatrix}a & b \\\\ c & d\\end{bmatrix}\n$\n"); break;
@@ -914,14 +910,6 @@ export function BWJMStudio() {
 
     const sheet = document.createElement("article");
     sheet.className = "bwjm-sheet";
-
-    const header = document.createElement("header");
-    header.className = "bwjm-sheet-header";
-    header.innerHTML = `
-      <div class="bwjm-sheet-badge">BWJM • DOCUMENTO CIENTÍFICO VIVO</div>
-      <div class="bwjm-sheet-filename">${escapeHtml(filename)}</div>
-    `;
-    sheet.appendChild(header);
 
     const segments = parseDocumentSegments(markdown, doc.children, doc.diagnostics);
 
@@ -1823,7 +1811,8 @@ export function BWJMStudio() {
         </div>
       </header>
       <DocumentTabs documents={documents} activeId={activeId}
-        onSelect={selectDocument} onClose={handleCloseDocument} onNew={handleNewDocument}/>
+        onSelect={selectDocument} onClose={handleCloseDocument} onNew={handleNewDocument}
+        onRename={renameDocument}/>
       <Ribbon activeView={viewMode} onAction={handleRibbonAction}
         collapsed={isRibbonCollapsed} onCollapseChange={setIsRibbonCollapsed}/>
 
