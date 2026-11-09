@@ -18,6 +18,7 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
    - 2.5. Calculo Vectorial y Cinematica Espacial 3D (Marco Frenet-Serret)
    - 2.6. Campos Vectoriales 2D, Rotacional y Teorema de Green
    - 2.7. Arquitectura del Motor y Pipeline Zero-HTML
+   - 2.8. Tablas cientificas y tipografia matematica (nueva entrega)
 3. Manual de Usuario y Guia del Formato (.bwjm / .jm)
    - 3.1. Estructura Basica de un Documento .bwjm
    - 3.2. Manual de Bloques Cientificos Interactivos
@@ -30,11 +31,13 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
      - 3.2.7. Flechas Vectoriales Tridimensionales (vectorarrow)
      - 3.2.8. Linea de Tiempo y Reloj Global (timeline)
      - 3.2.9. Composicion de Escenas Cinematicas (trajectory, particle, frame)
+     - 3.2.10. Tablas cientificas exportables (datatable)
    - 3.3. Manual de Operacion de BWJM Studio
      - 3.3.1. Modos de Vista: Editor, Split y Lector
      - 3.3.2. Carga de Lecciones y Navegacion de Esquema
      - 3.3.3. Asistente Visual de Graficas (ChartModal)
-     - 3.3.4. Exportacion a HTML Autonomo y Persistencia Local
+     - 3.3.4. Exportacion HTML y Persistencia Local
+     - 3.3.5. Exportacion de datos en CSV, TSV y JSON
 4. Futuras Herramientas del Proyecto (Roadmap)
 5. Estructura del Monorepo
 6. Instalacion y Uso
@@ -138,6 +141,22 @@ Estructura modular que garantiza la ejecucion en memoria sin generacion de archi
 - Renderizadores vectoriales: Renderizador SVG puro para graficos bidimensionales y campos vectoriales, y renderizador Plotly/WebGL para superficies y curvas tridimensionales.
 
 ![Arquitectura del Motor Cientifico BWJM](docs/images/04-arquitectura-formato-bwjm.svg)
+
+---
+
+### 2.8. Tablas cientificas y tipografia matematica (nueva entrega)
+
+En la rama de desarrollo del [Pull Request #1](https://github.com/BlackWolfJM/BWJM/pull/1) se incorporaron mejoras adicionales a BWJM Studio:
+
+- **Nuevo bloque `datatable`:** almacena tablas cientificas declarativas en el propio archivo `.bwjm`, con cabeceras, unidades, datos numericos y textuales, y precision de visualizacion.
+- **Exportacion directa de tablas:** botones para CSV, TSV y JSON, mas copia de TSV al portapapeles. CSV/TSV escapan delimitadores y protegen entradas de texto interpretables como formulas de hoja de calculo.
+- **Ecuaciones tipografiadas:** las cabeceras de `plot2d`, `surface3d` y `curve3d` presentan formulas mediante conversion de expresiones matematicas a LaTeX y renderizado con KaTeX, en lugar de mostrar solamente expresiones crudas.
+- **Presentacion de superficies 3D:** se retira de Plotly el titulo literal `Surface: sin(sqrt(...))` y se configura la relacion de aspecto segun los datos; las formulas aparecen en la cabecera de cada bloque.
+- **Estilos visuales:** cabeceras de nodos y formulas mas legibles, tablas con encabezados fijos, filas alternas y barra de exportacion.
+
+Estos cambios cuentan con pruebas automatizadas de validacion y exportacion. La validacion en navegador real de la interfaz 3D sigue siendo un paso adicional.
+
+Documentacion: [Tablas cientificas y formulas](docs/CIENCIA_TABLAS_Y_FORMULAS_BWJM.md).
 
 ---
 
@@ -429,6 +448,34 @@ showB: true
 
 ---
 
+#### 3.2.10. Tablas cientificas exportables (`datatable`)
+
+Las tablas se guardan **dentro del documento** como texto declarativo y se muestran como tablas interactivas con acciones de exportacion en el lector.
+
+```datatable
+id: medicion-cinematica
+caption: Datos de movimiento experimental
+columns: [Tiempo, Posicion, Velocidad]
+units: [s, m, m/s]
+precision: 3
+rows:
+  - [0, 0, 0]
+  - [1, 1.5, 3]
+  - [2, 6, 6]
+```
+
+**Reglas de validacion:**
+- Entre 1 y 25 columnas, como maximo 500 filas.
+- Cada fila debe tener el mismo numero de celdas que la lista de columnas.
+- `units` es opcional y, cuando se declara, debe tener una unidad por columna.
+- Los tipos admitidos en las celdas son texto, numero, booleano y `null`.
+- `precision` controla la visualizacion de numeros (de 0 a 12 decimales), sin alterar el valor almacenado.
+- Las tablas no son por ahora una hoja de calculo con evaluacion automatica de formulas.
+
+**Formatos:** CSV y TSV (aplicaciones de hojas de calculo), JSON (datos estructurados). XLSX directo y tablas reactivas se encuentran en la hoja de ruta.
+
+---
+
 ### 3.3. Manual de Operacion de BWJM Studio
 
 #### 3.3.1. Modos de Vista: Editor, Split y Lector
@@ -450,15 +497,25 @@ Si el usuario prefiere no escribir el codigo del bloque manualmente, puede acced
 - Dispone de pestanas diferenciadas para `plot2d`, `surface3d`, `curve3d`, `vectorfield2d` y `slider`.
 - Al rellenar los campos de ecuaciones y dominios, el modal genera el bloque formateado y lo inserta en la posicion actual del cursor con el boton **Insertar en el Editor**.
 
-#### 3.3.4. Exportacion a HTML Autonomo y Persistencia Local
+#### 3.3.4. Exportacion HTML y Persistencia Local
 
 - **Abrir (`Ctrl+O`)**: Permite cargar cualquier archivo local con extension `.bwjm`, `.jm`, `.md` o `.txt`.
 - **Guardar (`Ctrl+S`)**: Descarga el codigo fuente del documento activo en disco local conservando el nombre de archivo asignado.
-- **Exportar como HTML Interactivo**: Genera un documento HTML autonomo e interactivo sin dependencias de servidor, listo para ser enviado por correo o compartido con estudiantes e investigadores.
+- **Exportar como HTML**: genera una instantanea HTML del lector. **Limite actual:** no garantiza que el WebGL de Plotly ni todos los controles reactivos funcionen independientemente fuera de BWJM Studio; no debe considerarse todavia un exportador 3D autonomo.
+
+---
+
+#### 3.3.5. Exportacion de datos en CSV, TSV y JSON
+
+Para exportar una tabla `datatable`, abre el documento en modo lector y selecciona **CSV**, **TSV** o **JSON** en la barra superior de la tabla. El archivo descargado conserva las columnas y los datos. **Copiar TSV** transfiere los datos al portapapeles para pegarlos en herramientas externas.
 
 ---
 
 ## 4. Futuras Herramientas del Proyecto (Roadmap)
+
+El catalogo completo de **200 funcionalidades propuestas** se encuentra en [ROADMAP_200_FUNCIONALIDADES_CIENTIFICAS.md](docs/ROADMAP_200_FUNCIONALIDADES_CIENTIFICAS.md). **Este catalogo no equivale a 200 funciones implementadas**. Cada entrada tiene identificador `SCI-001` a `SCI-200`, por tema, y necesita pasar su propio proceso de desarrollo y pruebas antes de declararse terminada.
+
+
 
 Conforme a la vision integral de la especificacion de BlackWolfJM, el ecosistema evolucionara a traves de las siguientes herramientas y bloques curriculares:
 
@@ -587,7 +644,7 @@ pnpm lint
 # Comprobacion de tipos TypeScript en modo estricto en todos los paquetes
 pnpm typecheck
 
-# Suite completa de pruebas unitarias e integracion (162 tests pasando)
+# Suite completa de pruebas unitarias e integracion
 pnpm test
 
 # Verificacion de empaquetado y distribucion ESM
@@ -595,8 +652,8 @@ node scripts/test-dist.mjs
 ```
 
 Estado de Verificacion:
-- 15 suites de prueba ejecutadas exitosamente.
-- 162 pruebas unitarias e integradas pasando al 100%.
+- Las suites y cantidades de pruebas pueden variar con cada nueva funcionalidad; consultar el resultado actualizado de GitHub Actions.
+- El PR #1 agrega pruebas de `datatable`, conversion matematica a LaTeX y exportacion CSV/TSV/JSON.
 - 0 errores y 0 advertencias en ESLint.
 - 0 errores en TypeScript estricto (`tsc --noEmit`).
 - Empaquetado ESM de 11 paquetes monorepo y extensiones verificado.
