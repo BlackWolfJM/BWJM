@@ -1,0 +1,127 @@
+# BWJM — Laboratorio científico interactivo
+
+Un documento autocontenido para probar **cálculo vectorial, datos tabulados y gráficos científicos**.
+
+## 1. Partícula en una curva plana
+
+La trayectoria es $\mathbf r(t)=(\cos t,\sin t)$. Puedes presionar **Play** y ver la velocidad y los vectores T y N.
+
+```slider
+name: t
+min: 0
+max: 6.28
+step: 0.04
+default: 0
+```
+
+```parametric2d
+id: particula-plana
+x: cos(t)
+y: sin(t)
+tDomain: [0, 6.28]
+samples: 200
+color: "#0284c7"
+showTrail: true
+showVelocity: true
+showAcceleration: true
+showTangent: true
+showNormal: true
+```
+
+## 2. Generación de datos a partir de ecuaciones
+
+```functiontable
+id: muestras-circulo
+caption: Muestreo reproducible de la circunferencia unitaria
+variable: t
+domain: [0, 6.28]
+samples: 51
+columns: [tiempo, x, y, radio2]
+units: [rad, m, m, m2]
+expressions: ["cos(t)", "sin(t)", "cos(t)^2 + sin(t)^2"]
+precision: 6
+```
+
+En el bloque anterior puedes exportar los datos a **CSV**, **TSV** o **JSON**.
+
+## 3. Gráficas vinculadas a una misma tabla
+
+```datachart
+id: grafica-circulo
+tableRef: muestras-circulo
+kind: scatter
+x: x
+y: y
+title: Circunferencia muestreada
+color: "#2563eb"
+```
+
+```datachart
+id: grafica-tiempo
+tableRef: muestras-circulo
+kind: line
+x: tiempo
+y: x
+title: Coordenada x frente al tiempo
+```
+
+```datachart
+id: distribucion-x
+tableRef: muestras-circulo
+kind: histogram
+x: x
+bins: 12
+title: Distribución de x
+```
+
+## 4. Estadística y regresión lineal
+
+```statistics
+id: resumen-mediciones
+tableRef: muestras-circulo
+column: radio2
+```
+
+```datatable
+id: experiencia-lineal
+caption: Mediciones de una posición con ruido
+columns: [tiempo, posicion]
+units: [s, m]
+rows:
+  - [0, 1.1]
+  - [1, 2.9]
+  - [2, 5.0]
+  - [3, 7.2]
+  - [4, 8.8]
+precision: 2
+```
+
+```datachart
+id: recta-regresion
+tableRef: experiencia-lineal
+kind: scatter
+x: tiempo
+y: posicion
+trendline: true
+title: Ajuste lineal
+```
+
+```statistics
+id: resumen-regresion
+tableRef: experiencia-lineal
+column: tiempo
+pairedColumn: posicion
+```
+
+## 5. Onda radial 3D
+
+```surface3d
+id: onda-radial
+equation: sin(sqrt(x^2 + y^2))
+x: [-4, 4]
+y: [-4, 4]
+samples: 50
+contours: true
+```
+
+*Nota científica:* los datos numéricos y sus indicadores son aproximaciones. La visualización no sustituye la validación simbólica cuando se requieren resultados exactos.
