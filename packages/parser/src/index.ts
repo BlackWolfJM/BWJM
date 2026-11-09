@@ -38,6 +38,7 @@ import {
   statisticsSchema,
   parametric2dSchema,
   flow2dSchema,
+  calculusVizSchema,
 } from "@mathmd/ast";
 
 interface MdastPosition {
@@ -83,6 +84,7 @@ const SUPPORTED_MATHMD_TYPES = new Set([
   "statistics",
   "parametric2d",
   "flow2d",
+  "calculusviz",
 ]);
 
 const VALID_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -891,6 +893,53 @@ function buildMathMDNode(
         return null;
       }
       return result.data;
+    }
+
+    case "calculusviz": {
+      const payload = {
+        ...base,
+        mode: data.mode,
+        domain: data.domain ?? [0, 1],
+        f: data.f, g: data.g, integrand: data.integrand,
+        paramX: data.paramX, paramY: data.paramY,
+        fieldP: data.fieldP, fieldQ: data.fieldQ,
+        reverseLower: data.reverseLower, reverseUpper: data.reverseUpper,
+        reverseDomain: data.reverseDomain,
+        order: data.order ?? "dydx",
+        axis: data.axis ?? "x",
+        axisOffset: data.axisOffset ?? 0,
+        method: data.method ?? "washers",
+        samples: data.samples ?? 120,
+      };
+      const parsed = calculusVizSchema.safeParse(payload);
+      if (!parsed.success) {
+        parsed.error.issues.forEach(issue => diagnostics.push({
+          severity:"error", code:"MATHMD_SCHEMA_INVALID", message:issue.message,
+          range, blockType:type, blockId:id, path:issue.path,
+        }));
+        return null;
+      }
+      const node = parsed.data;
+      // Parse-level semantic checks must reject unsupported combinations, not merely warn.
+      const requiresFG = ["area-dx", "area-dy", "area-pieces", "area-polar",
+        "double-region", "change-order", "double-polar", "revolution"];
+      const invalid = (requiresFG.includes(node.mode) && (!node.f || !node.g))
+        || (["area-parametric", "green"].includes(node.mode) && (!node.paramX || !node.paramY))
+        || (node.mode === "green" && (!node.fieldP || !node.fieldQ))
+        || (node.mode === "change-order" &&
+          (!node.reverseLower || !node.reverseUpper || !node.reverseDomain))
+        || (node.mode === "revolution" && (
+          (node.axis === "y" && node.method !== "shells") ||
+          (node.axis !== "y" && node.method === "shells")));
+      if (invalid) {
+        diagnostics.push({
+          severity:"error", code:"MATHMD_CALCULUS_MODE_INVALID",
+          message:"Missing expressions or incompatible method for the chosen calculus mode",
+          range, blockType:type, blockId:id,
+        });
+        return null;
+      }
+      return node;
     }
 
     case "flow2d": {

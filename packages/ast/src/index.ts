@@ -353,6 +353,32 @@ export interface StatisticsNode extends MathMDNodeBase {
   pairedColumn?: string;
 }
 
+/** Ten independent calculus visualization modes, all serializable as .bwjm text. */
+export type CalculusVizMode =
+  | "area-dx" | "area-dy" | "area-pieces" | "area-parametric" | "area-polar"
+  | "double-region" | "change-order" | "double-polar" | "revolution" | "green";
+
+export interface CalculusVizNode extends MathMDNodeBase {
+  type: "calculusviz";
+  mode: CalculusVizMode;
+  domain: [number, number];
+  f?: string;
+  g?: string;
+  integrand?: string;
+  paramX?: string;
+  paramY?: string;
+  fieldP?: string;
+  fieldQ?: string;
+  reverseLower?: string;
+  reverseUpper?: string;
+  reverseDomain?: [number, number];
+  order?: "dydx" | "dxdy";
+  axis?: "x" | "y";
+  axisOffset?: number;
+  method?: "disks" | "washers" | "shells";
+  samples?: number;
+}
+
 // TextNode preserved for legacy consumers
 export interface TextNode extends MathMDNodeBase {
   type: "text";
@@ -389,7 +415,8 @@ export type MathMDNode =
   | DataChartNode
   | StatisticsNode
   | Parametric2DNode
-  | Flow2DNode;
+  | Flow2DNode
+  | CalculusVizNode;
 
 // --- Deterministic & Unicode-Safe ID Helper ---
 
@@ -843,7 +870,64 @@ export const statisticsSchema = mathmdNodeBaseSchema.extend({
   pairedColumn: z.string().optional(),
 });
 
-// Discriminated union of all 27 MathMD block schemas
+export const calculusVizSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("calculusviz"),
+  mode: z.enum([
+    "area-dx", "area-dy", "area-pieces", "area-parametric", "area-polar",
+    "double-region", "change-order", "double-polar", "revolution", "green",
+  ]),
+  domain: domainSchema,
+  f: z.string().min(1).max(1024).optional(),
+  g: z.string().min(1).max(1024).optional(),
+  integrand: z.string().min(1).max(1024).optional(),
+  paramX: z.string().min(1).max(1024).optional(),
+  paramY: z.string().min(1).max(1024).optional(),
+  fieldP: z.string().min(1).max(1024).optional(),
+  fieldQ: z.string().min(1).max(1024).optional(),
+  reverseLower: z.string().min(1).max(1024).optional(),
+  reverseUpper: z.string().min(1).max(1024).optional(),
+  reverseDomain: domainSchema.optional(),
+  order: z.enum(["dydx", "dxdy"]).optional(),
+  axis: z.enum(["x", "y"]).optional(),
+  axisOffset: z.number().finite().optional(),
+  method: z.enum(["disks", "washers", "shells"]).optional(),
+  samples: z.number().int().min(30).max(300).optional(),
+});
+
+function validateCalculusViz(
+  data: z.infer<typeof calculusVizSchema>,
+  context: z.RefinementCtx,
+): void {
+  const betweenModes = ["area-dx", "area-dy", "area-pieces", "area-polar",
+    "double-region", "change-order", "double-polar", "revolution"];
+  if (betweenModes.includes(data.mode) && (!data.f || !data.g)) {
+    context.addIssue({code:z.ZodIssueCode.custom,
+      message:"This mode requires nonempty expressions f and g", path:["f"]});
+  }
+  if (["area-parametric", "green"].includes(data.mode) && (!data.paramX || !data.paramY)) {
+    context.addIssue({code:z.ZodIssueCode.custom,
+      message:"This mode requires paramX and paramY", path:["paramX"]});
+  }
+  if (data.mode === "green" && (!data.fieldP || !data.fieldQ)) {
+    context.addIssue({code:z.ZodIssueCode.custom,
+      message:"Green mode requires fieldP and fieldQ", path:["fieldP"]});
+  }
+  if (data.mode === "change-order" &&
+    (!data.reverseLower || !data.reverseUpper || !data.reverseDomain)) {
+    context.addIssue({code:z.ZodIssueCode.custom,
+      message:"Change of order requires reverseLower, reverseUpper and reverseDomain",
+      path:["reverseLower"]});
+  }
+  if (data.mode === "revolution" &&
+    ((data.axis === "y" && data.method !== "shells") ||
+      (data.axis !== "y" && data.method === "shells"))) {
+    context.addIssue({code:z.ZodIssueCode.custom,
+      message:"Use shells around vertical axes, or disks/washers around horizontal axes",
+      path:["method"]});
+  }
+}
+
+// Discriminated union of all 28 MathMD block schemas
 const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   plot2dSchema,
   surface3dSchema,
@@ -874,9 +958,13 @@ const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   statisticsSchema,
   parametric2dSchema,
   flow2dSchema,
+  calculusVizSchema,
 ]);
 
 export const mathmdNodeSchema = mathmdNodeDiscriminatedUnion.superRefine((node, context) => {
+  if (node.type === "calculusviz") {
+    validateCalculusViz(node, context);
+  }
   if (node.type === "slider") {
     validateSliderBounds(node, context);
   }
