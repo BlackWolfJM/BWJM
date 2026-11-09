@@ -1,7 +1,7 @@
 # BWJM: Formato Cientifico Interactivo (.bwjm / .jm)
 
 Autor y Creador del Formato: BlackWolfJM
-Repositorio Oficial: https://github.com/BlackWolfJM/BWJM
+Repositorio Oficial (web): https://github.com/BlackWolfJM/BWJM-WEB-
 
 BWJM es un formato de documento cientifico interactivo de codigo abierto, disenado para superar las limitaciones estaticas del PDF tradicional y erradicar la dependencia de archivos HTML intermedios o dispersos. Permite que formulas matematicas, graficas 2D, superficies 3D, curvas espaciales, campos vectoriales, simulaciones parametricas y deducciones analiticas coexistan como objetos vivos, verificables y reproducibles en tiempo real.
 
@@ -60,6 +60,20 @@ La finalidad principal del proyecto BWJM, fundamentada en la Especificacion de F
 - Cero generacion de archivos HTML secundarios: El motor procesa y renderiza directamente en memoria mediante su propio pipeline reactivo y renderizadores vectoriales, evitando la dispersion de carpetas auxiliares, scripts externos inseguros o perdida de estilos.
 - Matematica rigurosa, analitica y numerica: El nucleo resuelve intersecciones exactas, evalua integrales definidas, mide sumas de Riemann con errores residuales reales, calcula invariantes diferenciales de curvas (curvatura y torsion) y verifica formalmente teoremas integrales como el Teorema de Green.
 - Autonomia y portabilidad: Los documentos `.bwjm` y `.jm` son autocontenidos, deterministas y portables, funcionando sin depender de conexiones remotas obligatorias ni servidores externos.
+
+---
+
+## Nueva interfaz modular BWJM Studio (cinta tipo Word)
+
+La interfaz científica usa una cinta desplegable: **Archivo, Inicio, Insertar, Matemáticas, Datos y Vista**. La búsqueda de palabras funciona con Ctrl+F, y Ctrl+F1 permite ocultar o desplegar las herramientas.
+
+- **Pestañas por documento:** varios archivos BWJM independientes con indicadores de cambios sin guardar.
+- **Panel izquierdo:** Esquema, Variables, Lecciones e Inspector, sin un inspector derecho permanente.
+- **Sin barras duplicadas:** la cabecera es navegación y búsqueda; la cinta agrupa herramientas; el antiguo panel inferior se retira.
+- **Arquitectura extensible:** las acciones se declaran en Ribbon.tsx, el estado de documentos está aislado en workspaceDocuments.ts y el resto del motor científico se reutiliza.
+- **Persistencia:** los documentos siguen guardándose mediante descarga. No se ofrece autoguardado en la nube ni recuperación garantizada tras cerrar el navegador.
+
+[Arquitectura técnica de la cinta y múltiples documentos](docs/ADR-0007-studio-ribbon-multidocumento.md)
 
 ---
 

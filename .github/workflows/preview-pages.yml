@@ -45,7 +45,7 @@ jobs:
         run: pnpm --filter "./packages/*" run build
       - name: Build public Studio with repository-relative assets
         env:
-          BWJM_BASE_PATH: /BWJM/
+          BWJM_BASE_PATH: /BWJM-WEB-/
         run: pnpm --filter @mathmd/playground run build
       - name: Verify Pages index asset paths
         run: |
@@ -53,13 +53,13 @@ jobs:
           const fs = require('node:fs');
           const path = require('node:path');
           const html = fs.readFileSync('apps/playground/dist/index.html', 'utf8');
-          const script = html.match(/<script[^>]*src="(\/BWJM\/assets\/[^"]+)"/);
-          const css = html.match(/<link[^>]*href="(\/BWJM\/assets\/[^"]+\.css)"/);
+          const script = html.match(/<script[^>]*src="(\/BWJM-WEB-\/assets\/[^"]+)"/);
+          const css = html.match(/<link[^>]*href="(\/BWJM-WEB-\/assets\/[^"]+\.css)"/);
           if (!script || !css) {
-            throw new Error('Invalid GitHub Pages base: bundled JavaScript/CSS must use /BWJM/assets/.');
+            throw new Error('Invalid GitHub Pages base: bundled JavaScript/CSS must use /BWJM-WEB-/assets/.');
           }
           for (const url of [script[1], css[1]]) {
-            const filepath = path.join('apps/playground/dist', url.slice('/BWJM/'.length));
+            const filepath = path.join('apps/playground/dist', url.slice('/BWJM-WEB-/'.length));
             if (!fs.existsSync(filepath)) throw new Error('Missing bundled asset: ' + filepath);
           }
           console.log('Pages assets verified:', script[1], css[1]);
