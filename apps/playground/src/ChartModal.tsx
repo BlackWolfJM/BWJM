@@ -193,7 +193,7 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
               className={`bwjm-tab-item ${kind === "slider" ? "active" : ""}`}
               onClick={() => setKind("slider")}
             >
-              Deslizador (slider)
+              Parámetro global (compartido)
             </button>
           </div>
 
@@ -542,6 +542,10 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
 
           {kind === "slider" && (
             <div className="bwjm-modal-grid">
+              <p style={{ gridColumn: "1 / -1", color: "#64748b", fontSize: "0.8rem" }}>
+                Control compartido entre varias gráficas. Para configurar coeficientes
+                exclusivos de una sola gráfica, utiliza Personalizar gráfica → Parámetros interactivos.
+              </p>
               <div className="bwjm-modal-field">
                 <label className="bwjm-modal-label">Nombre del Parámetro</label>
                 <input
