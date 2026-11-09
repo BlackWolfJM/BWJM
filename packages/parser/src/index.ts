@@ -896,14 +896,17 @@ function buildMathMDNode(
     }
 
     case "calculusviz": {
+      // YAML parses unquoted constants like f: 0 as numbers; accept them as expressions.
+      const asExpression = (value: unknown) => typeof value === "number" && Number.isFinite(value)
+        ? String(value) : value;
       const payload = {
         ...base,
         mode: data.mode,
         domain: data.domain ?? [0, 1],
-        f: data.f, g: data.g, integrand: data.integrand,
-        paramX: data.paramX, paramY: data.paramY,
-        fieldP: data.fieldP, fieldQ: data.fieldQ,
-        reverseLower: data.reverseLower, reverseUpper: data.reverseUpper,
+        f: asExpression(data.f), g: asExpression(data.g), integrand: asExpression(data.integrand),
+        paramX: asExpression(data.paramX), paramY: asExpression(data.paramY),
+        fieldP: asExpression(data.fieldP), fieldQ: asExpression(data.fieldQ),
+        reverseLower: asExpression(data.reverseLower), reverseUpper: asExpression(data.reverseUpper),
         reverseDomain: data.reverseDomain,
         order: data.order ?? "dydx",
         axis: data.axis ?? "x",
