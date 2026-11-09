@@ -1440,3 +1440,10 @@ body {
 .bwjm-scientific-table th small { color: #64748b; font-weight: 400; }
 .bwjm-scientific-table tbody tr:nth-child(even) { background: #f8fafc; }
 .bwjm-scientific-table tbody tr:hover { background: #eff6ff; }
+
+.bwjm-statistics-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px,1fr)); gap: 0.7rem; }
+.bwjm-statistic { display:flex; flex-direction:column; padding:0.85rem 1rem; background:#eff6ff; border-radius:9px; border:1px solid #dbeafe; }
+.bwjm-statistic span { font-size:0.75rem; color:#475569; text-transform:capitalize; }
+.bwjm-statistic strong { font:600 1.05rem var(--font-mono); color:#0f172a; font-variant-numeric: tabular-nums; }
+.bwjm-export-svg { float:right; margin:0.6rem 0 0; border:1px solid #cbd5e1; border-radius:7px; background:#fff; color:#1d4ed8; padding:0.4rem 0.8rem; cursor:pointer; font-weight:650; }
+.bwjm-export-svg:hover { background:#eff6ff; }

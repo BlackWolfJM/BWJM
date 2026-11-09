@@ -104,6 +104,42 @@ export function formatInlineMarkdown(text: string): string {
 }
 
 
+function renderTableBody(
+  tbody: HTMLTableSectionElement,
+  rows: ReadonlyArray<ReadonlyArray<string | number | boolean | null>>,
+  precision: number = 6,
+): void {
+  tbody.replaceChildren();
+  rows.forEach(values => {
+    const tr = document.createElement("tr");
+    values.forEach(value => {
+      const td = document.createElement("td");
+      const display = typeof value === "number" ? Number(value.toFixed(precision)) : value;
+      td.textContent = display === null ? "—" : String(display);
+      if (typeof value === "number") td.className = "numeric";
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function renderStatisticsPanel(report: HTMLElement, data: any): void {
+  report.replaceChildren();
+  if (data?.error) { report.textContent = data.error; return; }
+  if (!data?.summary) { report.textContent = "No hay muestras numéricas válidas."; return; }
+  const metrics = { ...data.summary, ...(data.regression ?? {}) };
+  Object.entries(metrics).forEach(([key, value]) => {
+    const item = document.createElement("div");
+    item.className = "bwjm-statistic";
+    const label = document.createElement("span");
+    label.textContent = key;
+    const figure = document.createElement("strong");
+    figure.textContent = typeof value === "number" ? String(Number(value.toPrecision(8))) : String(value);
+    item.append(label, figure);
+    report.appendChild(item);
+  });
+}
+
 interface TimelineControllerProps {
   core: MathMDCore | null;
   timelines: TimelineNode[];
@@ -1083,19 +1119,7 @@ export function BWJMStudio() {
           thead.appendChild(headerRow);
           table.appendChild(thead);
           const tbody = document.createElement("tbody");
-          tableNode.rows.forEach(rowData => {
-            const tr = document.createElement("tr");
-            rowData.forEach(value => {
-              const td = document.createElement("td");
-              const display = typeof value === "number" && tableNode.precision !== undefined
-                ? Number(value.toFixed(tableNode.precision))
-                : value;
-              td.textContent = display === null ? "—" : String(display);
-              if (typeof value === "number") td.className = "numeric";
-              tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-          });
+          renderTableBody(tbody, tableNode.rows, tableNode.precision);
           table.appendChild(tbody);
           tableWrapper.appendChild(table);
           const toolbar = document.createElement("div");
@@ -1107,7 +1131,8 @@ export function BWJMStudio() {
             button.textContent = "↓ " + format.toUpperCase();
             button.setAttribute("aria-label", "Exportar tabla a " + format.toUpperCase());
             button.addEventListener("click", () => {
-              const data = serializeScientificTable(tableNode.columns, tableNode.rows, format);
+              const live = coreRef.current?.getNodeData(node.id) as typeof tableNode ?? tableNode;
+              const data = serializeScientificTable(live.columns, live.rows, format);
               const contentType = format === "json" ? "application/json" : "text/plain";
               const blob = new Blob([data], { type: contentType + ";charset=utf-8" });
               const url = URL.createObjectURL(blob);
@@ -1123,7 +1148,8 @@ export function BWJMStudio() {
           copy.type = "button";
           copy.textContent = "Copiar TSV";
           copy.addEventListener("click", () => {
-            const data = serializeScientificTable(tableNode.columns, tableNode.rows, "tsv");
+            const live = coreRef.current?.getNodeData(node.id) as typeof tableNode ?? tableNode;
+            const data = serializeScientificTable(live.columns, live.rows, "tsv");
             void navigator.clipboard?.writeText(data);
           });
           toolbar.appendChild(copy);
@@ -1133,26 +1159,7 @@ export function BWJMStudio() {
           const data = coreRef.current?.getNodeData(node.id);
           const report = document.createElement("div");
           report.className = "bwjm-statistics-panel";
-          if (data?.error) {
-            report.textContent = data.error;
-          } else if (data?.summary) {
-            const metrics = Object.entries(data.summary).map(([key, value]) =>
-              [key, typeof value === "number" ? Number(value.toPrecision(8)) : value]);
-            if (data.regression) {
-              Object.entries(data.regression).forEach(([key, value]) =>
-                metrics.push([key, typeof value === "number" ? Number(value.toPrecision(8)) : value]));
-            }
-            metrics.forEach(([key, value]) => {
-              const item = document.createElement("div");
-              item.className = "bwjm-statistic";
-              const label = document.createElement("span");
-              label.textContent = String(key);
-              const number = document.createElement("strong");
-              number.textContent = String(value);
-              item.append(label, number);
-              report.appendChild(item);
-            });
-          }
+          renderStatisticsPanel(report, data);
           cardBody.appendChild(report);
         } else if (node.type === "datachart") {
           const mount = document.createElement("div");
@@ -1442,6 +1449,26 @@ export function BWJMStudio() {
           renderer.render(nodeData);
         }
 
+        const svgRenderer = svgRenderersRef.current.get(node.id);
+        if (svgRenderer) {
+          const exportButton = document.createElement("button");
+          exportButton.type = "button";
+          exportButton.className = "bwjm-export-svg";
+          exportButton.textContent = "↓ Exportar SVG";
+          exportButton.title = "Guardar el gráfico como imagen vectorial editable";
+          exportButton.onclick = () => {
+            const svg = svgRenderer.getElement().cloneNode(true) as SVGSVGElement;
+            svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+            const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = node.id + ".svg";
+            anchor.click();
+            URL.revokeObjectURL(url);
+          };
+          cardBody.appendChild(exportButton);
+        }
         card.appendChild(cardBody);
         sheet.appendChild(card);
       }
@@ -1727,6 +1754,18 @@ export function BWJMStudio() {
     dirtyNodeIds.forEach((nodeId) => {
       const nodeData = coreRef.current?.getNodeData(nodeId);
       if (!nodeData) return;
+
+      const card = sheetRef.current?.querySelector(`#node-${nodeId}`);
+      if (nodeData.type === "functiontable") {
+        const tbody = card?.querySelector("table.bwjm-scientific-table tbody");
+        if (tbody instanceof HTMLTableSectionElement) {
+          renderTableBody(tbody, nodeData.rows, nodeData.precision);
+        }
+      }
+      if (nodeData.type === "statistics") {
+        const report = card?.querySelector(".bwjm-statistics-panel");
+        if (report instanceof HTMLElement) renderStatisticsPanel(report, nodeData);
+      }
 
       const svgRenderer = svgRenderersRef.current.get(nodeId);
       if (svgRenderer) {
