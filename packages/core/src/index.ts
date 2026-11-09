@@ -280,7 +280,7 @@ export class MathMDCore {
         if (temporal?.type === "timeline") timeName = temporal.name;
         const currentT = Math.min(node.tMax, Math.max(0, this.variables.get(timeName) ?? 0));
         return { ...node, ...sampleFlow2D(node.field, node.seeds, node.tMax,
-          node.stepSize ?? 0.04, scope), currentT };
+          node.stepSize ?? 0.04, scope, node.xDomain, node.yDomain), currentT };
       }
 
       case "parametric2d": {

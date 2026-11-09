@@ -8,16 +8,17 @@ export function sampleFlow2D(
   tMax: number,
   stepSize: number,
   scope: Readonly<Record<string, number>> = {},
+  xDomain: [number, number] = [-3, 3],
+  yDomain: [number, number] = [-3, 3],
 ) {
   if (seeds.length < 1 || seeds.length > 12 || !(stepSize >= 0.01 && stepSize <= 1) ||
     !(tMax > 0 && tMax <= 20)) throw new Error("Flow scene is outside supported bounds");
   const P = compileExpression(field[0]), Q = compileExpression(field[1]);
   const vectors: Array<{ position: [number, number]; vector: [number, number] }> = [];
   const samples = 11;
-  const domain: [number, number] = [-3, 3];
   for (let row = 0; row < samples; row++) for (let col = 0; col < samples; col++) {
-    const x = domain[0] + (domain[1] - domain[0]) * col / (samples - 1);
-    const y = domain[0] + (domain[1] - domain[0]) * row / (samples - 1);
+    const x = xDomain[0] + (xDomain[1] - xDomain[0]) * col / (samples - 1);
+    const y = yDomain[0] + (yDomain[1] - yDomain[0]) * row / (samples - 1);
     try {
       const fx = evaluateExpression(P, { ...scope, x, y });
       const fy = evaluateExpression(Q, { ...scope, x, y });

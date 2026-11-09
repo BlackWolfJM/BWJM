@@ -7,7 +7,7 @@ interface ChartModalProps {
   onInsert: (codeBlock: string) => void;
 }
 
-type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider" | "parametric2d" | "experiment";
+type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider" | "parametric2d" | "experiment" | "flow2d";
 
 export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInsert }) => {
   const [kind, setKind] = useState<ChartKind>("plot2d");
@@ -58,6 +58,15 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
     generatedCode = `\`\`\`surface3d\nequation: ${eq3d}\nx: [${xMin3d}, ${xMax3d}]\ny: [${yMin3d}, ${yMax3d}]\nsamples: ${samples3d}\ncontours: ${contours3d}\n\`\`\``;
   } else if (kind === "curve3d") {
     generatedCode = `\`\`\`curve3d\nx: ${curveX}\ny: ${curveY}\nz: ${curveZ}\ntDomain: [${curveTMin}, ${curveTMax}]\ncolor: "${curveColor}"\n\`\`\``;
+  } else if (kind === "flow2d") {
+    generatedCode = [
+      "```slider", "name: t", "min: 0", "max: 6.28",
+      "step: 0.04", "default: 0", "```", "",
+      "```flow2d", 'field: ["-y", "x"]',
+      "seeds: [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0]]",
+      "x: [-3, 3]", "y: [-3, 3]", "tMax: 6.28",
+      "stepSize: 0.04", "showParticles: true", "showVectors: true", "```",
+    ].join("\n");
   } else if (kind === "parametric2d") {
     generatedCode = [
       "```slider", "name: t", "min: " + curveTMin, "max: " + curveTMax,
@@ -124,6 +133,12 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
               Curva 3D (curve3d)
             </button>
             <button
+              className={`bwjm-tab-item ${kind === "flow2d" ? "active" : ""}`}
+              onClick={() => setKind("flow2d")}
+            >
+              Líneas de corriente
+            </button>
+            <button
               className={`bwjm-tab-item ${kind === "parametric2d" ? "active" : ""}`}
               onClick={() => setKind("parametric2d")}
             >
@@ -149,6 +164,13 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
             </button>
           </div>
 
+          {kind === "flow2d" && (
+            <div className="bwjm-modal-grid">
+              <p style={{ gridColumn: "1 / -1", color: "#475569" }}>
+                Inserta un campo rotacional 2D con partículas que siguen sus líneas de corriente mediante RK4. Edita después el campo y las semillas directamente en el archivo.
+              </p>
+            </div>
+          )}
           {kind === "parametric2d" && (
             <div className="bwjm-modal-grid">
               <div className="bwjm-modal-field">
