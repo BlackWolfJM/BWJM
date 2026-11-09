@@ -112,6 +112,26 @@ Las opciones no cambian las ecuaciones ni los resultados matemáticos; afectan a
 
 ---
 
+## Paletas de colores y cambio de tema en vivo
+
+En **Vista → Apariencia → Cambiar tema** se abre un menú desplegable con muestras de seis colores por opción. Al seleccionar cualquiera, el editor, sus paneles, la cinta y el fondo del documento actualizan la apariencia **al instante**, sin recargar y sin modificar las ecuaciones. El menú permanece abierto para comparar opciones y se cierra con «Cerrar», clic fuera o Escape.
+
+Además de Linear Obsidian, Catppuccin Mocha y Tokyo Night, hay seis paletas tomadas de la imagen de referencia:
+
+| Tema | Colores de referencia, en orden |
+|---|---|
+| Bruma rosada | `#EADED4` · `#555F77` · `#AA6077` · `#A1BECD` · `#C88488` · `#AC746C` |
+| Marea esmeralda | `#D4DDC6` · `#AA2E27` · `#074659` · `#D98229` · `#049494` · `#9F7570` |
+| Lino y café | `#9D8B75` · `#050505` · `#DBC4A4` · `#F2F1EC` · `#545453` · `#7A6A54` |
+| Oliva mineral | `#B9B77C` · `#151411` · `#F9F9F1` · `#71726F` · `#746644` · `#5C5C5C` |
+| Bosque ocre | `#243214` · `#CB8740` · `#FBFBE3` · `#5C6B34` · `#ACAC94` · `#5C2C0C` |
+| Arcilla cálida | `#B22414` · `#E7C6BB` · `#9C7668` · `#CD9682` · `#543E31` · `#E77B6C` |
+
+La elección se conserva con `localStorage` (`bwjm-studio:appearance-theme`) si está disponible. Si se encuentra una preferencia desconocida, se restablece Linear Obsidian. Los gráficos conservan los colores de sus datos; se cambia la interfaz y la superficie de lectura, no los cálculos.
+
+**Arquitectura extensible:** el catálogo vive en `apps/playground/src/studioThemes.ts`, el menú en `ThemePicker.tsx`, la integración en la cinta en `Ribbon.tsx` y los tokens de apariencia en `theme.css`. Agregar otro tema no requiere duplicar comandos.
+
+---
 ## 2. Funcionalidades Implementadas
 
 Cada funcionalidad se encuentra desarrollada en TypeScript estricto, cubierta por pruebas unitarias automatizadas y respaldada por su correspondiente diagrama tecnico.

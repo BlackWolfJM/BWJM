@@ -2197,6 +2197,7 @@ body {
 
 /* One dropdown under Vista → Apariencia instead of a row of duplicated themes. */
 .bwjm-theme-trigger {
+  position:relative;
   display:flex;
   flex-direction:column;
   align-items:center;
