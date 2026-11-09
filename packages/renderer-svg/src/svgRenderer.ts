@@ -66,6 +66,10 @@ export class SVGRenderer {
     }
     
     switch (node.type) {
+      case "parametric2d":
+        this.renderParametric2D(node as any);
+        break;
+
       case "plot2d":
         this.renderPlot2D(node);
         break;
@@ -93,6 +97,87 @@ export class SVGRenderer {
     }
   }
   
+  /**
+   * Render a moving 2D parametric curve with a particle and Frenet vectors.
+   * Measurements and derivatives are computed by @mathmd/math, not the renderer.
+   */
+  private renderParametric2D(node: Extract<MathMDNode, { type: "parametric2d" }> & {
+    points: number[][];
+    currentT: number;
+    kinematics: { position: { x: number; y: number }; velocity: { x: number; y: number };
+      acceleration: { x: number; y: number }; tangent: { x: number; y: number }; normal: { x: number; y: number } };
+  }): void {
+    const pairs = node.points.filter(p => p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    if (pairs.length < 2) return;
+    const xs = pairs.map(p => p[0]), ys = pairs.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const span = Math.max(maxX - minX, maxY - minY, 0.001);
+    const pad = span * 0.18;
+    const tx = this.createTransform(minX - pad, maxX + pad, minY - pad, maxY + pad);
+    this.renderGrid(tx, minX - pad, maxX + pad, minY - pad, maxY + pad, 0.3);
+    this.renderAxes(tx, minX - pad, maxX + pad, minY - pad, maxY + pad);
+    const makePath = (points: number[][]): SVGPathElement => {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", points.map((p, i) => (i === 0 ? "M " : " L ") +
+        tx.x(p[0]).toFixed(2) + " " + tx.y(p[1]).toFixed(2)).join(""));
+      path.setAttribute("fill", "none");
+      return path;
+    };
+    const path = makePath(pairs);
+    path.setAttribute("stroke", node.color ?? "#2563eb");
+    path.setAttribute("stroke-width", "2.5");
+    this.svgElement.appendChild(path);
+    const frac = Math.max(0, Math.min(1, (node.currentT - node.tDomain[0]) /
+      (node.tDomain[1] - node.tDomain[0])));
+    if (node.showTrail) {
+      const count = Math.max(1, Math.floor(frac * (pairs.length - 1)));
+      const trail = makePath(pairs.slice(0, count + 1));
+      trail.setAttribute("stroke", "#e11d48");
+      trail.setAttribute("stroke-width", "4");
+      trail.setAttribute("stroke-linecap", "round");
+      this.svgElement.appendChild(trail);
+    }
+    const pos = node.kinematics.position;
+    if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
+    const px = tx.x(pos.x), py = tx.y(pos.y);
+    const drawVector = (vec: { x: number; y: number }, color: string, name: string) => {
+      const norm = Math.hypot(vec.x, vec.y);
+      if (!Number.isFinite(norm) || norm < 1e-10) return;
+      const distance = Math.min(span * 0.3, span * 0.2 * norm);
+      const ex = px + (vec.x / norm) * distance * (this.width / (span + 2 * pad));
+      const ey = py - (vec.y / norm) * distance * (this.height / (span + 2 * pad));
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", String(px)); line.setAttribute("y1", String(py));
+      line.setAttribute("x2", String(ex)); line.setAttribute("y2", String(ey));
+      line.setAttribute("stroke", color); line.setAttribute("stroke-width", "2.6");
+      this.svgElement.appendChild(line);
+      const angle = Math.atan2(ey - py, ex - px);
+      const arrow = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      const tip1 = [ex - 10 * Math.cos(angle - 0.48), ey - 10 * Math.sin(angle - 0.48)];
+      const tip2 = [ex - 10 * Math.cos(angle + 0.48), ey - 10 * Math.sin(angle + 0.48)];
+      arrow.setAttribute("points", `${ex},${ey} ${tip1[0]},${tip1[1]} ${tip2[0]},${tip2[1]}`);
+      arrow.setAttribute("fill", color);
+      this.svgElement.appendChild(arrow);
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      label.setAttribute("x", String(ex + 5)); label.setAttribute("y", String(ey - 5));
+      label.setAttribute("font-size", "13"); label.setAttribute("fill", color);
+      label.textContent = name;
+      this.svgElement.appendChild(label);
+    };
+    if (node.showVelocity) drawVector(node.kinematics.velocity, "#059669", "v");
+    if (node.showAcceleration) drawVector(node.kinematics.acceleration, "#d97706", "a");
+    if (node.showTangent) drawVector(node.kinematics.tangent, "#0284c7", "T");
+    if (node.showNormal) drawVector(node.kinematics.normal, "#9333ea", "N");
+    const particle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    particle.setAttribute("cx", String(px)); particle.setAttribute("cy", String(py));
+    particle.setAttribute("r", "7");
+    particle.setAttribute("fill", "#e11d48");
+    particle.setAttribute("stroke", "#ffffff");
+    particle.setAttribute("stroke-width", "2");
+    this.svgElement.appendChild(particle);
+  }
+
   /**
    * Render a contour node
    */

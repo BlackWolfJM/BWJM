@@ -1038,16 +1038,17 @@ export function BWJMStudio() {
             ${escapeHtml(node.type.toUpperCase())} • ${escapeHtml(node.id)}
           </span>
         `;
-        if (node.type === "plot2d" || node.type === "surface3d" || node.type === "curve3d") {
+        if (node.type === "plot2d" || node.type === "surface3d" || node.type === "curve3d" || node.type === "parametric2d") {
           const formula = document.createElement("div");
           formula.className = "bwjm-node-equation";
           const latex = node.type === "curve3d"
             ? "\\mathbf{r}(t)=\\left(" + [node.x, node.y, node.z].map(expressionToLatex).join(",\\;") + "\\right)"
-            : (node.type === "surface3d" ? "z=" : "y=") + expressionToLatex(node.equation);
+            : node.type === "parametric2d"
+              ? "\\mathbf{r}(t)=\\left(" + [node.x, node.y].map(expressionToLatex).join(",\\;") + "\\right)"
+              : (node.type === "surface3d" ? "z=" : "y=") + expressionToLatex(node.equation);
           formula.innerHTML = renderMathToString(latex, false);
-          formula.title = node.type === "curve3d"
-            ? [node.x, node.y, node.z].join(" , ")
-            : node.equation;
+          formula.title = node.type === "curve3d" ? [node.x, node.y, node.z].join(" , ")
+            : node.type === "parametric2d" ? [node.x, node.y].join(" , ") : node.equation;
           cardHeader.appendChild(formula);
         }
         card.appendChild(cardHeader);
@@ -1256,6 +1257,14 @@ export function BWJMStudio() {
           label.appendChild(checkbox);
           label.appendChild(textSpan);
           cardBody.appendChild(label);
+        } else if (node.type === "parametric2d") {
+          const mount = document.createElement("div");
+          mount.style.width = "100%";
+          mount.style.minHeight = "380px";
+          cardBody.appendChild(mount);
+          const renderer = new SVGRenderer(mount, 720, 380);
+          svgRenderersRef.current.set(node.id, renderer);
+          renderer.render(coreRef.current.getNodeData(node.id));
         } else if (node.type === "plot2d") {
           const mount = document.createElement("div");
           mount.id = `mount-${node.id}`;

@@ -2,6 +2,16 @@ import { describe, it, expect } from "vitest";
 import { parseMathMD } from "../src/index.js";
 
 describe("MathMD Parser", () => {
+  it("parses a reusable animated parametric curve in two dimensions", () => {
+    const markdown = [
+      "```parametric2d", "x: cos(t)", "y: sin(t)", "tDomain: [0, 6.28318]",
+      "samples: 150", "showTrail: true", "showNormal: true", "```",
+    ].join("\n");
+    const result = parseMathMD(markdown);
+    expect(result.children).toHaveLength(1);
+    expect(result.children[0].type).toBe("parametric2d");
+  });
+
   it("parses portable generated tables and charts from a single document", () => {
     const markdown = [
       "```functiontable", "id: movement", "variable: t", "domain: [0, 3]",

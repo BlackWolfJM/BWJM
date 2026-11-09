@@ -288,6 +288,21 @@ export interface DataTableNode extends MathMDNodeBase {
   precision?: number;
 }
 
+export interface Parametric2DNode extends MathMDNodeBase {
+  type: "parametric2d";
+  x: string;
+  y: string;
+  tDomain: [number, number];
+  samples?: number;
+  timelineRef?: string;
+  color?: string;
+  showTrail?: boolean;
+  showVelocity?: boolean;
+  showAcceleration?: boolean;
+  showTangent?: boolean;
+  showNormal?: boolean;
+}
+
 export interface FunctionTableNode extends MathMDNodeBase {
   type: "functiontable";
   caption?: string;
@@ -355,7 +370,8 @@ export type MathMDNode =
   | DataTableNode
   | FunctionTableNode
   | DataChartNode
-  | StatisticsNode;
+  | StatisticsNode
+  | Parametric2DNode;
 
 // --- Deterministic & Unicode-Safe ID Helper ---
 
@@ -736,6 +752,21 @@ export const dataTableSchema = mathmdNodeBaseSchema.extend({
   precision: z.number().int().min(0).max(12).optional(),
 });
 
+export const parametric2dSchema = mathmdNodeBaseSchema.extend({
+  type: z.literal("parametric2d"),
+  x: z.string().min(1),
+  y: z.string().min(1),
+  tDomain: domainSchema,
+  samples: z.number().int().min(2).max(500).optional(),
+  timelineRef: z.string().optional(),
+  color: z.string().max(64).optional(),
+  showTrail: z.boolean().optional(),
+  showVelocity: z.boolean().optional(),
+  showAcceleration: z.boolean().optional(),
+  showTangent: z.boolean().optional(),
+  showNormal: z.boolean().optional(),
+});
+
 export const functionTableSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("functiontable"),
   caption: z.string().max(256).optional(),
@@ -796,6 +827,7 @@ const mathmdNodeDiscriminatedUnion = z.discriminatedUnion("type", [
   functionTableSchema,
   dataChartSchema,
   statisticsSchema,
+  parametric2dSchema,
 ]);
 
 export const mathmdNodeSchema = mathmdNodeDiscriminatedUnion.superRefine((node, context) => {
