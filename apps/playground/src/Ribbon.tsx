@@ -66,20 +66,18 @@ const icons = {
 interface Props {
   onAction: (id: RibbonAction) => void;
   activeView: "editor" | "split" | "reader";
-  onCollapseChange?: (collapsed: boolean) => void;
+  collapsed: boolean;
+  onCollapseChange: (collapsed: boolean) => void;
 }
-export const Ribbon: React.FC<Props> = ({onAction,activeView,onCollapseChange}) => {
+export const Ribbon: React.FC<Props> = ({onAction,activeView,collapsed,onCollapseChange}) => {
   const [tab,setTab] = useState<RibbonTab>("Inicio");
-  const [collapsed,setCollapsed] = useState(false);
-  const toggle = () => {
-    setCollapsed(old => {onCollapseChange?.(!old);return !old;});
-  };
+  const toggle = () => onCollapseChange(!collapsed);
   return <section className={"bwjm-ribbon " + (collapsed ? "collapsed" : "")} aria-label="Cinta de herramientas BWJM">
     <div className="bwjm-ribbon-tabs">
       <div className="bwjm-ribbon-tablist" role="tablist" aria-label="Categorías de herramientas">
         {tabs.map(name=><button key={name} type="button" role="tab"
           aria-selected={tab===name} className={"bwjm-ribbon-tab " + (tab===name?"selected":"")}
-          onClick={() => {setTab(name);setCollapsed(false);onCollapseChange?.(false);}}>{name}</button>)}
+          onClick={() => {setTab(name);onCollapseChange(false);}}>{name}</button>)}
       </div>
       <button type="button" className="bwjm-ribbon-collapse" onClick={toggle}
         title={collapsed ? "Mostrar herramientas (Ctrl+F1)" : "Ocultar herramientas (Ctrl+F1)"}
