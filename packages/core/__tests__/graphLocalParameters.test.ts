@@ -45,12 +45,19 @@ describe("parameter scope belongs to one graph",()=>{
     expect(core.getVariable("a")).toBeUndefined();
     expect(core.getGraphScope(doc.children[0].id).a).toBe(2);
   });
-  it("previews undeclared coefficients using a provisional value without crashing",()=>{
+  it("keeps legacy strict undefined-symbol errors unless controls were explicitly configured",()=>{
     const doc=parseMathMD([fence+"plot2d","equation: k*x","x: [-1, 1]",fence].join("\n"));
     const core=new MathMDCore(doc);
     expect(core.getVariable("k")).toBeUndefined();
-    expect(core.getGraphScope(doc.children[0].id).k).toBe(1);
-    expect(core.getNodeData(doc.children[0].id).points.at(-1)[1]).toBeCloseTo(1,6);
+    expect(()=>core.getNodeData(doc.children[0].id)).toThrow();
+    const configured=parseMathMD([
+      fence+"plot2d","equation: k*x","x: [-1, 1]",
+      'paramControls: {"enabled":false,"parameters":[{"name":"k","min":-3,"max":3,"step":0.1,"default":1}]}',
+      fence,
+    ].join("\n"));
+    const fallback=new MathMDCore(configured);
+    expect(fallback.getGraphScope(configured.children[0].id).k).toBe(1);
+    expect(fallback.getNodeData(configured.children[0].id).points.at(-1)[1]).toBeCloseTo(1,6);
   });
   it("local controls take precedence over global sliders for that graph only",()=>{
     const global=[fence+"slider","name: a","min: 0","max: 10","default: 8",fence].join("\n");
