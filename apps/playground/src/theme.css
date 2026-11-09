@@ -2771,3 +2771,253 @@ body {
 }
 .bwjm-theme-empty { padding: 1rem .75rem; font-size: .76rem; color: var(--text-secondary); }
 .bwjm-theme-popover-footer { flex: 0 0 auto; }
+
+
+/* ── Legible theme chrome (all 25 palettes), Nov 2026 ───────────────────
+ * Text color MUST be inherited from the theme container, not body/:root.
+ * All regular text roles tested >=4.5:1 against the four theme surfaces.
+ * Original palette swatches and scientific plot colors are preserved.
+ */
+:root {
+  --text-secondary: #969BA3;
+  --text-muted: #8A8D93;
+  --primary-readable: #7D86DB;
+  --status-success-text: #10B981;
+  --status-error-text: #F44563;
+  --on-primary: #FFFFFF;
+}
+.theme-catppuccin {
+  --text-muted: #9A9DAC;
+  --primary-readable: #CBA6F7;
+  --status-success-text: #A6E3A1;
+  --status-error-text: #F38BA8;
+  --on-primary: #000000;
+}
+.theme-tokyonight {
+  --text-secondary: #9BA6CE;
+  --text-muted: #9197B2;
+  --primary-readable: #7AA2F7;
+  --status-success-text: #9ECE6A;
+  --status-error-text: #F7768E;
+  --on-primary: #000000;
+}
+.theme-bruma {
+  --text-secondary: #474F64;
+  --text-muted: #5C5869;
+  --primary-readable: #824A5B;
+  --status-success-text: #216851;
+  --status-error-text: #A92D42;
+  --on-primary: #000000;
+}
+.theme-marea {
+  --text-main: #FCFDF7;
+  --text-secondary: #EDF0E6;
+  --text-muted: #D2DFD9;
+  --primary-readable: #F3D7BA;
+  --status-success-text: #B5E2BD;
+  --status-error-text: #F5B9AF;
+  --on-primary: #000000;
+}
+.theme-lino {
+  --text-secondary: #4F4F4F;
+  --text-muted: #605A51;
+  --primary-readable: #665947;
+  --status-success-text: #366951;
+  --status-error-text: #AD3434;
+  --on-primary: #FFFFFF;
+}
+.theme-oliva {
+  --text-secondary: #545454;
+  --text-muted: #606156;
+  --primary-readable: #6B5F3F;
+  --status-success-text: #406A3E;
+  --status-error-text: #A62E25;
+  --on-primary: #FFFFFF;
+}
+.theme-bosque {
+  --text-main: #FEFEF5;
+  --text-secondary: #E6E7D8;
+  --text-muted: #D4D5C1;
+  --primary-readable: #EACFB2;
+  --status-success-text: #C0D995;
+  --status-error-text: #F1A3A3;
+  --on-primary: #000000;
+}
+.theme-arcilla {
+  --text-main: #3A2A22;
+  --text-secondary: #4D3931;
+  --text-muted: #59453B;
+  --primary-readable: #8E1D10;
+  --status-success-text: #275845;
+  --status-error-text: #9A1F11;
+  --on-primary: #FFFFFF;
+}
+.theme-bruma-celeste {
+  --primary-readable: #526169;
+  --status-success-text: #246449;
+  --status-error-text: #A62C31;
+  --on-primary: #FFFFFF;
+}
+.theme-bruma-rosa {
+  --primary-readable: #664345;
+  --status-success-text: #246449;
+  --status-error-text: #A62C31;
+  --on-primary: #FFFFFF;
+}
+.theme-bruma-terracota {
+  --primary-readable: #583B37;
+  --status-success-text: #246349;
+  --status-error-text: #A42C31;
+  --on-primary: #FFFFFF;
+}
+.theme-marea-carmesi {
+  --primary-readable: #571714;
+  --status-success-text: #205841;
+  --status-error-text: #92272B;
+  --on-primary: #FFFFFF;
+}
+.theme-marea-piedra {
+  --primary-readable: #513C39;
+  --status-success-text: #246349;
+  --status-error-text: #A32B30;
+  --on-primary: #FFFFFF;
+}
+.theme-lino-tinta {
+  --primary-readable: #E2CFB5;
+  --status-success-text: #BDE4AB;
+  --status-error-text: #FAA7A7;
+  --on-primary: #000000;
+}
+.theme-lino-canela {
+  --primary-readable: #706454;
+  --status-success-text: #246449;
+  --status-error-text: #A62C31;
+  --on-primary: #FFFFFF;
+}
+.theme-oliva-salvia {
+  --primary-readable: #5E5D3F;
+  --status-success-text: #246449;
+  --status-error-text: #A62C31;
+  --on-primary: #FFFFFF;
+}
+.theme-oliva-carbon {
+  --text-muted: #C9C7BE;
+  --primary-readable: #CACA9D;
+  --status-success-text: #BDE4AB;
+  --status-error-text: #FAA7A7;
+  --on-primary: #000000;
+}
+.theme-bosque-musgo {
+  --text-main: #FCFCF8;
+  --text-secondary: #FCFCFA;
+  --text-muted: #F5F5F3;
+  --primary-readable: #F5F5F1;
+  --status-success-text: #BDE4AB;
+  --status-error-text: #FCCBCB;
+  --on-primary: #000000;
+}
+.theme-bosque-cacao {
+  --text-main: #FDFDFA;
+  --text-secondary: #EEEDE6;
+  --text-muted: #DBDAD4;
+  --primary-readable: #EDD6BD;
+  --status-success-text: #BDE4AB;
+  --status-error-text: #FAA7A7;
+  --on-primary: #000000;
+}
+.theme-arcilla-salmon {
+  --primary-readable: #763F37;
+  --status-success-text: #246449;
+  --status-error-text: #A62C31;
+  --on-primary: #FFFFFF;
+}
+.theme-nord-polar {
+  --text-main: #F9FAFB;
+  --text-secondary: #DAE0EA;
+  --text-muted: #C3CFDB;
+  --primary-readable: #ADD4DF;
+  --status-success-text: #B9CEA7;
+  --status-error-text: #E4BEC1;
+  --on-primary: #000000;
+}
+.theme-dracula {
+  --text-muted: #CBC4D6;
+  --primary-readable: #D5BBFB;
+  --status-success-text: #50FA7B;
+  --status-error-text: #FFACAC;
+  --on-primary: #000000;
+}
+.theme-rose-pine {
+  --text-muted: #B0A9C8;
+  --primary-readable: #C4A7E7;
+  --status-success-text: #95B1AC;
+  --status-error-text: #EB6F92;
+  --on-primary: #000000;
+}
+.theme-catppuccin-latte {
+  --text-main: #43455C;
+  --text-secondary: #52546A;
+  --text-muted: #5E6074;
+  --primary-readable: #6927BE;
+  --status-success-text: #266F20;
+  --status-error-text: #B52943;
+  --on-primary: #FFFFFF;
+}
+.bwjm-app-container {
+  color: var(--text-main);
+}
+.bwjm-app-container .bwjm-studio-header,
+.bwjm-app-container .bwjm-document-tabs,
+.bwjm-app-container .bwjm-ribbon,
+.bwjm-app-container .bwjm-workspace-layout { color: var(--text-main); }
+
+/* Header: BWJM/Studio must both remain visible, especially in light themes. */
+.bwjm-studio-name { color: var(--text-main); font-size:1.05rem; font-weight:780; letter-spacing:-.015em; }
+.bwjm-studio-name strong { color:var(--text-secondary); font-weight:700; }
+.bwjm-studio-subtitle { color:var(--text-secondary); font-size:.81rem; font-weight:630; }
+.bwjm-studio-active-name { color:var(--text-secondary); font-size:.81rem; }
+.bwjm-studio-mark { color:var(--on-primary); background:var(--primary); }
+.bwjm-studio-diagnostics { color:var(--status-success-text); font-size:.8rem; font-weight:700; }
+.bwjm-studio-diagnostics.has-errors { color:var(--status-error-text); }
+
+/* Document tabs and filename tools. */
+.bwjm-document-tab { color:var(--text-secondary); }
+.bwjm-document-tab.active { color:var(--text-main); }
+.bwjm-document-tab > button:first-child { font-size:.84rem; font-weight:650; letter-spacing:.005em; }
+.bwjm-document-tab-icon { color:var(--primary-readable); }
+.bwjm-tab-close,.bwjm-document-new,.bwjm-tab-rename { color:var(--text-secondary); }
+.bwjm-tab-close:hover,.bwjm-document-new:hover,.bwjm-tab-rename:hover { color:var(--text-main); }
+
+/* Menus: readable 13px+ labels without changing layout architecture. */
+.bwjm-ribbon-tab { color:var(--text-secondary); font-size:.86rem; font-weight:700; }
+.bwjm-ribbon-tab.selected,.bwjm-ribbon-tab:hover { color:var(--text-main); border-bottom-color:var(--primary-readable); }
+.bwjm-ribbon-action { color:var(--text-secondary); font-size:.83rem; font-weight:650; line-height:1.28; }
+.bwjm-ribbon-group-label { color:var(--text-secondary); font-size:.75rem; font-weight:650; letter-spacing:.025em; }
+.bwjm-ribbon-glyph { color:var(--primary-readable); }
+.bwjm-ribbon-collapse { color:var(--text-secondary); font-size:.8rem; font-weight:650; }
+.bwjm-ribbon-collapse:hover { color:var(--text-main); }
+.bwjm-sidebar-tab { color:var(--text-secondary); font-size:.82rem; }
+.bwjm-sidebar-tab.active { color:var(--primary-readable); }
+.bwjm-sidebar-left .bwjm-sidebar-tab span { font-size:.79rem; }
+
+/* Appearance picker, selected states and global search. */
+.bwjm-theme-trigger { color:var(--text-secondary); font-size:.82rem; }
+.bwjm-theme-option-caption strong { color:var(--text-main); font-size:.84rem; }
+.bwjm-theme-option-caption small,.bwjm-theme-popover-heading small { color:var(--text-secondary); font-size:.77rem; }
+.bwjm-theme-category-heading strong { font-size:.81rem; }
+.bwjm-theme-category-heading small { font-size:.75rem; }
+.bwjm-theme-search { color:var(--text-main); font-size:.85rem; }
+.bwjm-theme-option-check { color:var(--primary-readable); }
+.bwjm-theme-popover-footer span { font-size:.75rem; }
+.bwjm-theme-popover-footer button { font-size:.79rem; color:var(--text-main); }
+.bwjm-document-search { border-color:var(--border); }
+.bwjm-document-search input { color:var(--text-main); font-size:.85rem; }
+.bwjm-document-search input::placeholder { color:var(--text-muted); }
+.bwjm-search-count { color:var(--text-secondary); font-size:.78rem; }
+.bwjm-app-container :is(button,input,summary,[role="tab"]):focus-visible {
+  outline:2px solid var(--primary-readable);
+  outline-offset:2px;
+}
+@media(max-width:760px) {
+  .bwjm-sidebar-left .bwjm-sidebar-tab span { font-size:.76rem; }
+}
