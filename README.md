@@ -21,6 +21,7 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
    - 2.8. Tablas cientificas y tipografia matematica
    - 2.9. Tablas generadas, graficas estadisticas y particulas 2D (fase 2)
    - 2.10. Motor de animacion — lote 01 (SCI-001 a SCI-010)
+   - 2.11. Diez graficos de areas e integrales — lote 02
 3. Manual de Usuario y Guia del Formato (.bwjm / .jm)
    - 3.1. Estructura Basica de un Documento .bwjm
    - 3.2. Manual de Bloques Cientificos Interactivos
@@ -196,6 +197,17 @@ la selección de capas se limita por ahora a curvas `parametric2d`.
 
 - [Manual y pruebas del lote 01](docs/LOTE_01_ANIMACION.md)
 - [Documento interactivo de prueba](examples/lote-01-animacion.bwjm)
+
+---
+
+### 2.11. Diez nuevos gráficos para áreas e integrales — lote 02
+
+El asistente **Insertar gráfica → Áreas e integrales (10)** ofrece diez métodos con parámetros independientes, cálculo numérico y gráfica: área entre curvas `dx`/`dy`, área por tramos, área paramétrica, área polar, integrales dobles Tipo I/II, cambio de orden, integral doble polar, sólidos de revolución 3D (discos/arandelas/cascarones) y teorema de Green.
+
+Se usa el bloque declarativo `calculusviz` con un atributo `mode`. Los resultados son aproximados y el motor advierte sobre límites incorrectos, orientación, cruces y solapamientos. No se afirma que el cambio de orden se resuelva algebraicamente de forma automática.
+
+- [Manual científico de las diez opciones](docs/LOTE_02_AREAS_INTEGRALES.md)
+- [Archivo BWJM que contiene los diez ejercicios](examples/10-graficos-areas-integrales.bwjm)
 
 ---
 

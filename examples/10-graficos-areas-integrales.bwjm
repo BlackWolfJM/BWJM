@@ -1,0 +1,141 @@
+# BWJM — Diez nuevos gráficos de áreas e integrales
+
+Este documento demuestra las 10 nuevas opciones del asistente **Insertar gráfica → Áreas e integrales (10)**.
+
+Los valores se obtienen por cuadratura numérica y pueden diferir ligeramente de expresiones exactas. Cada bloque incluye una gráfica, las fronteras y un resultado aproximado. Usa **Exportar SVG** cuando la gráfica es 2D.
+
+## 1. Área entre curvas dx
+
+```calculusviz
+id: calc-ejemplo-1
+mode: area-dx
+domain: [0, 2]
+f: "2*x"
+g: "x^2"
+samples: 160
+```
+
+## 2. Área entre curvas dy
+
+```calculusviz
+id: calc-ejemplo-2
+mode: area-dy
+domain: [0, 2]
+f: "y^2"
+g: "2*y"
+samples: 160
+```
+
+## 3. Área por tramos y cruces
+
+```calculusviz
+id: calc-ejemplo-3
+mode: area-pieces
+domain: [-1, 1]
+f: "x"
+g: "x^3"
+samples: 160
+```
+
+## 4. Área firmada de la cicloide
+
+```calculusviz
+id: calc-ejemplo-4
+mode: area-parametric
+domain: [0, 6.283185307179586]
+paramX: "t-sin(t)"
+paramY: "1-cos(t)"
+samples: 160
+```
+
+## 5. Área polar cardioide
+
+```calculusviz
+id: calc-ejemplo-5
+mode: area-polar
+domain: [0, 6.283185307179586]
+f: "1+cos(theta)"
+g: "0"
+samples: 160
+```
+
+## 6. Integral doble Tipo I
+
+```calculusviz
+id: calc-ejemplo-6
+mode: double-region
+domain: [0, 1]
+f: "x^2"
+g: "x"
+integrand: "1"
+order: dydx
+samples: 160
+```
+
+## 7. Cambio de orden (Tipo I a Tipo II)
+
+```calculusviz
+id: calc-ejemplo-7
+mode: change-order
+domain: [0, 1]
+f: "x^2"
+g: "x"
+integrand: "1"
+order: dydx
+reverseLower: "y"
+reverseUpper: "sqrt(y)"
+reverseDomain: [0, 1]
+samples: 160
+```
+
+## 8. Integral doble polar en disco
+
+```calculusviz
+id: calc-ejemplo-8
+mode: double-polar
+domain: [0, 6.283185307179586]
+f: "1"
+g: "0"
+integrand: "x^2+y^2"
+samples: 160
+```
+
+## 9. Sólido de revolución en 3D
+
+```calculusviz
+id: calc-ejemplo-9
+mode: revolution
+domain: [0, 1]
+f: "x"
+g: "0"
+axis: x
+method: disks
+axisOffset: 0
+samples: 160
+```
+
+## 10. Integral de línea y Green
+
+```calculusviz
+id: calc-ejemplo-10
+mode: green
+domain: [0, 6.283185307179586]
+paramX: "cos(t)"
+paramY: "sin(t)"
+fieldP: "-y/2"
+fieldQ: "x/2"
+samples: 160
+```
+
+## Comprobaciones esperadas
+
+- Área dx y dy: 4/3 unidades cuadradas.
+- Área por tramos: 1/2.
+- Área paramétrica de la cicloide: 3π (aprox. 9.4248).
+- Área polar cardioide: 3π/2 (aprox. 4.7124).
+- Integral doble Tipo I y cambio de orden: 1/6.
+- Integral doble polar de r² en disco unitario: π/2.
+- Volumen disco y=x alrededor del eje X entre 0 y 1: π/3.
+- Circulación y Green en el disco unitario para F=(-y/2,x/2): π.
+
+**Precauciones:** la integral paramétrica es *firmada*, el radio polar debe ser no negativo, la región Tipo I / II debe estar ordenada, el sólido con cascarones no debe cruzar el eje vertical y la versión de Green supone curva cerrada simple y campo C¹.
