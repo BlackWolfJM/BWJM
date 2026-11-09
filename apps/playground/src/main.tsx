@@ -31,6 +31,7 @@ import { FormulaModal } from "./FormulaModal.js";
 import { ChartModal } from "./ChartModal.js";
 import { CommandPalette, CommandItem } from "./CommandPalette.js";
 import { createInlinePlayback, supportsInlinePlayback, type InlinePlaybackController } from "./inlineGraphPlayback.js";
+import { readStoredTheme, persistStudioTheme, type StudioThemeId } from "./studioThemes.js";
 import "./theme.css";
 
 declare global {
@@ -528,7 +529,9 @@ export function BWJMStudio() {
   const [viewMode, setViewMode] = useState<ViewMode>("split");
 
   const [sliceX] = useState<number>(0.5);
-  const [theme, setTheme] = useState<"linear" | "catppuccin" | "tokyonight">("linear");
+  const [theme, setTheme] = useState<StudioThemeId>(readStoredTheme);
+  // Appearance is a Studio preference, not a property of the scientific document.
+  useEffect(() => { persistStudioTheme(theme); }, [theme]);
 
   const [isSidebarLeftOpen, setIsSidebarLeftOpen] = useState<boolean>(true);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("outline");
@@ -1981,6 +1984,7 @@ export function BWJMStudio() {
         onSelect={selectDocument} onClose={handleCloseDocument} onNew={handleNewDocument}
         onRename={renameDocument}/>
       <Ribbon activeView={viewMode} onAction={handleRibbonAction}
+        theme={theme} onThemeChange={setTheme}
         collapsed={isRibbonCollapsed} onCollapseChange={setIsRibbonCollapsed}/>
 
       <div className="bwjm-workspace-layout">

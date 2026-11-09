@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { ThemePicker } from "./ThemePicker.js";
+import type { StudioThemeId } from "./studioThemes.js";
 import { IconAtom, IconBarChart, IconBookOpen, IconChevronDown, IconCode,
   IconColumns, IconDownload, IconFileText, IconFolderOpen, IconFunction,
   IconLayers, IconList, IconSearch, IconSidebar, IconSliders } from "./icons.js";
@@ -49,8 +51,7 @@ export const RIBBON_GROUPS: Record<RibbonTab, readonly RibbonGroup[]> = {
     {label:"Modo de lectura",actions:[item("view-editor","Editor","code"),
       item("view-split","Dividido","columns"),item("view-reader","Lector","book")]},
     {label:"Paneles",actions:[item("outline","Esquema","sidebar"),item("inspector","Inspector","layers")]},
-    {label:"Apariencia",actions:[item("theme-linear","Oscuro"),
-      item("theme-catppuccin","Violeta"),item("theme-tokyonight","Azul")]},
+    {label:"Apariencia",actions:[]},
     {label:"Herramientas",actions:[item("commands","Comandos","search","Ctrl+K")]},
   ],
 };
@@ -65,10 +66,12 @@ const icons = {
 interface Props {
   onAction: (id: RibbonAction) => void;
   activeView: "editor" | "split" | "reader";
+  theme: StudioThemeId;
+  onThemeChange: (theme: StudioThemeId) => void;
   collapsed: boolean;
   onCollapseChange: (collapsed: boolean) => void;
 }
-export const Ribbon: React.FC<Props> = ({onAction,activeView,collapsed,onCollapseChange}) => {
+export const Ribbon: React.FC<Props> = ({onAction,activeView,theme,onThemeChange,collapsed,onCollapseChange}) => {
   const [tab,setTab] = useState<RibbonTab>("Inicio");
   const toggle = () => onCollapseChange(!collapsed);
   return <section className={"bwjm-ribbon " + (collapsed ? "collapsed" : "")} aria-label="Cinta de herramientas BWJM">
@@ -100,6 +103,7 @@ export const Ribbon: React.FC<Props> = ({onAction,activeView,collapsed,onCollaps
             </button>;
           })}
         </div>
+        {group.label==="Apariencia" && <ThemePicker theme={theme} onThemeChange={onThemeChange}/>}
         <span className="bwjm-ribbon-group-label">{group.label}</span>
       </div>)}
     </div>}
