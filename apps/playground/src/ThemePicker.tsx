@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconChevronDown } from "./icons.js";
-import { STUDIO_THEMES, type StudioThemeId } from "./studioThemes.js";
+import { STUDIO_THEMES, STUDIO_THEME_GROUPS, type StudioThemeId } from "./studioThemes.js";
 
 interface Props {
   theme: StudioThemeId;
@@ -11,6 +11,7 @@ interface Props {
 /** Drop-down lives in a portal to avoid the ribbon's horizontal overflow clipping it. */
 export const ThemePicker: React.FC<Props> = ({theme,onThemeChange}) => {
   const [open,setOpen] = useState(false);
+  const [query,setQuery] = useState("");
   const [position,setPosition] = useState({top:0,left:0});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -71,31 +72,53 @@ export const ThemePicker: React.FC<Props> = ({theme,onThemeChange}) => {
     </button>
     {open && createPortal(
       <div ref={popoverRef} id="bwjm-theme-options" className={"bwjm-theme-popover theme-"+theme}
-        style={{top:position.top,left:position.left}} role="listbox"
-        aria-label="Seleccionar tema visual del editor">
+        style={{top:position.top,left:position.left}} role="dialog"
+        aria-label="Elegir tema visual del editor">
         <div className="bwjm-theme-popover-heading">
           <strong>Tema de BWJM Studio</strong>
-          <small>Haz clic en una paleta para ver el resultado al instante.</small>
+          <small>25 estilos · elige uno para compararlo inmediatamente.</small>
+          <input type="search" className="bwjm-theme-search" value={query}
+            onChange={event=>setQuery(event.target.value)} placeholder="Buscar tema o color…"
+            aria-label="Filtrar temas por nombre o color hexadecimal" />
         </div>
-        {STUDIO_THEMES.map(item=>
-          <button key={item.id} type="button" role="option"
-            aria-selected={theme===item.id}
-            className={"bwjm-theme-option "+(theme===item.id?"selected":"")}
-            onClick={()=>onThemeChange(item.id)}
-            title={item.description}>
-            <span className="bwjm-theme-swatch-strip" aria-hidden="true">
-              {item.colors.map((color,index)=>
-                <i key={index} style={{backgroundColor:color}} />)}
-            </span>
-            <span className="bwjm-theme-option-caption">
-              <strong>{item.name}</strong>
-              <small>{item.description}</small>
-            </span>
-            <span className="bwjm-theme-option-check" aria-hidden="true">
-              {theme===item.id?"✓":""}
-            </span>
-          </button>
-        )}
+        <div className="bwjm-theme-gallery" role="listbox" aria-label="Temas disponibles">
+          {STUDIO_THEME_GROUPS.map(group=>{
+            const results=STUDIO_THEMES.filter(item=>
+              group.ids.some(id=>id===item.id) &&
+              (item.name.toLocaleLowerCase("es").includes(query.trim().toLocaleLowerCase("es")) ||
+               item.description.toLocaleLowerCase("es").includes(query.trim().toLocaleLowerCase("es")) ||
+               item.colors.some(color=>color.toLowerCase().includes(query.trim().toLowerCase()))));
+            return results.length ? <div key={group.id} className="bwjm-theme-category" role="group" aria-label={group.label}>
+              <div className="bwjm-theme-category-heading">
+                <strong>{group.label}</strong>
+                <small>{results.length}</small>
+              </div>
+              {results.map(item=>
+                <button key={item.id} type="button" role="option"
+                  aria-selected={theme===item.id}
+                  className={"bwjm-theme-option "+(theme===item.id?"selected":"")}
+                  onClick={()=>onThemeChange(item.id)}
+                  title={item.description}>
+                  <span className="bwjm-theme-swatch-strip" aria-hidden="true">
+                    {item.colors.map((color,index)=>
+                      <i key={index} style={{backgroundColor:color}} />)}
+                  </span>
+                  <span className="bwjm-theme-option-caption">
+                    <strong>{item.name}</strong>
+                    <small>{item.description}</small>
+                  </span>
+                  <span className="bwjm-theme-option-check" aria-hidden="true">
+                    {theme===item.id?"✓":""}
+                  </span>
+                </button>)}
+            </div> : null;
+          })}
+          {!STUDIO_THEMES.some(item=>
+             item.name.toLocaleLowerCase("es").includes(query.trim().toLocaleLowerCase("es")) ||
+             item.description.toLocaleLowerCase("es").includes(query.trim().toLocaleLowerCase("es")) ||
+             item.colors.some(color=>color.toLowerCase().includes(query.trim().toLowerCase()))) &&
+            <p className="bwjm-theme-empty">No hay temas que coincidan con tu búsqueda.</p>}
+        </div>
         <div className="bwjm-theme-popover-footer">
           <span>El tema se recuerda al volver a abrir el editor.</span>
           <button type="button" onClick={close}>Cerrar</button>

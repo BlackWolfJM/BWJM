@@ -2719,3 +2719,55 @@ body {
   --border-subtle: rgba(76,79,105,.16);
   --primary-glow: rgba(105,39,190,0.22);
 }
+
+
+/* Theme gallery scales to 25 themes without swallowing the document. */
+.bwjm-theme-popover {
+  display: flex;
+  flex-direction: column;
+  max-height: min(78vh, 640px);
+  overflow: hidden;
+}
+.bwjm-theme-popover-heading { flex: 0 0 auto; }
+.bwjm-theme-search {
+  width: 100%;
+  margin-top: .35rem;
+  padding: .54rem .62rem;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font: .75rem var(--font-sans);
+}
+.bwjm-theme-search:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 1px; }
+.bwjm-theme-gallery {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 .08rem .35rem;
+  scrollbar-color: var(--border-focus) transparent;
+  scrollbar-width: thin;
+}
+.bwjm-theme-category + .bwjm-theme-category { margin-top: .48rem; }
+.bwjm-theme-category-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin: .2rem .5rem .3rem;
+  padding: .34rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.bwjm-theme-category-heading strong {
+  color: var(--text-main);
+  font-size: .71rem;
+  font-weight: 750;
+  letter-spacing: .01em;
+}
+.bwjm-theme-category-heading small {
+  color: var(--text-secondary);
+  font-size: .65rem;
+  font-weight: 600;
+}
+.bwjm-theme-empty { padding: 1rem .75rem; font-size: .76rem; color: var(--text-secondary); }
+.bwjm-theme-popover-footer { flex: 0 0 auto; }
