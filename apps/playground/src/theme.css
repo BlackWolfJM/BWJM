@@ -1997,3 +1997,69 @@ body {
   .bwjm-editor-panel { flex-basis:50%; }
   .bwjm-preview-panel { flex-basis:50%; }
 }
+
+
+/* Scientific display settings: collapsible, persisted in each .bwjm graph block. */
+.bwjm-graph-settings {
+  margin: 0.25rem 0 0.9rem;
+  border: 1px solid #dbe3f0;
+  border-radius: 9px;
+  color: #475569;
+  background: #f8fafc;
+}
+.bwjm-graph-settings > summary {
+  cursor: pointer;
+  user-select: none;
+  padding: 0.7rem 0.9rem;
+  font-size: .81rem;
+  font-weight: 650;
+  color: #334155;
+}
+.bwjm-graph-settings > summary:hover { color: #4f46e5; }
+.bwjm-graph-settings-controls {
+  display: flex; gap: 0.55rem 1.1rem; flex-wrap: wrap;
+  padding: 0.2rem 0.85rem 0.85rem;
+  border-top: 1px solid #e2e8f0;
+}
+.bwjm-graph-settings-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: .38rem;
+  font-size: .76rem;
+  padding-top: .55rem;
+  cursor: pointer;
+}
+.bwjm-graph-settings-controls input,
+.bwjm-graph-wizard-options input { accent-color: #6366f1; }
+.bwjm-graph-wizard-options {
+  padding: .7rem;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap: .75rem 1.2rem;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+}
+.bwjm-graph-wizard-options .bwjm-checkbox-label { min-width: 195px; }
+.bwjm-document-rename-input {
+  box-sizing: border-box;
+  width: 195px;
+  min-height: 31px;
+  padding: 5px 8px;
+  border: 1px solid #818cf8;
+  outline: 2px solid rgba(99,102,241,.16);
+  background: var(--bg-elevated);
+  color: var(--text-main);
+  border-radius: 6px;
+  font: .77rem var(--font-mono);
+}
+.bwjm-tab-rename {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.3rem 0.38rem;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: .86rem;
+}
+.bwjm-tab-rename:hover { background: var(--bg-elevated); color: var(--text-main); }

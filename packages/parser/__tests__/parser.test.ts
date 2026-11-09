@@ -2,6 +2,28 @@ import { describe, it, expect } from "vitest";
 import { parseMathMD } from "../src/index.js";
 
 describe("MathMD Parser", () => {
+  it("reads optional 3D animation and scientific panel flags", () => {
+    const fence = String.fromCharCode(96).repeat(3);
+    const doc = parseMathMD([
+      fence + "curve3d", "x: cos(t)", "y: sin(t)", "z: t/3",
+      "tDomain: [0, 6.28]", "animated: true", "showVectors: true",
+      "showTNB: false", "showLegend: false", "showInfo: true", fence,
+      fence + "surface3d", "equation: sin(sqrt(x^2+y^2))",
+      "x: [-4, 4]", "y: [-4, 4]", "animated: false",
+      "showInfo: false", "contours: false", fence,
+    ].join("\n"));
+    expect(doc.diagnostics).toHaveLength(0);
+    expect(doc.children).toHaveLength(2);
+    const [curve,surface] = doc.children;
+    if (curve.type !== "curve3d" || surface.type !== "surface3d") throw Error("wrong node types");
+    expect(curve.animated).toBe(true);
+    expect(curve.showVectors).toBe(true);
+    expect(curve.showLegend).toBe(false);
+    expect(curve.showInfo).toBe(true);
+    expect(surface.showInfo).toBe(false);
+    expect(surface.contours).toBe(false);
+  });
+
   it("parses all ten calculus visualization types from valid .bwjm blocks", () => {
     const modes = [
       "area-dx","area-dy","area-pieces","area-parametric","area-polar",
