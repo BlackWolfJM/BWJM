@@ -5,9 +5,9 @@ import {
 } from "../src/studioThemes.js";
 
 describe("theme catalog and 12 recovered colors plus four community themes",()=>{
-  it("contains the three original themes and six new ones, without duplicates",()=>{
+  it("keeps nine existing themes and adds sixteen new themes without duplicate IDs",()=>{
     expect(STUDIO_THEMES.map(item=>item.id)).toEqual(["linear","catppuccin","tokyonight","bruma","marea","lino","oliva","bosque","arcilla","bruma-celeste","bruma-rosa","bruma-terracota","marea-carmesi","marea-piedra","lino-tinta","lino-canela","oliva-salvia","oliva-carbon","bosque-musgo","bosque-cacao","arcilla-salmon","nord-polar","dracula","rose-pine","catppuccin-latte"]);
-    expect(new Set(STUDIO_THEMES.map(item=>item.id)).size).toBe(9);
+    expect(new Set(STUDIO_THEMES.map(item=>item.id)).size).toBe(25);
   });
   it("uses the six visible hexadecimal swatches in the supplied image",()=>{
     const find=(id:string)=>STUDIO_THEMES.find(item=>item.id===id)?.colors;
