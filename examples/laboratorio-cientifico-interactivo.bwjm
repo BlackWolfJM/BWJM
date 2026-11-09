@@ -125,3 +125,21 @@ contours: true
 ```
 
 *Nota científica:* los datos numéricos y sus indicadores son aproximaciones. La visualización no sustituye la validación simbólica cuando se requieren resultados exactos.
+
+## 6. Líneas de corriente y transporte en un campo vectorial
+
+El campo $\\mathbf{F}(x,y)=(-y,x)$ produce trayectorias de giro alrededor del origen. La integración se aproxima mediante RK4.
+
+```flow2d
+id: flujo-rotacional
+field: ["-y", "x"]
+seeds: [[1, 0], [0, 1], [-1, 0], [0, -1]]
+x: [-3, 3]
+y: [-3, 3]
+tMax: 6.28
+stepSize: 0.04
+showVectors: true
+showParticles: true
+```
+
+Las partículas comparten el control `t` del principio del documento.

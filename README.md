@@ -35,6 +35,7 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
      - 3.2.10. Tablas cientificas exportables (datatable)
      - 3.2.11. Experimentos desde ecuaciones (functiontable, datachart, statistics)
      - 3.2.12. Curvas parametricas animadas en el plano (parametric2d)
+     - 3.2.13. Lineas de corriente y campos vectoriales 2D (flow2d)
    - 3.3. Manual de Operacion de BWJM Studio
      - 3.3.1. Modos de Vista: Editor, Split y Lector
      - 3.3.2. Carga de Lecciones y Navegacion de Esquema
@@ -171,6 +172,7 @@ En la misma rama de desarrollo se implementaron piezas reutilizables para docume
 - `datachart`: genera graficas conectadas a una tabla por `tableRef`, con modos `scatter`, `line`, `bar`, `area`, `step`, `histogram`, `box` y `pie`. La regresion lineal opcional se representa sobre dispersion o linea.
 - `statistics`: calcula tamaño muestral, media, mediana, suma, minimo, maximo, cuartiles, varianza muestral y desviacion estandar; puede calcular correlacion y regresion lineal entre columnas.
 - `parametric2d`: representa curvas 2D arbitrarias con particula movil, estela y vectores velocidad, aceleracion, tangente y normal.
+- `flow2d`: lineas de corriente con RK4, flechas del campo y particulas animadas.
 - Las graficas SVG admiten exportacion vectorial y las tablas generadas pueden exportarse a CSV/TSV/JSON.
 - La interfaz de insercion `ChartModal` incluye asistentes para curvas 2D animadas y experimentos con datos.
 
@@ -549,6 +551,23 @@ showNormal: true
 ```
 
 La particula se mueve con el deslizador, mientras los vectores cambian de posicion y orientacion. La grafica se puede guardar como SVG.
+
+---
+
+#### 3.2.13. Lineas de corriente (`flow2d`)
+
+```flow2d
+field: ["-y", "x"]
+seeds: [[1, 0], [0, 1], [-1, 0], [0, -1]]
+x: [-3, 3]
+y: [-3, 3]
+tMax: 6.28
+stepSize: 0.04
+showVectors: true
+showParticles: true
+```
+
+Si el documento dispone de un `slider` de nombre `t`, las particulas avanzan por las lineas de corriente. La escena utiliza integracion numerica RK4 sobre un campo autonomo; los parametros `seeds`, `tMax` y `stepSize` tienen limites para evitar cargas descontroladas.
 
 ---
 
