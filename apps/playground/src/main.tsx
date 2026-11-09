@@ -1130,6 +1130,50 @@ export function BWJMStudio() {
           lengthLabel.appendChild(length);
           panel.appendChild(lengthLabel);
           cardBody.appendChild(panel);
+        } else if (node.type === "calculusviz") {
+          const data = coreRef.current.getNodeData(node.id);
+          const mount = document.createElement("div");
+          mount.style.width = "100%";
+          mount.style.height = node.mode === "revolution" ? "440px" : "380px";
+          cardBody.appendChild(mount);
+          if (node.mode === "revolution") {
+            const renderer = new PlotlyRenderer(mount);
+            plotlyRenderersRef.current.set(node.id, renderer);
+            renderer.render(data);
+          } else {
+            const renderer = new SVGRenderer(mount, 760, 390);
+            svgRenderersRef.current.set(node.id, renderer);
+            renderer.render(data);
+          }
+          const report = document.createElement("div");
+          report.className = "bwjm-calculus-report";
+          if (data?.error) {
+            report.textContent = "Error: " + data.error;
+            report.classList.add("has-error");
+          } else {
+            const metric = document.createElement("strong");
+            const formatted = Number.isFinite(data.value) ? Number(data.value.toPrecision(8)) : "No determinado";
+            metric.textContent = data.valueLabel + ": " + formatted + " " +
+              (data.unit === "valor" ? "" : data.unit);
+            report.appendChild(metric);
+            const method = document.createElement("small");
+            method.textContent = data.method + " · resultado numérico aproximado";
+            report.appendChild(method);
+            if (data.comparison) {
+              const second = document.createElement("div");
+              second.textContent = data.comparison.label + ": " +
+                Number(data.comparison.value.toPrecision(8)) +
+                " · Diferencia: " + Number(data.comparison.difference.toPrecision(4));
+              report.appendChild(second);
+            }
+            (data.warnings ?? []).forEach((message:string) => {
+              const caution = document.createElement("p");
+              caution.className = "bwjm-calculus-warning";
+              caution.textContent = "⚠ " + message;
+              report.appendChild(caution);
+            });
+          }
+          cardBody.appendChild(report);
         } else if (node.type === "plot2d") {
           const mount = document.createElement("div");
           mount.id = `mount-${node.id}`;

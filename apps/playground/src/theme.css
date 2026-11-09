@@ -1621,3 +1621,9 @@ body {
     grid-column: 1;
   }
 }
+
+.bwjm-calculus-report { display:flex; flex-direction:column; gap:0.5rem; padding:0.85rem 1rem; border:1px solid #dbeafe; border-radius:9px; background:#eff6ff; color:#1e293b; }
+.bwjm-calculus-report strong { font-size:1.02rem; font-variant-numeric:tabular-nums; color:#1d4ed8; }
+.bwjm-calculus-report small { font-size:0.76rem; color:#64748b; }
+.bwjm-calculus-report .bwjm-calculus-warning { font-size:0.78rem; color:#9a3412; }
+.bwjm-calculus-report.has-error { background:#fff1f2; border-color:#fecdd3; color:#be123c; }

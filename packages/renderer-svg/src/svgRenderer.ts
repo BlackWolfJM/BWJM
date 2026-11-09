@@ -66,6 +66,10 @@ export class SVGRenderer {
     }
     
     switch (node.type) {
+      case "calculusviz":
+        this.renderCalculusViz(node as any);
+        break;
+
       case "flow2d":
         this.renderFlow2D(node as any);
         break;
@@ -101,6 +105,79 @@ export class SVGRenderer {
     }
   }
   
+  /** Scientific 2D domains, guides and boundaries for ten calculus insertion modes. */
+  private renderCalculusViz(node: Extract<MathMDNode, { type: "calculusviz" }> & {
+    polygons?: Array<{ points: number[][]; fill?: string }>;
+    curves?: Array<{ points: number[][]; color?: string; label?: string }>;
+    guides?: Array<{ a: [number, number]; b: [number, number]; label?: string }>;
+    error?: string;
+  }): void {
+    if (node.error) {
+      const message = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      message.setAttribute("x", "25");
+      message.setAttribute("y", "55");
+      message.setAttribute("font-size", "14");
+      message.setAttribute("fill", "#be123c");
+      message.textContent = "No se pudo construir la región: " + node.error.slice(0, 100);
+      this.svgElement.appendChild(message);
+      return;
+    }
+    const polygons = node.polygons ?? [];
+    const curves = node.curves ?? [];
+    const guides = node.guides ?? [];
+    const points = [
+      ...polygons.flatMap(polygon => polygon.points),
+      ...curves.flatMap(curve => curve.points),
+      ...guides.flatMap(guide => [guide.a, guide.b]),
+    ].filter(p => p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    if (points.length === 0) return;
+    const xValues = points.map(p => p[0]), yValues = points.map(p => p[1]);
+    const minX = Math.min(...xValues), maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues), maxY = Math.max(...yValues);
+    const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
+    const ratio = this.width / this.height;
+    const spanX = Math.max(maxX - minX, (maxY - minY) * ratio, 0.5) * 1.2;
+    const spanY = spanX / ratio;
+    const loX = midX - spanX / 2, hiX = midX + spanX / 2;
+    const loY = midY - spanY / 2, hiY = midY + spanY / 2;
+    const transform = this.createTransform(loX, hiX, loY, hiY);
+    this.renderGrid(transform,loX,hiX,loY,hiY,.25);
+    this.renderAxes(transform,loX,hiX,loY,hiY);
+    const pointString = (p:number[]) => transform.x(p[0]).toFixed(2) + "," + transform.y(p[1]).toFixed(2);
+    for (const polygon of polygons) {
+      if (polygon.points.length < 3) continue;
+      const item = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      item.setAttribute("points", polygon.points.map(pointString).join(" "));
+      item.setAttribute("fill", polygon.fill ?? "#93c5fd");
+      item.setAttribute("fill-opacity", "0.38");
+      item.setAttribute("stroke", "#64748b");
+      item.setAttribute("stroke-opacity", "0.4");
+      item.setAttribute("stroke-width", "1");
+      this.svgElement.appendChild(item);
+    }
+    for (const guide of guides) {
+      const item = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      item.setAttribute("x1", String(transform.x(guide.a[0])));
+      item.setAttribute("y1", String(transform.y(guide.a[1])));
+      item.setAttribute("x2", String(transform.x(guide.b[0])));
+      item.setAttribute("y2", String(transform.y(guide.b[1])));
+      item.setAttribute("stroke", guide.label ? "#d97706" : "#64748b");
+      item.setAttribute("stroke-width", guide.label ? "1.8" : "1");
+      item.setAttribute("stroke-dasharray", guide.label ? "3 3" : "4 6");
+      this.svgElement.appendChild(item);
+    }
+    for (const curve of curves) {
+      const finite = curve.points.filter(p => p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]));
+      if (finite.length < 2) continue;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      path.setAttribute("points", finite.map(pointString).join(" "));
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", curve.color ?? "#2563eb");
+      path.setAttribute("stroke-width", "2.6");
+      this.svgElement.appendChild(path);
+    }
+  }
+
   /**
    * Streamline geometry computed with RK4 by @mathmd/math.
    */

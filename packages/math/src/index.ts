@@ -26,6 +26,8 @@ export { serializeScientificTable } from "./scientificTable.js";
 export { generateFunctionTable, summarizeColumn, fitLinearRegression } from "./scientificAnalysis.js";
 export { sampleParametric2D } from "./parametric2d.js";
 export { sampleFlow2D } from "./flow2d.js";
+export { computeCalculusViz } from "./calculusViz.js";
+export type { CalculusSpec, CalculusVizResult } from "./calculusViz.js";
 export type { ScientificSummary, RegressionResult } from "./scientificAnalysis.js";
 export type { ScientificCell, ScientificTableFormat } from "./scientificTable.js";
 export { computeExactArea, computePiecewiseArea, computeRiemannPartition, findIntersections };

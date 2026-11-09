@@ -103,6 +103,10 @@ export class PlotlyRenderer {
     this.data = [];
 
     switch (node.type) {
+      case "calculusviz":
+        this.renderCalculusViz(node as any);
+        break;
+
       case "datachart":
         this.renderDataChart(node as any);
         break;
@@ -149,6 +153,28 @@ export class PlotlyRenderer {
     }
 
     void this.updatePlot();
+  }
+
+  private renderCalculusViz(node: Extract<PlotlyRenderNode, { type: "calculusviz" }> & {
+    mesh?: { x:number[][]; y:number[][]; z:number[][] };
+    innerMesh?: { x:number[][]; y:number[][]; z:number[][] };
+    error?: string;
+  }): void {
+    if (node.error) { this.renderError(node.error); return; }
+    if (node.mode !== "revolution" || !node.mesh) {
+      this.renderError("Esta visualización no tiene malla tridimensional.");
+      return;
+    }
+    const trace = (mesh: {x:number[][];y:number[][];z:number[][]}, color:string, name:string, opacity:number) => ({
+      type: "surface", x:mesh.x, y:mesh.y, z:mesh.z,
+      colorscale:[[0,color],[1,color]], showscale:false, opacity, name,
+      hovertemplate:"x: %{x:.3f}<br>y: %{y:.3f}<br>z: %{z:.3f}<extra></extra>",
+    });
+    this.data = [trace(node.mesh,"#6366f1","Superficie exterior",0.84)];
+    if (node.innerMesh) this.data.push(trace(node.innerMesh,"#38bdf8","Superficie interior",0.48));
+    this.layout.title={text:"Sólido de revolución ("+(node.method??"washers")+")",x:0.5};
+    this.layout.scene.aspectmode="data";
+    this.layout.margin={l:0,r:0,b:0,t:40};
   }
 
   private renderDataChart(node: Extract<PlotlyRenderNode, { type: "datachart" }>): void {

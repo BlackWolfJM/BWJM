@@ -10,7 +10,8 @@ import {
   summarizeColumn,
   fitLinearRegression,
   sampleParametric2D,
-  sampleFlow2D
+  sampleFlow2D,
+  computeCalculusViz
 } from "@mathmd/math";
 import type { Vector3D } from "@mathmd/math";
 
@@ -162,6 +163,13 @@ export class MathMDCore {
         }
         break;
         
+      case "calculusviz": {
+        [
+          node.f, node.g, node.integrand, node.paramX, node.paramY,
+          node.fieldP, node.fieldQ, node.reverseLower, node.reverseUpper,
+        ].forEach(expression => { if(expression) deps.push(...extractVarsFromStr(expression)); });
+        break;
+      }
       case "flow2d": {
         node.field.forEach(expression => deps.push(...extractVarsFromStr(expression)));
         const temporal = this.document.children.find(item => item.id === node.timelineRef && item.type === "timeline");
@@ -274,6 +282,13 @@ export class MathMDCore {
     });
     
     switch (node.type) {
+      case "calculusviz":
+        try {
+          return { ...node, ...computeCalculusViz(node, scope) };
+        } catch (error) {
+          return { ...node, error: error instanceof Error ? error.message : String(error) };
+        }
+
       case "flow2d": {
         let timeName = node.timelineRef ?? "t";
         const temporal = this.document.children.find(item => item.id === node.timelineRef && item.type === "timeline");
