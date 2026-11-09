@@ -7,7 +7,7 @@ interface ChartModalProps {
   onInsert: (codeBlock: string) => void;
 }
 
-type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider";
+type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider" | "parametric2d" | "experiment";
 
 export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInsert }) => {
   const [kind, setKind] = useState<ChartKind>("plot2d");
@@ -32,6 +32,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
   const [curveTMin, setCurveTMin] = useState<string>("0");
   const [curveTMax, setCurveTMax] = useState<string>("6.28");
   const [curveColor, setCurveColor] = useState<string>("#0284c7");
+  const [sampleFormula, setSampleFormula] = useState<string>("sin(t)");
+  const [sampleCount, setSampleCount] = useState<string>("101");
 
   const [fieldX, setFieldX] = useState<string>("-y");
   const [fieldY, setFieldY] = useState<string>("x");
@@ -56,6 +58,27 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
     generatedCode = `\`\`\`surface3d\nequation: ${eq3d}\nx: [${xMin3d}, ${xMax3d}]\ny: [${yMin3d}, ${yMax3d}]\nsamples: ${samples3d}\ncontours: ${contours3d}\n\`\`\``;
   } else if (kind === "curve3d") {
     generatedCode = `\`\`\`curve3d\nx: ${curveX}\ny: ${curveY}\nz: ${curveZ}\ntDomain: [${curveTMin}, ${curveTMax}]\ncolor: "${curveColor}"\n\`\`\``;
+  } else if (kind === "parametric2d") {
+    generatedCode = [
+      "```slider", "name: t", "min: " + curveTMin, "max: " + curveTMax,
+      "step: 0.02", "default: " + curveTMin, "```", "",
+      "```parametric2d", "x: " + curveX, "y: " + curveY,
+      "tDomain: [" + curveTMin + ", " + curveTMax + "]",
+      'color: "' + curveColor + '"', "samples: 200", "showTrail: true",
+      "showVelocity: true", "showAcceleration: false",
+      "showTangent: true", "showNormal: true", "```",
+    ].join("\n");
+  } else if (kind === "experiment") {
+    generatedCode = [
+      "```functiontable", "id: experimento",
+      "caption: Muestreo de una función", "variable: t",
+      "domain: [" + curveTMin + ", " + curveTMax + "]",
+      "samples: " + sampleCount, "columns: [tiempo, valor]",
+      'expressions: ["' + sampleFormula + '"]', "precision: 5", "```", "",
+      "```datachart", "tableRef: experimento", "kind: line",
+      "x: tiempo", "y: valor", "title: Datos muestreados", "```", "",
+      "```statistics", "tableRef: experimento", "column: valor", "```",
+    ].join("\n");
   } else if (kind === "vectorfield2d") {
     generatedCode = `\`\`\`vectorfield2d\nfield: ["${fieldX}", "${fieldY}"]\nxDomain: [${fieldXMin}, ${fieldXMax}]\nyDomain: [${fieldYMin}, ${fieldYMax}]\ndensity: ${fieldDensity}\n\`\`\``;
   } else {
@@ -101,6 +124,18 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
               Curva 3D (curve3d)
             </button>
             <button
+              className={`bwjm-tab-item ${kind === "parametric2d" ? "active" : ""}`}
+              onClick={() => setKind("parametric2d")}
+            >
+              Curva móvil 2D
+            </button>
+            <button
+              className={`bwjm-tab-item ${kind === "experiment" ? "active" : ""}`}
+              onClick={() => setKind("experiment")}
+            >
+              Experimento + tablas
+            </button>
+            <button
               className={`bwjm-tab-item ${kind === "vectorfield2d" ? "active" : ""}`}
               onClick={() => setKind("vectorfield2d")}
             >
@@ -114,6 +149,46 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
             </button>
           </div>
 
+          {kind === "parametric2d" && (
+            <div className="bwjm-modal-grid">
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">x(t)</label>
+                <input className="bwjm-modal-input" value={curveX} onChange={e => setCurveX(e.target.value)} />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">y(t)</label>
+                <input className="bwjm-modal-input" value={curveY} onChange={e => setCurveY(e.target.value)} />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">t mínimo</label>
+                <input className="bwjm-modal-input" value={curveTMin} onChange={e => setCurveTMin(e.target.value)} />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">t máximo</label>
+                <input className="bwjm-modal-input" value={curveTMax} onChange={e => setCurveTMax(e.target.value)} />
+              </div>
+            </div>
+          )}
+          {kind === "experiment" && (
+            <div className="bwjm-modal-grid">
+              <div className="bwjm-modal-field full-width">
+                <label className="bwjm-modal-label">Expresión a muestrear</label>
+                <input className="bwjm-modal-input" value={sampleFormula} onChange={e => setSampleFormula(e.target.value)} />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">Mínimo</label>
+                <input className="bwjm-modal-input" value={curveTMin} onChange={e => setCurveTMin(e.target.value)} />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">Máximo</label>
+                <input className="bwjm-modal-input" value={curveTMax} onChange={e => setCurveTMax(e.target.value)} />
+              </div>
+              <div className="bwjm-modal-field">
+                <label className="bwjm-modal-label">Número de muestras (2 a 500)</label>
+                <input className="bwjm-modal-input" value={sampleCount} onChange={e => setSampleCount(e.target.value)} />
+              </div>
+            </div>
+          )}
           {kind === "plot2d" && (
             <div className="bwjm-modal-grid">
               <div className="bwjm-modal-field full-width">
