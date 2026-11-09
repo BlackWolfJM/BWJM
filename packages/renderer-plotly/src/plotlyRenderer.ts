@@ -17,6 +17,12 @@ type PlotlyRenderNode = MathMDNode & {
   showVectors?: boolean;
   showTNB?: boolean;
   samples?: number;
+  origin?: number[];
+  vector?: number[];
+  end?: number[];
+  tipPoints?: number[][];
+  layer?: string;
+  visible?: boolean;
 };
 
 /**
@@ -83,6 +89,10 @@ export class PlotlyRenderer {
 
       case "curve3d":
         this.renderCurve3D(node as any);
+        break;
+
+      case "vectorarrow":
+        this.renderVectorArrow(node as any);
         break;
 
       default:
@@ -203,6 +213,79 @@ export class PlotlyRenderer {
       this.layout.scene.aspectmode = "data";
     } catch (error: any) {
       this.renderError(`Error rendering curve3d: ${error?.message || String(error)}`);
+    }
+  }
+
+  private renderVectorArrow(node: Extract<PlotlyRenderNode, { type: "vectorarrow" }>): void {
+    if (node.visible === false) {
+      this.renderError("Vector arrow hidden");
+      return;
+    }
+    try {
+      const { origin, end, tipPoints, color } = node;
+      const o = origin ?? [0, 0, 0];
+      const e = end ?? [1, 0, 0];
+      const vecColor = color ?? "#0284c7";
+      
+      const traces: any[] = [];
+      
+      traces.push({
+        type: "scatter3d",
+        mode: "lines",
+        x: [o[0], e[0]],
+        y: [o[1], e[1]],
+        z: [o[2], e[2]],
+        line: {
+          color: vecColor,
+          width: 6
+        },
+        name: node.label ?? "Vector"
+      });
+      
+      if (tipPoints && tipPoints.length > 0) {
+        const tipXs = tipPoints.map((p: number[]) => p[0]);
+        const tipYs = tipPoints.map((p: number[]) => p[1]);
+        const tipZs = tipPoints.map((p: number[]) => p[2]);
+        
+        traces.push({
+          type: "scatter3d",
+          mode: "lines",
+          x: tipXs,
+          y: tipYs,
+          z: tipZs,
+          line: {
+            color: vecColor,
+            width: 6
+          },
+          name: `${node.label ?? "Vector"} tip`,
+          showlegend: false
+        });
+      }
+      
+      traces.push({
+        type: "scatter3d",
+        mode: "markers",
+        x: [o[0]],
+        y: [o[1]],
+        z: [o[2]],
+        marker: {
+          size: 5,
+          color: vecColor,
+          symbol: "circle"
+        },
+        name: "Origen",
+        showlegend: false
+      });
+
+      this.data = traces;
+      this.layout.title = {
+        text: `Vector ${node.label ?? ""}`,
+        x: 0.5,
+        xanchor: "center"
+      };
+      this.layout.scene.aspectmode = "data";
+    } catch (error: any) {
+      this.renderError(`Error rendering vectorarrow: ${error?.message || String(error)}`);
     }
   }
 

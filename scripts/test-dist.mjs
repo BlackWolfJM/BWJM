@@ -138,7 +138,7 @@ async function main() {
 
   console.log('');
   if (allPassed) {
-    console.log('🎉 All distribution tests passed!');
+    console.log('[OK] All distribution tests passed!');
     process.exit(0);
   } else {
     console.error('❌ Some distribution tests failed!');

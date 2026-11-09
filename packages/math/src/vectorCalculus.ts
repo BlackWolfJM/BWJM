@@ -348,3 +348,299 @@ export function computeLineIntegral(
     circulationDensityAverage: totalLength > 0 ? Number((totalWork / totalLength).toFixed(6)) : 0,
   };
 }
+
+export interface KinematicsSeries {
+  t: number[];
+  position: Vector3D[];
+  velocity: Vector3D[];
+  speed: number[];
+  acceleration: Vector3D[];
+  tangentialAcceleration: number[];
+  normalAcceleration: number[];
+  tangent: Vector3D[];
+  normal: Vector3D[];
+  binormal: Vector3D[];
+  curvature: number[];
+  torsion: number[];
+  osculatingRadius: number[];
+}
+
+export function computeKinematicsSeries(
+  curve: CurveParametric,
+  domain: [number, number],
+  samples: number = 100,
+  scope: Record<string, number> = {}
+): KinematicsSeries {
+  const [tMin, tMax] = domain;
+  const count = Math.max(2, samples);
+  const step = (tMax - tMin) / (count - 1);
+
+  const result: KinematicsSeries = {
+    t: [],
+    position: [],
+    velocity: [],
+    speed: [],
+    acceleration: [],
+    tangentialAcceleration: [],
+    normalAcceleration: [],
+    tangent: [],
+    normal: [],
+    binormal: [],
+    curvature: [],
+    torsion: [],
+    osculatingRadius: [],
+  };
+
+  for (let i = 0; i < count; i++) {
+    const t = tMin + i * step;
+    const kin = computeKinematics(curve, t, scope);
+    
+    result.t.push(t);
+    result.position.push(kin.position);
+    result.velocity.push(kin.velocity);
+    result.speed.push(kin.speed);
+    result.acceleration.push(kin.acceleration);
+    result.tangentialAcceleration.push(kin.tangentialAcceleration);
+    result.normalAcceleration.push(kin.normalAcceleration);
+    result.tangent.push(kin.tangent);
+    result.normal.push(kin.normal);
+    result.binormal.push(kin.binormal);
+    result.curvature.push(kin.curvature);
+    result.torsion.push(kin.torsion);
+    result.osculatingRadius.push(kin.osculatingRadius);
+  }
+
+  return result;
+}
+
+export interface FieldLineOptions {
+  field: { P: string; Q: string; R?: string };
+  startPoint: [number, number] | [number, number, number];
+  tMax: number;
+  stepSize?: number;
+  maxSteps?: number;
+  scope?: Record<string, number>;
+  direction?: "forward" | "backward" | "both";
+}
+
+export interface FieldLineResult {
+  points: Vector3D[];
+  tValues: number[];
+  terminated: boolean;
+  terminationReason?: string;
+}
+
+export function integrateFieldLine(options: FieldLineOptions): FieldLineResult {
+  const { field, startPoint, tMax, stepSize = 0.01, maxSteps = 10000, scope = {}, direction = "forward" } = options;
+  
+  const is3D = startPoint.length === 3 && field.R !== undefined;
+  const compP = compileExpression(field.P);
+  const compQ = compileExpression(field.Q);
+  const compR = is3D ? compileExpression(field.R!) : undefined;
+
+  const evaluateField = (point: Vector3D): Vector3D => {
+    const s = { ...scope, x: point.x, y: point.y, z: point.z };
+    const fx = evaluateExpression(compP, s);
+    const fy = evaluateExpression(compQ, s);
+    const fz = is3D ? evaluateExpression(compR!, s) : 0;
+    return { x: fx, y: fy, z: fz };
+  };
+
+  const points: Vector3D[] = [];
+  const tValues: number[] = [];
+  let currentPoint = { x: startPoint[0], y: startPoint[1], z: startPoint[2] || 0 };
+  let t = 0;
+  let steps = 0;
+  let terminated = false;
+  let terminationReason = "";
+
+  const directions = direction === "both" ? [1, -1] : [direction === "forward" ? 1 : -1];
+
+  for (const dir of directions) {
+    if (dir === -1 && direction === "both") {
+      currentPoint = { x: startPoint[0], y: startPoint[1], z: startPoint[2] || 0 };
+      t = 0;
+    }
+    
+    const dirPoints: Vector3D[] = [];
+    const dirTValues: number[] = [];
+    
+    while (t < tMax && steps < maxSteps) {
+      dirPoints.push({ ...currentPoint });
+      dirTValues.push(t);
+      
+      const h = dir * stepSize;
+      
+      const k1 = evaluateField(currentPoint);
+      const k2 = evaluateField({
+        x: currentPoint.x + h * 0.5 * k1.x,
+        y: currentPoint.y + h * 0.5 * k1.y,
+        z: currentPoint.z + h * 0.5 * k1.z
+      });
+      const k3 = evaluateField({
+        x: currentPoint.x + h * 0.5 * k2.x,
+        y: currentPoint.y + h * 0.5 * k2.y,
+        z: currentPoint.z + h * 0.5 * k2.z
+      });
+      const k4 = evaluateField({
+        x: currentPoint.x + h * k3.x,
+        y: currentPoint.y + h * k3.y,
+        z: currentPoint.z + h * k3.z
+      });
+      
+      currentPoint = {
+        x: currentPoint.x + h * (k1.x + 2 * k2.x + 2 * k3.x + k4.x) / 6,
+        y: currentPoint.y + h * (k1.y + 2 * k2.y + 2 * k3.y + k4.y) / 6,
+        z: currentPoint.z + h * (k1.z + 2 * k2.z + 2 * k3.z + k4.z) / 6
+      };
+      
+      t += Math.abs(h);
+      steps++;
+      
+      const mag = Math.sqrt(currentPoint.x**2 + currentPoint.y**2 + currentPoint.z**2);
+      if (mag > 1e6) {
+        terminated = true;
+        terminationReason = "Escaped to infinity";
+        break;
+      }
+      if (mag < 1e-10) {
+        terminated = true;
+        terminationReason = "Reached singularity/zero";
+        break;
+      }
+      if (!isFinite(currentPoint.x) || !isFinite(currentPoint.y) || !isFinite(currentPoint.z)) {
+        terminated = true;
+        terminationReason = "Non-finite values";
+        break;
+      }
+    }
+    
+    if (dir === -1) {
+      points.unshift(...dirPoints.reverse());
+      tValues.unshift(...dirTValues.map(v => -v).reverse());
+    } else {
+      points.push(...dirPoints);
+      tValues.push(...dirTValues);
+    }
+  }
+
+  return { points, tValues, terminated, terminationReason };
+}
+
+export interface GreensTheoremOptions {
+  field: { P: string; Q: string };
+  boundaryCurve: { x: string; y: string };
+  domain: [number, number];
+  region: {
+    type: "disk" | "rectangle" | "custom";
+    center?: [number, number];
+    radius?: number;
+    xRange?: [number, number];
+    yRange?: [number, number];
+  };
+  steps?: number;
+  scope?: Record<string, number>;
+}
+
+export interface GreensTheoremResult {
+  lineIntegral: number;
+  doubleIntegral: number;
+  difference: number;
+  relativeError: number;
+  curlValues: number[];
+  regionArea: number;
+}
+
+export function computeGreensTheorem(options: GreensTheoremOptions): GreensTheoremResult {
+  const { field, boundaryCurve, domain, region, steps = 200, scope = {} } = options;
+  
+  const lineResult = computeLineIntegral(
+    { P: field.P, Q: field.Q },
+    boundaryCurve,
+    domain,
+    steps,
+    scope
+  );
+  
+  let doubleIntegral = 0;
+  let regionArea = 0;
+  
+  const compP = compileExpression(field.P);
+  const compQ = compileExpression(field.Q);
+  
+  const h = 1e-4;
+  const curlValues: number[] = [];
+  
+  if (region.type === "disk") {
+    const center = region.center ?? [0, 0];
+    const radius = region.radius ?? 1;
+    const gridSize = Math.ceil(Math.sqrt(steps));
+    const dx = (2 * radius) / gridSize;
+    const dy = (2 * radius) / gridSize;
+    
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        const x = center[0] - radius + (i + 0.5) * dx;
+        const y = center[1] - radius + (j + 0.5) * dy;
+        
+        const distSq = (x - center[0])**2 + (y - center[1])**2;
+        if (distSq <= radius**2) {
+          const s = { ...scope, x, y };
+          const qRight = evaluateExpression(compQ, { ...s, x: x + h });
+          const qLeft = evaluateExpression(compQ, { ...s, x: x - h });
+          const pUp = evaluateExpression(compP, { ...s, y: y + h });
+          const pDown = evaluateExpression(compP, { ...s, y: y - h });
+          
+          const dQdx = (qRight - qLeft) / (2 * h);
+          const dPdy = (pUp - pDown) / (2 * h);
+          const curl = dQdx - dPdy;
+          
+          curlValues.push(curl);
+          doubleIntegral += curl * dx * dy;
+          regionArea += dx * dy;
+        }
+      }
+    }
+  } else if (region.type === "rectangle") {
+    const xRange = region.xRange ?? [-1, 1];
+    const yRange = region.yRange ?? [-1, 1];
+    const gridSize = Math.ceil(Math.sqrt(steps));
+    const dx = (xRange[1] - xRange[0]) / gridSize;
+    const dy = (yRange[1] - yRange[0]) / gridSize;
+    
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        const x = xRange[0] + (i + 0.5) * dx;
+        const y = yRange[0] + (j + 0.5) * dy;
+        
+        const s = { ...scope, x, y };
+        const qRight = evaluateExpression(compQ, { ...s, x: x + h });
+        const qLeft = evaluateExpression(compQ, { ...s, x: x - h });
+        const pUp = evaluateExpression(compP, { ...s, y: y + h });
+        const pDown = evaluateExpression(compP, { ...s, y: y - h });
+        
+        const dQdx = (qRight - qLeft) / (2 * h);
+        const dPdy = (pUp - pDown) / (2 * h);
+        const curl = dQdx - dPdy;
+        
+        curlValues.push(curl);
+        doubleIntegral += curl * dx * dy;
+        regionArea += dx * dy;
+      }
+    }
+  }
+  
+  const difference = Math.abs(lineResult.work - doubleIntegral);
+  const relativeError = Math.abs(lineResult.work) > 1e-10 
+    ? difference / Math.abs(lineResult.work) 
+    : (difference > 1e-10 ? Infinity : 0);
+  
+  return {
+    lineIntegral: lineResult.work,
+    doubleIntegral,
+    difference,
+    relativeError,
+    curlValues,
+    regionArea
+  };
+}

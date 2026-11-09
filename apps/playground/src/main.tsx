@@ -11,7 +11,6 @@ import {
   computeRevolutionVolume,
   computeCrossSection,
   computeKinematics,
-  computeLineIntegral,
   sampleVectorField2D,
 } from "@mathmd/math";
 import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode } from "@mathmd/ast";
@@ -1166,6 +1165,22 @@ export function BWJMStudio() {
             showTNB: true,
             showVectors: true,
           } as any);
+        } else if (node.type === "vectorarrow") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.height = "420px";
+          cardBody.appendChild(mount);
+
+          const renderer = new PlotlyRenderer(mount);
+          plotlyRenderersRef.current.set(node.id, renderer);
+
+          const nodeData = coreRef.current.getNodeData(node.id) || node;
+          const currentVars = coreRef.current.getVariables();
+          renderer.render({
+            ...nodeData,
+            scope: currentVars,
+          } as any);
         } else if (node.type === "vectorfield2d") {
           const mount = document.createElement("div");
           mount.id = `mount-${node.id}`;
@@ -1192,7 +1207,7 @@ export function BWJMStudio() {
     const updateLiveScientificAnalysis = () => {
       // Check if there are any visualizable nodes in the document
       const hasVisualNodes = doc.children.some(node => 
-        ["curve3d", "trajectory", "surface3d", "vectorfield2d", "field", "plot2d", "region", "frame", "particle"].includes(node.type)
+        ["curve3d", "trajectory", "surface3d", "vectorfield2d", "field", "plot2d", "region", "frame", "particle", "vectorarrow"].includes(node.type)
       );
       if (!hasVisualNodes) {
         livePanel.style.display = "none";
@@ -1209,7 +1224,6 @@ export function BWJMStudio() {
       const plot2dNodes = doc.children.filter(n => n.type === "plot2d");
       const regionNode = doc.children.find(n => n.type === "region");
       const frameNode = doc.children.find(n => n.type === "frame");
-      const sliderNodes = doc.children.filter(n => n.type === "slider");
 
       // Case 1: Trajectory/Curve3D with kinematics
       if (trajectoryNode) {
@@ -1501,15 +1515,15 @@ export function BWJMStudio() {
     plotlyRenderersRef.current.forEach((renderer, nodeId) => {
       if (dirtyNodeIds.includes(nodeId)) return;
       const nodeData = coreRef.current?.getNodeData(nodeId);
-      if (nodeData && (nodeData as any).type === "curve3d") {
+      if (nodeData && ((nodeData as any).type === "curve3d" || (nodeData as any).type === "vectorarrow")) {
         const currentT = currentVars["t"] ?? (nodeData as any).tDomain?.[1];
         renderer.render({
           ...nodeData,
           scope: currentVars,
           currentT,
-          particle: true,
-          showTNB: true,
-          showVectors: true,
+          particle: (nodeData as any).type === "curve3d",
+          showTNB: (nodeData as any).type === "curve3d",
+          showVectors: (nodeData as any).type === "curve3d",
         } as any);
       }
     });

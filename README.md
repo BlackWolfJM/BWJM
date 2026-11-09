@@ -27,6 +27,7 @@ BWJM es un formato de documento cientifico interactivo de codigo abierto, disena
      - 3.2.4. Superficies Tridimensionales (surface3d)
      - 3.2.5. Curvas Parametricas Espaciales y Marco TNB (curve3d)
      - 3.2.6. Campos Vectoriales 2D y Circulacion (vectorfield2d)
+     - 3.2.7. Flechas Vectoriales Tridimensionales (vectorarrow)
    - 3.3. Manual de Operacion de BWJM Studio
      - 3.3.1. Modos de Vista: Editor, Split y Lector
      - 3.3.2. Carga de Lecciones y Navegacion de Esquema
@@ -340,6 +341,28 @@ xDomain: [-3, 3]
 yDomain: [-3, 3]
 density: 12
 color: "#0284c7"
+```
+
+---
+
+#### 3.2.7. Flechas Vectoriales Tridimensionales (`vectorarrow`)
+
+Representa vectores tridimensionales con direccion, magnitud y punta de flecha orientada en el espacio carthesiano 3D, util para vectores posicion, velocidad, aceleracion y fuerzas.
+
+**Sintaxis:**
+```vectorarrow
+origin: [<x0>, <y0>, <z0>]
+vector: ["<vx>", "<vy>", "<vz>"]
+label: "<etiqueta>"
+color: "<codigo_hex>"
+```
+
+**Ejemplo de uso (Vector Aceleracion Normal):**
+```vectorarrow
+origin: [0, 1, 0]
+vector: [0, -2, 0]
+label: "a_N"
+color: "#10b981"
 ```
 
 ---
