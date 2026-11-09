@@ -20,7 +20,7 @@ import {
   sampleVectorField2D,
 } from "./vectorCalculus.js";
 
-export { compileExpression, evaluateExpression, sample1D, sampleSurface };
+export { compileExpression, evaluateExpression, sample1D, sampleSurface, extractFreeParameters };
 export { expressionToLatex } from "./latex.js";
 export { serializeScientificTable } from "./scientificTable.js";
 export { generateFunctionTable, summarizeColumn, fitLinearRegression } from "./scientificAnalysis.js";

@@ -39,8 +39,25 @@ export interface MathMDDocument {
 
 // --- Specific AST Nodes ---
 
+/** Self-contained slider settings; each graph has an independent namespace. */
+export interface GraphParameter {
+  name: string;
+  min: number;
+  max: number;
+  step: number;
+  default: number;
+  integer?: boolean;
+}
+export interface GraphParameterControls {
+  enabled: boolean;
+  animate?: boolean;
+  parameters: GraphParameter[];
+}
+
+
 export interface Plot2DNode extends MathMDNodeBase {
   type: "plot2d";
+  paramControls?: GraphParameterControls;
   equation: string;
   xDomain: [number, number];
   yDomain?: [number, number];
@@ -53,6 +70,7 @@ export interface Plot2DNode extends MathMDNodeBase {
 
 export interface Surface3DNode extends MathMDNodeBase {
   type: "surface3d";
+  paramControls?: GraphParameterControls;
   equation: string;
   xDomain: [number, number];
   yDomain: [number, number];
@@ -83,6 +101,7 @@ export interface Vector3DNode extends MathMDNodeBase {
 
 export interface Curve3DNode extends MathMDNodeBase {
   type: "curve3d";
+  paramControls?: GraphParameterControls;
   x: string;
   y: string;
   z: string;
@@ -97,6 +116,7 @@ export interface Curve3DNode extends MathMDNodeBase {
 
 export interface VectorField2DNode extends MathMDNodeBase {
   type: "vectorfield2d";
+  paramControls?: GraphParameterControls;
   field: [string, string];
   xDomain: [number, number];
   yDomain: [number, number];
@@ -300,6 +320,7 @@ export interface DataTableNode extends MathMDNodeBase {
 
 export interface Parametric2DNode extends MathMDNodeBase {
   type: "parametric2d";
+  paramControls?: GraphParameterControls;
   x: string;
   y: string;
   tDomain: [number, number];
@@ -318,6 +339,7 @@ export interface Parametric2DNode extends MathMDNodeBase {
 
 export interface Flow2DNode extends MathMDNodeBase {
   type: "flow2d";
+  paramControls?: GraphParameterControls;
   field: [string, string];
   seeds: Array<[number, number]>;
   xDomain: [number, number];
@@ -370,6 +392,7 @@ export type CalculusVizMode =
 
 export interface CalculusVizNode extends MathMDNodeBase {
   type: "calculusviz";
+  paramControls?: GraphParameterControls;
   mode: CalculusVizMode;
   domain: [number, number];
   f?: string;
@@ -504,8 +527,42 @@ export const controlNameSchema = z.string().min(1).regex(/^[a-zA-Z_][a-zA-Z0-9_]
   message: "Control name must be a valid non-empty identifier",
 });
 
+/** Shared schema: invalid ranges/duplicate names never enter the rendering engine. */
+export const graphParameterSchema = z.object({
+  name: controlNameSchema.refine(name =>
+    !["x","y","z","t","r","theta","phi","pi","e"].includes(name.toLowerCase()),
+    { message: "Independent variables and mathematical constants are not parameters" }),
+  min: z.number().finite().min(-1e6).max(1e6),
+  max: z.number().finite().min(-1e6).max(1e6),
+  step: z.number().finite().positive().max(1e6),
+  default: z.number().finite(),
+  integer: z.boolean().optional(),
+}).superRefine((p,ctx) => {
+  if(p.max<=p.min) ctx.addIssue({code:z.ZodIssueCode.custom,
+    message:"Maximum must exceed minimum",path:["max"]});
+  if(p.default<p.min||p.default>p.max) ctx.addIssue({code:z.ZodIssueCode.custom,
+    message:"Default is outside range",path:["default"]});
+  if(p.integer&&![p.min,p.max,p.default,p.step].every(Number.isInteger)) {
+    ctx.addIssue({code:z.ZodIssueCode.custom,
+      message:"Integer control requires integer limits, default and step",path:["integer"]});
+  }
+});
+export const graphParameterControlsSchema = z.object({
+  enabled: z.boolean(),
+  animate: z.boolean().optional(),
+  parameters: z.array(graphParameterSchema).max(8),
+}).superRefine((config,ctx) => {
+  const names=new Set<string>();
+  config.parameters.forEach((p,i)=>{
+    if(names.has(p.name)) ctx.addIssue({code:z.ZodIssueCode.custom,
+      message:"Duplicate graph parameter",path:["parameters",i,"name"]});
+    names.add(p.name);
+  });
+});
+
 export const plot2dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("plot2d"),
+  paramControls: graphParameterControlsSchema.optional(),
   equation: z.string().min(1, "Equation must be a non-empty string"),
   xDomain: domainSchema,
   yDomain: domainSchema.optional(),
@@ -518,6 +575,7 @@ export const plot2dSchema = mathmdNodeBaseSchema.extend({
 
 export const surface3dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("surface3d"),
+  paramControls: graphParameterControlsSchema.optional(),
   equation: z.string().min(1, "Equation must be a non-empty string"),
   xDomain: domainSchema,
   yDomain: domainSchema,
@@ -546,6 +604,7 @@ export const vector3dSchema = mathmdNodeBaseSchema.extend({
 
 export const curve3dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("curve3d"),
+  paramControls: graphParameterControlsSchema.optional(),
   x: z.string().min(1, "x equation must be a non-empty string"),
   y: z.string().min(1, "y equation must be a non-empty string"),
   z: z.string().min(1, "z equation must be a non-empty string"),
@@ -560,6 +619,7 @@ export const curve3dSchema = mathmdNodeBaseSchema.extend({
 
 export const vectorfield2dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("vectorfield2d"),
+  paramControls: graphParameterControlsSchema.optional(),
   field: z.tuple([
     z.string().min(1, "fx component must be a non-empty string"),
     z.string().min(1, "fy component must be a non-empty string"),
@@ -827,6 +887,7 @@ export const dataTableSchema = mathmdNodeBaseSchema.extend({
 
 export const flow2dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("flow2d"),
+  paramControls: graphParameterControlsSchema.optional(),
   field: z.tuple([z.string().min(1), z.string().min(1)]),
   seeds: z.array(z.tuple([z.number().finite(), z.number().finite()])).min(1).max(12),
   xDomain: domainSchema,
@@ -841,6 +902,7 @@ export const flow2dSchema = mathmdNodeBaseSchema.extend({
 
 export const parametric2dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("parametric2d"),
+  paramControls: graphParameterControlsSchema.optional(),
   x: z.string().min(1),
   y: z.string().min(1),
   tDomain: domainSchema,
@@ -890,6 +952,7 @@ export const statisticsSchema = mathmdNodeBaseSchema.extend({
 
 export const calculusVizSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("calculusviz"),
+  paramControls: graphParameterControlsSchema.optional(),
   mode: z.enum([
     "area-dx", "area-dy", "area-pieces", "area-parametric", "area-polar",
     "double-region", "change-order", "double-polar", "revolution", "green",

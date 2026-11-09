@@ -74,6 +74,32 @@ export function evaluateExpression(compiledExpr: EvalFunction, scope: Readonly<R
   }
 }
 
+/** Secure, AST-based free-parameter detection (never count function names as variables). */
+export function extractFreeParameters(
+  expressions: readonly string[], independent: readonly string[] = [],
+): string[] {
+  const excluded=new Set(
+    ["x","y","z","t","r","theta","phi","pi","e","tau","i","infinity",
+      "true","false",...independent].map(name=>name.toLowerCase()));
+  const symbols=new Set<string>();
+  for(const expr of expressions){
+    if(!expr?.trim())continue;
+    compileExpression(expr); // apply the same safety restrictions as the evaluator
+    const tree=parse(expr);
+    const functions=new Set<string>();
+    tree.traverse((node:any)=>{
+      if(node.isFunctionNode&&node.fn?.isSymbolNode) functions.add(node.fn.name);
+    });
+    tree.traverse((node:any)=>{
+      if(!node.isSymbolNode)return;
+      const name=String(node.name);
+      if(!functions.has(name)&&!excluded.has(name.toLowerCase())&&
+        /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) symbols.add(name);
+    });
+  }
+  return [...symbols].sort().slice(0,8);
+}
+
 export function sample1D(
   exprStr: string, 
   xDomain: [number, number], 
