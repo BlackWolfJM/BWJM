@@ -1095,7 +1095,8 @@ export function BWJMStudio() {
         cardBody.className = "bwjm-node-body";
 
         // Graph settings persist in the selected code fence, avoiding transient-only UI state.
-        if (supportsAdaptiveParameters(node)) {
+        if (supportsAdaptiveParameters(node) ||
+          ((node.type === "vector2d" || node.type === "vector3d") && Boolean(node.mode))) {
           const options: Array<[string, string]> = node.type === "curve3d" ? [
             ["animated", "Animar partícula"],
             ["showVectors", "Vectores velocidad y aceleración"],
@@ -1114,6 +1115,8 @@ export function BWJMStudio() {
             ["showTangent", "Tangente"],
             ["showNormal", "Normal"],
             ["followParticle", "Seguir partícula"],
+          ] : (node.type === "vector2d" || node.type === "vector3d") ? [
+            ["showSteps", "Mostrar procedimiento matemático"],
           ] : [];
           const details = document.createElement("details");
           details.className = "bwjm-graph-settings";
@@ -1129,11 +1132,13 @@ export function BWJMStudio() {
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             const configured = (node as unknown as Record<string, unknown>)[key];
-            checkbox.checked = key === "animated" && node.type === "parametric2d"
-              ? configured !== false : configured === true;
+            checkbox.checked = key === "showSteps" ? configured !== false :
+              key === "animated" && node.type === "parametric2d"
+                ? configured !== false : configured === true;
             checkbox.onchange = () => {
               if (node.type !== "curve3d" && node.type !== "surface3d" &&
-                node.type !== "parametric2d") return;
+                node.type !== "parametric2d" && node.type !== "vector2d" &&
+                node.type !== "vector3d") return;
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, key, checkbox.checked));
@@ -1172,6 +1177,7 @@ export function BWJMStudio() {
             trailRow.append(textLabel, trailRange, trailValue);
             controls.appendChild(trailRow);
           }
+          if (supportsAdaptiveParameters(node)) {
           const editor = createAdaptiveParameterEditor(node, {
             save: config => {
               openGraphSettingsRef.current.add(settingsKey);
@@ -1196,6 +1202,7 @@ export function BWJMStudio() {
           });
           parameterEditorDisposersRef.current.push(editor.dispose);
           controls.appendChild(editor.element);
+          }
           details.appendChild(controls);
           cardBody.appendChild(details);
         }
