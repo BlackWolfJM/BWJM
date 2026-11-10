@@ -12,7 +12,8 @@ import {
   sampleParametric2D,
   sampleFlow2D,
   computeCalculusViz,
-  extractFreeParameters
+  extractFreeParameters,
+  computeVectorStudy
 } from "@mathmd/math";
 import type { Vector3D } from "@mathmd/math";
 
@@ -131,6 +132,8 @@ export class MathMDCore {
             }
           });
         }
+        if (typeof node.factor === "string") deps.push(node.factor);
+        if (typeof node.secondFactor === "string") deps.push(node.secondFactor);
         break;
         
       case "vector3d":
@@ -148,6 +151,8 @@ export class MathMDCore {
             }
           });
         }
+        if (typeof node.factor === "string") deps.push(node.factor);
+        if (typeof node.secondFactor === "string") deps.push(node.secondFactor);
         break;
         
       case "curve3d":
@@ -452,39 +457,34 @@ export class MathMDCore {
         };
       }
       
-      case "vector2d": {
-        const origin = this.resolveArray(node.origin, scope);
-        const vector = this.resolveArray(node.vector, scope);
-        
-        return {
-          ...node,
-          type: "vector2d",
-          origin: origin ?? [0, 0],
-          vector: vector ?? [0, 0],
-          end: [
-            (origin ?? [0, 0])[0] + (vector ?? [0, 0])[0],
-            (origin ?? [0, 0])[1] + (vector ?? [0, 0])[1]
-          ]
-        };
-      }
-      
+      case "vector2d":
       case "vector3d": {
-        const origin = this.resolveArray(node.origin, scope);
-        const vector = this.resolveArray(node.vector, scope);
-        
-        return {
-          ...node,
-          type: "vector3d",
-          origin: origin ?? [0, 0, 0],
-          vector: vector ?? [0, 0, 0],
-          end: [
-            (origin ?? [0, 0, 0])[0] + (vector ?? [0, 0, 0])[0],
-            (origin ?? [0, 0, 0])[1] + (vector ?? [0, 0, 0])[1],
-            (origin ?? [0, 0, 0])[2] + (vector ?? [0, 0, 0])[2]
-          ]
+        const n = node.type === "vector2d" ? 2 : 3;
+        const origin = this.resolveArray(node.origin, scope) ?? Array(n).fill(0);
+        const vector = this.resolveArray(node.vector, scope) ?? Array(n).fill(0);
+        const data = {
+          ...node, origin, vector, end: origin.map((x,i) => x + vector[i])
         };
+        if (!node.mode) return data; // Legacy vector files remain unchanged.
+        try {
+          const resolveFactor = (value: number | string | undefined): number | undefined => {
+            if (typeof value !== "string") return value;
+            if (!Object.prototype.hasOwnProperty.call(scope,value))
+              throw new Error("Parámetro no declarado: " + value);
+            return scope[value];
+          };
+          const study = computeVectorStudy({
+            mode: node.mode, origin, vector,
+            other: node.other, third: node.third,
+            factor: resolveFactor(node.factor),
+            secondFactor: resolveFactor(node.secondFactor),
+          });
+          return { ...data, study };
+        } catch (error) {
+          return { ...data, error: error instanceof Error ? error.message : String(error) };
+        }
       }
-      
+
       case "curve3d": {
         const tCount = 100;
         const [tMin, tMax] = node.tDomain;
