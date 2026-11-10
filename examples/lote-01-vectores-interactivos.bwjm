@@ -1,0 +1,162 @@
+# Laboratorio de vectores · Lote 01 (01.01–01.10)
+
+Este documento **.bwjm** reúne diez actividades dentro del lector de BWJM Studio.
+Cada construcción usa los bloques preexistentes `vector2d` y `vector3d`,
+ampliados con `mode`. Las expresiones mostradas son **cálculos numéricos**,
+no demostraciones simbólicas generales. Expande **Ver procedimiento** para
+comprobar los pasos.
+
+## Parámetros compartidos por las construcciones
+
+Modifica `k` y `m` mediante los sliders. Se actualizan automáticamente
+la combinación y la escala, **sin crear otra gráfica**.
+
+```slider
+name: k
+min: -3
+max: 3
+step: 0.25
+default: 2
+```
+
+```slider
+name: m
+min: -3
+max: 3
+step: 0.25
+default: -1
+```
+
+## 01.01 · Escalar frente a vector
+
+La temperatura es escalar; un desplazamiento en el plano necesita dos componentes.
+
+```vector2d
+id: lote-0101
+mode: classify
+origin: [0, 0]
+vector: [3, 4]
+showSteps: true
+```
+
+## 01.02 · Cuadrantes
+
+```vector2d
+id: lote-0102
+mode: coordinates
+origin: [0, 0]
+vector: [-2, 3]
+```
+
+## 01.03 · Traslación de un vector libre
+
+```vector3d
+id: lote-0103
+mode: translate
+origin: [2, -1, 1]
+vector: [3, 2, 1]
+```
+
+## 01.04 · Descomposición por ejes
+
+```vector3d
+id: lote-0104
+mode: components
+origin: [0, 0, 0]
+vector: [2, -1, 3]
+```
+
+## 01.05 · Desplazamiento entre A y B
+
+Los puntos son A=(1,1) y B=(4,5). La longitud del desplazamiento es 5.
+
+```vector2d
+id: lote-0105
+mode: displacement
+origin: [1, 1]
+vector: [0, 0]
+other: [4, 5]
+```
+
+## 01.06 · Igualdad de vectores
+
+```vector2d
+id: lote-0106
+mode: compare
+origin: [0, 0]
+vector: [3, -2]
+other: [3, -2]
+```
+
+## 01.07 · Suma y resta cabeza-cola
+
+```vector2d
+id: lote-0107-suma
+mode: sum
+origin: [0, 0]
+vector: [3, 2]
+other: [-1, 4]
+```
+
+```vector2d
+id: lote-0107-resta
+mode: difference
+origin: [0, 0]
+vector: [3, 2]
+other: [-1, 4]
+```
+
+## 01.08 · Multiplicación por escalar
+
+Al desplazar `k` verás la inversión de sentido para valores negativos y
+el vector nulo cuando k=0.
+
+```vector2d
+id: lote-0108
+mode: scale
+origin: [0, 0]
+vector: [3, 2]
+factor: k
+```
+
+## 01.09 · Propiedades de las operaciones
+
+Verificación **numérica** de conmutatividad, asociatividad y distributividad.
+
+```vector2d
+id: lote-0109
+mode: properties
+origin: [0, 0]
+vector: [1, 2]
+other: [3, -1]
+third: [2, 1]
+factor: k
+```
+
+## 01.10 · Combinación lineal y colinealidad en 3D
+
+```vector3d
+id: lote-0110
+mode: combination
+origin: [0, 0, 0]
+vector: [1, 2, 3]
+other: [2, 4, 6]
+factor: k
+secondFactor: m
+```
+
+## Compatibilidad con documentos anteriores
+
+Este bloque tradicional sigue funcionando sin las opciones educativas:
+
+```vector2d
+id: vector-clasico
+origin: [1, 1]
+vector: [2, 3]
+label: Vector simple
+```
+
+**Alcance actual:** las flechas 2D no admiten arrastre; las visualizaciones
+3D permiten la rotación y el zoom propios de Plotly. La tolerancia de
+colinealidad se declara en el procedimiento. No se afirma que estas
+experiencias cubran por completo las dos propuestas de cada subtema del backlog.
