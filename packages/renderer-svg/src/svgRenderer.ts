@@ -493,10 +493,80 @@ export class SVGRenderer {
     }
   }
   
+  /** Several mathematical vectors in one axis system (the same .bwjm block). */
+  private renderVectorStudy2D(study: {
+    arrows: Array<{
+      label: string; start: number[]; end: number[];
+      role: "primary" | "secondary" | "result" | "guide"; dashed?: boolean;
+    }>;
+  }): void {
+    const coordinates = study.arrows.flatMap(a => [a.start, a.end]);
+    const xValues = [0, ...coordinates.map(p => p[0])];
+    const yValues = [0, ...coordinates.map(p => p[1])];
+    const x0 = Math.min(...xValues), x1 = Math.max(...xValues);
+    const y0 = Math.min(...yValues), y1 = Math.max(...yValues);
+    const extent = Math.max(1, x1 - x0, y1 - y0);
+    const padding = Math.max(0.5, extent * 0.18);
+    const transform = this.createTransform(x0 - padding, x1 + padding, y0 - padding, y1 + padding);
+    this.renderGrid(transform, x0 - padding, x1 + padding, y0 - padding, y1 + padding, 0.2);
+    this.renderAxes(transform, x0 - padding, x1 + padding, y0 - padding, y1 + padding);
+    const colors = {
+      primary: "#2563eb", secondary: "#d97706",
+      result: "#047857", guide: "#64748b"
+    };
+    for (const segment of study.arrows) {
+      const color = colors[segment.role];
+      const ax = transform.x(segment.start[0]), ay = transform.y(segment.start[1]);
+      const bx = transform.x(segment.end[0]), by = transform.y(segment.end[1]);
+      const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      for (const [key,value] of Object.entries({
+        x1: ax, y1: ay, x2: bx, y2: by,
+      })) line.setAttribute(key, String(value));
+      line.setAttribute("stroke",color);
+      line.setAttribute("stroke-width",segment.role==="result"?"3.2":"2.3");
+      if (segment.dashed) line.setAttribute("stroke-dasharray","6 5");
+      const accessibleTitle = document.createElementNS("http://www.w3.org/2000/svg","title");
+      accessibleTitle.textContent = segment.label;
+      line.appendChild(accessibleTitle);
+      this.svgElement.appendChild(line);
+      const dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy);
+      if (len>0.1 && !segment.dashed) {
+        const ux=dx/len,uy=dy/len;
+        const polygon=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+        polygon.setAttribute("points",[
+          [bx,by],
+          [bx-11*ux-5*uy,by-11*uy+5*ux],
+          [bx-11*ux+5*uy,by-11*uy-5*ux],
+        ].map(p=>p.join(",")).join(" "));
+        polygon.setAttribute("fill",color);
+        this.svgElement.appendChild(polygon);
+      } else if (len<=0.1) {
+        const point=document.createElementNS("http://www.w3.org/2000/svg","circle");
+        point.setAttribute("cx",String(bx));point.setAttribute("cy",String(by));
+        point.setAttribute("r","4");point.setAttribute("fill",color);
+        this.svgElement.appendChild(point);
+      }
+      if (!segment.dashed) {
+        const label=document.createElementNS("http://www.w3.org/2000/svg","text");
+        label.setAttribute("x",String(bx+5));
+        label.setAttribute("y",String(by-7));
+        label.setAttribute("fill",color);
+        label.setAttribute("font-size","12");
+        label.textContent=segment.label;
+        this.svgElement.appendChild(label);
+      }
+    }
+  }
+
   /**
    * Render a vector2d node
    */
   private renderVector2D(node: Extract<MathMDNode, { type: "vector2d" }> & { origin: [number, number]; vector: [number, number]; end?: [number, number] }): void {
+    const study = (node as typeof node & { study?: Parameters<SVGRenderer["renderVectorStudy2D"]>[0] }).study;
+    if (study) {
+      this.renderVectorStudy2D(study);
+      return;
+    }
     const { origin, vector, label, color = "#cc0000" } = node;
     const end = node.end ?? [origin[0] + vector[0], origin[1] + vector[1]];
     
