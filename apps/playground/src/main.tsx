@@ -1979,6 +1979,10 @@ export function BWJMStudio() {
         const report = card?.querySelector(".bwjm-statistics-panel");
         if (report instanceof HTMLElement) renderStatisticsPanel(report, nodeData);
       }
+      if (nodeData.type === "vector2d" || nodeData.type === "vector3d") {
+        const report = card?.querySelector(".bwjm-vector-report");
+        if (report instanceof HTMLElement) updateVectorStudyReport(report, nodeData);
+      }
 
       const svgRenderer = svgRenderersRef.current.get(nodeId);
       if (svgRenderer) {
