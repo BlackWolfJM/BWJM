@@ -1,5 +1,6 @@
 import type { MathMDNode } from "@mathmd/ast";
 import { sampleSurface, sampleParametricTrajectory, computeKinematics } from "@mathmd/math";
+import type { VectorStudyResult } from "@mathmd/math";
 
 function getX(pos: { x: number; y: number; z: number } | [number, number, number]): number {
   return Array.isArray(pos) ? pos[0] : pos.x;
@@ -144,6 +145,10 @@ export class PlotlyRenderer {
 
       case "camera":
         this.renderCamera(node as any);
+        break;
+
+      case "vector3d":
+        this.renderVector3D(node as any);
         break;
 
       case "vectorarrow":
@@ -350,6 +355,54 @@ export class PlotlyRenderer {
     } catch (error: any) {
       this.renderError(`Error rendering curve3d: ${error?.message || String(error)}`);
     }
+  }
+
+  /** Spatial vector studies share the existing Plotly camera and a single 3D scene. */
+  private renderVector3D(node: Extract<PlotlyRenderNode,{type:"vector3d"}> & {
+    study?: VectorStudyResult;
+  }): void {
+    if (node.error) { this.renderError(node.error); return; }
+    const start = node.origin ?? [0, 0, 0];
+    const end = node.end ?? start.map((x,i)=>x+(node.vector?.[i]??0));
+    const arrows = node.study?.arrows ?? [{
+      label: node.label ?? "u", start, end, role: "primary" as const
+    }];
+    const all = arrows.flatMap(a=>[a.start,a.end]);
+    const extent = Math.max(1,...[0,1,2].map(i=>
+      Math.max(...all.map(p=>p[i]))-Math.min(...all.map(p=>p[i]))));
+    const palette:Record<string,string> = {
+      primary: "#2563eb", secondary: "#d97706", result: "#059669", guide: "#64748b"
+    };
+    const traces:any[]=[];
+    for (const vector of arrows) {
+      const c=palette[vector.role]??"#2563eb";
+      traces.push({
+        type:"scatter3d",mode:"lines+markers",
+        x:[vector.start[0],vector.end[0]],
+        y:[vector.start[1],vector.end[1]],
+        z:[vector.start[2],vector.end[2]],
+        line:{color:c,width:vector.role==="result"?8:5,
+          dash:vector.dashed?"dash":"solid"},
+        marker:{color:c,size:3},
+        name:vector.label
+      });
+      const d=vector.end.map((x,i)=>x-vector.start[i]);
+      const mag=Math.hypot(...d);
+      if (mag>1e-12 && !vector.dashed) {
+        traces.push({
+          type:"cone",x:[vector.end[0]],y:[vector.end[1]],z:[vector.end[2]],
+          u:[d[0]/mag],v:[d[1]/mag],w:[d[2]/mag],
+          anchor:"tip",sizemode:"absolute",sizeref:extent*0.18,
+          colorscale:[[0,c],[1,c]],showscale:false,
+          showlegend:false,hoverinfo:"skip"
+        });
+      }
+    }
+    this.data=traces;
+    this.layout.scene.aspectmode="data";
+    this.layout.title={text:node.study?.topic ?? (node.label??"Vector 3D"),x:0.5};
+    this.layout.showlegend=true;
+    this.layout.uirevision=node.id;
   }
 
   private renderVectorArrow(node: Extract<PlotlyRenderNode, { type: "vectorarrow" }>): void {
