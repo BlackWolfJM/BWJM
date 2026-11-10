@@ -83,7 +83,21 @@ export interface Surface3DNode extends MathMDNodeBase {
   color?: string;
 }
 
-export interface Vector2DNode extends MathMDNodeBase {
+/** Optional educational layer on the existing vector nodes. */
+export type VectorStudyMode = "classify" | "coordinates" | "translate" |
+  "components" | "displacement" | "compare" | "sum" | "difference" |
+  "scale" | "properties" | "combination";
+export interface VectorStudyOptions {
+  mode?: VectorStudyMode;
+  /** The second input vector; in displacement mode, the absolute endpoint B. */
+  other?: number[];
+  third?: number[];
+  /** A number or an explicitly declared slider/timeline variable name. */
+  factor?: number | string;
+  secondFactor?: number | string;
+  showSteps?: boolean;
+}
+export interface Vector2DNode extends MathMDNodeBase, VectorStudyOptions {
   type: "vector2d";
   origin: [number, number];
   vector: [number, number];
@@ -91,7 +105,7 @@ export interface Vector2DNode extends MathMDNodeBase {
   color?: string;
 }
 
-export interface Vector3DNode extends MathMDNodeBase {
+export interface Vector3DNode extends MathMDNodeBase, VectorStudyOptions {
   type: "vector3d";
   origin: [number, number, number];
   vector: [number, number, number];
@@ -586,10 +600,28 @@ export const surface3dSchema = mathmdNodeBaseSchema.extend({
   color: z.string().optional(),
 });
 
+const vectorStudyModeSchema = z.enum([
+  "classify", "coordinates", "translate", "components", "displacement",
+  "compare", "sum", "difference", "scale", "properties", "combination",
+]);
+const vectorFactorSchema = z.union([
+  z.number().finite(),
+  z.string().regex(/^[A-Za-z_][A-Za-z0-9_]{0,31}$/),
+]);
+const vectorStudyOptionsSchema = {
+  mode: vectorStudyModeSchema.optional(),
+  factor: vectorFactorSchema.optional(),
+  secondFactor: vectorFactorSchema.optional(),
+  showSteps: z.boolean().optional(),
+};
+
 export const vector2dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("vector2d"),
   origin: z.tuple([z.number().finite(), z.number().finite()]),
   vector: z.tuple([z.number().finite(), z.number().finite()]),
+  other: z.tuple([z.number().finite(), z.number().finite()]).optional(),
+  third: z.tuple([z.number().finite(), z.number().finite()]).optional(),
+  ...vectorStudyOptionsSchema,
   label: z.string().optional(),
   color: z.string().optional(),
 });
@@ -598,6 +630,9 @@ export const vector3dSchema = mathmdNodeBaseSchema.extend({
   type: z.literal("vector3d"),
   origin: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]),
   vector: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]),
+  other: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]).optional(),
+  third: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]).optional(),
+  ...vectorStudyOptionsSchema,
   label: z.string().optional(),
   color: z.string().optional(),
 });
