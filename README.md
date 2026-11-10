@@ -891,3 +891,15 @@ Estado de Verificacion:
 
 Este proyecto esta licenciado bajo los terminos de la Licencia MIT.
 Formato y concepto original creados por BlackWolfJM.
+
+
+## Laboratorio vectorial en documentos vivos (.bwjm)
+
+La guía incremental de los primeros diez subtemas de cálculo vectorial ya
+tiene un prototipo **dentro del lector existente**: bloques `vector2d`/
+`vector3d` con operaciones, construcciones 2D/3D, explicaciones y factores
+controlables por sliders del documento. Sigue siendo una implementación parcial:
+faltan arrastre, actividades autocorregibles y pruebas E2E. Consulta
+[`examples/lote-01-vectores-interactivos.bwjm`](examples/lote-01-vectores-interactivos.bwjm),
+[`LANGUAGE.md`](LANGUAGE.md) y
+[`docs/LOTE_01_VECTORES_DOCUMENTOS.md`](docs/LOTE_01_VECTORES_DOCUMENTOS.md).
