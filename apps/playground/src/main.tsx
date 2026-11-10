@@ -16,6 +16,7 @@ import {
   serializeScientificTable,
 } from "@mathmd/math";
 import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode, Parametric2DNode } from "@mathmd/ast";
+import type { VectorStudyResult } from "@mathmd/math";
 import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
@@ -40,6 +41,55 @@ declare global {
       renderToString(tex: string, options?: { displayMode?: boolean; throwOnError?: boolean }): string;
     };
   }
+}
+
+/** The document and interactive slider share this one educational readout. */
+function updateVectorStudyReport(
+  report: HTMLElement,
+  data: { study?: VectorStudyResult; error?: string; showSteps?: boolean }
+): void {
+  const expanded = report.querySelector("details")?.open ?? false;
+  report.replaceChildren();
+  if (data.error) {
+    report.textContent = "No se pudo construir el laboratorio: " + data.error;
+    report.classList.add("has-error");
+    return;
+  }
+  report.classList.remove("has-error");
+  if (!data.study) return;
+  const study = data.study;
+  const heading = document.createElement("strong");
+  heading.textContent = study.topic + " · Resultado: ⟨" +
+    study.result.map(x => Number(x.toPrecision(10))).join(", ") + "⟩";
+  report.appendChild(heading);
+  const explanation = document.createElement("p");
+  explanation.textContent = study.explanation;
+  report.appendChild(explanation);
+  const check = document.createElement("p");
+  check.textContent = "Verificación: " + study.verification;
+  report.appendChild(check);
+  if (data.showSteps === false) return;
+  const details = document.createElement("details");
+  details.open = expanded;
+  const summary = document.createElement("summary");
+  summary.textContent = "Ver procedimiento (" + study.steps.length + " pasos)";
+  details.appendChild(summary);
+  const list = document.createElement("ol");
+  for (const item of study.steps) {
+    const li = document.createElement("li");
+    const title = document.createElement("strong");
+    title.textContent = item.title + ": ";
+    li.appendChild(title);
+    const math = document.createElement("span");
+    math.textContent = item.expression;
+    li.appendChild(math);
+    const note = document.createElement("p");
+    note.textContent = item.explanation;
+    li.appendChild(note);
+    list.appendChild(li);
+  }
+  details.appendChild(list);
+  report.appendChild(details);
 }
 
 export function escapeHtml(str: string): string {
@@ -962,6 +1012,10 @@ export function BWJMStudio() {
         } : {};
         plotly.render({ ...data, scope, currentT, ...extra });
       }
+      if (data.type === "vector2d" || data.type === "vector3d") {
+        const report = sheet.querySelector<HTMLElement>("#node-" + id + " .bwjm-vector-report");
+        if (report) updateVectorStudyReport(report, data);
+      }
       if (data.type === "calculusviz") {
         const report = sheet.querySelector<HTMLElement>("#node-" + id + " .bwjm-calculus-report");
         if (report) {
@@ -1392,6 +1446,30 @@ export function BWJMStudio() {
           const nodeData = coreRef.current.getNodeData(node.id);
           if (nodeData) {
             renderer.render(nodeData);
+          }
+        } else if (node.type === "vector2d" || node.type === "vector3d") {
+          const mount = document.createElement("div");
+          mount.id = `mount-${node.id}`;
+          mount.style.width = "100%";
+          mount.style.minHeight = node.type === "vector3d" ? "420px" : "360px";
+          mount.style.height = node.type === "vector3d" ? "420px" : "360px";
+          cardBody.appendChild(mount);
+          const data = coreRef.current.getNodeData(node.id);
+          if (node.type === "vector3d") {
+            const renderer = new PlotlyRenderer(mount);
+            plotlyRenderersRef.current.set(node.id, renderer);
+            renderer.render(data);
+          } else {
+            const renderer = new SVGRenderer(mount, 720, 360);
+            svgRenderersRef.current.set(node.id, renderer);
+            renderer.render(data);
+          }
+          if (node.mode || data.error) {
+            const report = document.createElement("section");
+            report.className = "bwjm-calculus-report bwjm-vector-report";
+            report.setAttribute("aria-label", "Procedimiento vectorial");
+            updateVectorStudyReport(report, data);
+            cardBody.appendChild(report);
           }
         } else if (node.type === "surface3d") {
           const mount = document.createElement("div");
