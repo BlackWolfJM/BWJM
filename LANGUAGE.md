@@ -85,3 +85,42 @@ Opcional:
 mathmd: 1
 ---
 ```
+
+## Estudio vectorial incremental (lote 01)
+
+Los bloques tradicionales `vector2d` y `vector3d` ahora admiten, de manera
+opcional, `mode`, `other`, `third`, `factor`, `secondFactor` y `showSteps`.
+Si se omite `mode`, el bloque conserva el comportamiento previo.
+
+```slider
+name: k
+min: -3
+max: 3
+step: 0.25
+default: 2
+```
+
+```vector2d
+mode: sum
+origin: [0, 0]
+vector: [3, 2]
+other: [-1, 4]
+```
+
+```vector3d
+mode: scale
+origin: [0, 0, 0]
+vector: [1, 2, 3]
+factor: k
+showSteps: true
+```
+
+`mode`: `classify`, `coordinates`, `translate`, `components`,
+`displacement`, `compare`, `sum`, `difference`, `scale`,
+`properties`, `combination`. Para `displacement`, `origin` representa
+A y `other` representa la posición absoluta B; `vector` continúa siendo
+obligatorio por compatibilidad. Los factores son números o identificadores
+de sliders declarados. No se admiten expresiones arbitrarias como factores.
+La salida es numérica y las comprobaciones de propiedades no sustituyen
+demostraciones generales. Consulta
+[`docs/LOTE_01_VECTORES_DOCUMENTOS.md`](docs/LOTE_01_VECTORES_DOCUMENTOS.md).
