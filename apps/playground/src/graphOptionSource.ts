@@ -1,10 +1,10 @@
 import type { SourceRange } from "@mathmd/ast";
 
-type SupportedBlock = "curve3d" | "surface3d" | "parametric2d";
+type SupportedBlock = "curve3d" | "surface3d" | "parametric2d" | "vector2d" | "vector3d";
 const allowedBooleanSettings = new Set([
   "animated", "showInfo", "showLegend", "showTNB", "showVectors",
   "contours", "showTrail", "showVelocity", "showAcceleration",
-  "showTangent", "showNormal", "followParticle",
+  "showTangent", "showNormal", "followParticle", "showSteps",
 ]);
 
 /**
@@ -45,6 +45,9 @@ export function updateGraphOption(
   value: boolean,
 ): string {
   if (!allowedBooleanSettings.has(key)) return source;
+  const vector = blockType === "vector2d" || blockType === "vector3d";
+  if ((vector && key !== "showSteps") || (!vector && key === "showSteps"))
+    return source;
   return updateGraphField(source, range, blockType, key, value);
 }
 
