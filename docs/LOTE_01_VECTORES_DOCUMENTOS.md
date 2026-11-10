@@ -19,9 +19,8 @@ La guía contiene 419 subtemas; el backlog agrupa 1024 *oportunidades*, no
 - El lector de `apps/playground` no montaba una vista de los nodos
   `vector2d`/`vector3d`. No se trasladan las funciones a una calculadora
   diferente; se ha conectado el lector actual.
-- No se modifica ni se recrea el menú único de personalización de las
-  gráficas preexistentes; ese paso queda pendiente para las opciones
-  específicas del laboratorio vectorial.
+- Se reutiliza el menú único **Personalizar gráfica** para activar/desactivar
+  el procedimiento de los estudios vectoriales. No se crea un segundo menú.
 
 ## Incremento implementado
 
@@ -43,7 +42,8 @@ campos opcionales `mode`, `other`, `third`, `factor`,
   en la **misma** escena 2D.
 - **Plotly:** flechas y orientación 3D en la misma cámara rotatoria.
 - **Lector:** panel de explicación, resultado, verificación y pasos
-  desplegables junto a la gráfica, actualizado con el slider.
+  desplegables junto a la gráfica, actualizado con el slider. El interruptor
+  `showSteps` se guarda desde **Personalizar gráfica** en el código .bwjm.
 - **Ejemplo:** `examples/lote-01-vectores-interactivos.bwjm`.
   Mantiene un caso tradicional sin `mode` como prueba de compatibilidad.
 
@@ -83,7 +83,8 @@ No se debe asumir que tener un test escrito implica que haya pasado.
 
 1. Pruebas E2E del lector y apertura/exportación/reapertura de documentos.
 2. Arrastre de vectores y puntos en 2D/3D con comprobación matemática.
-3. Personalización opcional y adaptativa desde el menú único existente.
+3. Ampliar el menú único existente con capas vectoriales adicionales,
+   más allá del nuevo interruptor de procedimiento.
 4. Actividades de clasificación con retroalimentación, editores y tablas.
 5. Pasos simbólicos rigurosos y verificadores formales donde sean posibles.
 
