@@ -126,6 +126,13 @@ try {
   const rotated = await camera(page);
   assert(rotated && Object.values(rotated).every(Number.isFinite));
 
+  const transportDebug = await page.evaluate(() => ({
+    transports: document.querySelectorAll(".bwjm-inline-playback").length,
+    cards: [...document.querySelectorAll(".bwjm-node-tag")].map(x => x.textContent?.trim()),
+    diagnostics: [...document.querySelectorAll(".bwjm-diagnostic-box")].map(x => x.textContent?.slice(0, 210)),
+  }));
+  console.log("VIS11 transport diagnostics:", JSON.stringify(transportDebug));
+  assert.equal(transportDebug.transports, 1, "No se montó el transporte de la línea temporal");
   await page.getByRole("button", { name: "Reproducir animación" }).click();
   await page.waitForTimeout(380);
   const tBefore = await getClock(page);
