@@ -3499,3 +3499,80 @@ code.bwjm-property-value {
   font-size: 0.88rem;
   line-height: 1.45;
 }
+
+
+/* VIS-10: numerical results stay outside the Plotly 3D camera/legend. */
+.bwjm-cross-summary {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0.8rem 0 1.1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-subtle, #dbe3f0);
+  border-radius: 10px;
+  color: var(--text-main, #1f2937);
+  background: var(--bg-surface, #f8fafc);
+}
+.bwjm-cross-summary > h3 {
+  margin: 0 0 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.bwjm-cross-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr));
+  gap: 0.65rem;
+  margin: 0;
+}
+.bwjm-cross-summary-metric {
+  min-width: 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border-subtle, #dbe3f0);
+  border-radius: 7px;
+  background: var(--bg-elevated, #ffffff);
+}
+.bwjm-cross-summary-metric dt {
+  margin: 0 0 0.3rem;
+  color: var(--text-muted, #64748b);
+  font-size: 0.73rem;
+  font-weight: 650;
+}
+.bwjm-cross-summary-metric dd {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.bwjm-cross-summary-metric dd small {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.73rem;
+  font-weight: 500;
+  color: var(--text-muted, #64748b);
+}
+.bwjm-cross-summary-warning {
+  margin: 0.7rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid #d97706;
+  border-radius: 5px;
+  background: rgba(245, 158, 11, 0.09);
+  color: var(--text-main, #1f2937);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.bwjm-cross-summary-empty {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted, #64748b);
+  font-size: 0.8rem;
+}
+@media (max-width: 440px) {
+  .bwjm-cross-summary {
+    padding: 0.7rem;
+  }
+  .bwjm-cross-summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
