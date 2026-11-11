@@ -169,6 +169,12 @@ try {
     return {
       styleLength: style?.textContent?.length ?? 0,
       cssStart: style?.textContent?.slice(0, 200),
+      sourceFaceCount: (style?.textContent?.match(/@font-face/g) ?? []).length,
+      firstFaceEnd: style?.textContent?.indexOf("}") ?? -1,
+      firstFaceTail: style?.textContent?.slice(Math.max(0, (style?.textContent?.indexOf("}") ?? 0) - 150),
+        (style?.textContent?.indexOf("}") ?? 0) + 90),
+      firstFontNames: [...(style?.textContent?.matchAll(/font-family:KaTeX_[A-Za-z]+/g) ?? [])]
+        .slice(0, 30).map(match => match[0]),
       faces: [...document.fonts].slice(0, 8).map(face => ({ family: face.family, status: face.status })),
       sheets, computedFont: getComputedStyle(document.querySelector(".katex-html") ?? document.body).fontFamily,
     };
