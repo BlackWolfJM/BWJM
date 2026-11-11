@@ -82,8 +82,14 @@ async function numberedButton() {
   assert((await preview.innerText()).includes("(8)"), "Preview missing (8)");
   await screenshot(page, "preview-8");
   await page.getByRole("button", { name: "Insertar Fórmula" }).click();
-  await page.waitForFunction(() =>
-    document.querySelector(".bwjm-code-textarea")?.value.includes("\\tag{8}"));
+  await page.waitForTimeout(500);
+  console.log("VIS09 after button:", JSON.stringify({
+    source: (await editor.inputValue()).slice(0, 380),
+    modalVisible: await latex.isVisible(),
+    activeTabs: await page.locator('[role="tab"][aria-selected="true"]').allTextContents(),
+  }));
+  assert((await editor.inputValue()).includes("\\tag{8}"),
+    "Click did not insert numbered formula into editor");
   assert.equal((await editor.inputValue()).match(/\\tag\{8\}/g)?.length, 1);
   const tag = page.locator("#bwjm-reader-panel .math-display-box .tag").last();
   await tag.waitFor({ timeout: 12000 });
