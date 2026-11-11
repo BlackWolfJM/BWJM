@@ -1,0 +1,45 @@
+name: VIS-07 formula regression browser
+
+on:
+  push:
+    branches: [codex/vis-07-delimitadores-formulas]
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/playground/src/main.tsx
+      - apps/playground/src/formulaInsertion.ts
+      - apps/playground/__tests__/vis07-formula-insertion.test.ts
+      - packages/parser/src/index.ts
+      - packages/parser/src/mathSource.ts
+      - packages/parser/__tests__/vis07-math.test.ts
+      - scripts/vis07-browser.mjs
+      - .github/workflows/vis07-browser.yml
+
+jobs:
+  chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install isolated Chromium
+        run: |
+          mkdir -p /tmp/bwjm-browser
+          npm install --prefix /tmp/bwjm-browser --no-save --no-package-lock playwright@1.58.2
+          /tmp/bwjm-browser/node_modules/.bin/playwright install --with-deps chromium
+      - name: Verify VIS-07 in Studio browser
+        run: node scripts/vis07-browser.mjs
+      - name: Save acceptance screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vis07-formulas-reader
+          path: /tmp/vis07-screens/*.png
+          if-no-files-found: ignore
