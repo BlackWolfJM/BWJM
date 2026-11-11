@@ -156,7 +156,7 @@ try {
   await local.locator(".katex-mathml msqrt").first().waitFor();
   assert(await local.locator(".katex-mathml mfrac").count() >= 2);
   assert(await local.locator(".katex-mathml mtable").count() >= 1);
-  assert((await local.locator(".bwjm-sheet").innerText()).includes("Este párrafo y la siguiente gráfica"));
+  assert((await local.locator("article.bwjm-sheet").innerText()).includes("Este párrafo y la siguiente gráfica"));
   await checkFont(local, "HTML file:// sin red");
   assert.equal(remoteRequests.length, 0, "El HTML descargado solicitó archivos externos");
   await local.screenshot({ path: "/tmp/vis08-screens/html-sin-red-1280.png", fullPage: true });
