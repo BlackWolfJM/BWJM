@@ -65,7 +65,7 @@ async function screenshot(page, name) {
 async function numberedButton() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 850 } });
   const page = await ctx.newPage();
-  page.on("console", msg => { if (msg.text().includes("VIS09 confirmation")) console.log(msg.text()); });
+  page.on("console", msg => { if (msg.text().includes("VIS09")) console.log(msg.text()); });
   page.on("pageerror", error => console.log("VIS09 page error", error.message));
   await visit(page);
   await openText(page, "numero-vis09.bwjm", "# Número VIS-09\n\nTexto previo.");
@@ -83,7 +83,9 @@ async function numberedButton() {
   assert(!(await preview.innerText()).includes("(7)"), "Stale (7) preview");
   assert((await preview.innerText()).includes("(8)"), "Preview missing (8)");
   await screenshot(page, "preview-8");
-  await page.getByRole("button", { name: "Insertar Fórmula" }).click();
+  const submit = page.getByRole("button", { name: "Insertar Fórmula" });
+  console.log("VIS09 clickable button", await submit.evaluate(el => el.outerHTML.slice(0, 450)));
+  await submit.click();
   await page.waitForTimeout(500);
   console.log("VIS09 after button:", JSON.stringify({
     source: (await editor.inputValue()).slice(0, 380),
