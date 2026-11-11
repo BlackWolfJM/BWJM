@@ -96,7 +96,12 @@ type PlotlyRenderNode = (Exclude<MathMDNode, { type: "frame" }> | PlotlyFrameNod
  * Plotly Renderer for MathMD 3D visualizations
  * Handles surface3d blocks
  */
+let nextPlotMountRevision = 1;
+
 export class PlotlyRenderer {
+  /** Stable for this mounted Plotly instance, never derived from an implicit AST ID. */
+  private readonly mountRevision = "bwjm-mount-" + nextPlotMountRevision++;
+
   private plotlyDiv: HTMLDivElement;
   private layout: any = {};
   private config: any = {};
@@ -243,6 +248,10 @@ export class PlotlyRenderer {
         break;
     }
 
+    // Plotly.react preserves camera, axis zoom and legend trace visibility
+    // when the revision token remains stable across data/layout revisions.
+    this.layout.uirevision = this.mountRevision;
+    this.layout.legend = { ...(this.layout.legend ?? {}), uirevision: this.mountRevision };
     void this.updatePlot();
   }
 
@@ -485,7 +494,7 @@ export class PlotlyRenderer {
     this.layout.scene.aspectmode="data";
     this.layout.title={text:node.study?.topic ?? (node.label??"Vector 3D"),x:0.5};
     this.layout.showlegend=true;
-    this.layout.uirevision=node.id;
+    this.layout.uirevision = this.mountRevision;
   }
 
   private renderVectorArrow(node: Extract<PlotlyRenderNode, { type: "vectorarrow" }>): void {
@@ -582,7 +591,7 @@ export class PlotlyRenderer {
     }
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -711,7 +720,7 @@ export class PlotlyRenderer {
     }
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -842,7 +851,7 @@ export class PlotlyRenderer {
     const [px2, py2, pz2] = point2;
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -969,7 +978,7 @@ export class PlotlyRenderer {
     const info = angleBetweenPlanes(firstPlane.normal, secondPlane.normal);
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -1011,7 +1020,7 @@ export class PlotlyRenderer {
     const info = linePlaneAngle(lineDir, planeNormal);
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -1126,7 +1135,7 @@ export class PlotlyRenderer {
     const info = pointPlaneDistance(pointCoords, geometry.point, geometry.normal);
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -1179,7 +1188,7 @@ export class PlotlyRenderer {
     const info = pointLineDistance(pointCoords, line.point, line.direction);
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -1247,7 +1256,7 @@ export class PlotlyRenderer {
     const info: LinesDistanceInfo = linesDistance(line1.point, line1.direction, line2.point, line2.direction);
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -1366,7 +1375,7 @@ export class PlotlyRenderer {
     const isHyperbola = info.type === "hyperbola";
 
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
 
     const traces: any[] = [];
@@ -2275,7 +2284,7 @@ export class PlotlyRenderer {
     const effectiveW = node.effectiveW ?? w;
     const scene = node.crossScene ?? computeCrossProductScene(u, v, reverseOrder, effectiveW, origin);
     this.layout.scene.aspectmode = "data";
-    this.layout.uirevision = node.id;
+    this.layout.uirevision = this.mountRevision;
     this.layout.showlegend = true;
     if (scene.error !== undefined) {
       this.layout.title = { text: scene.error };

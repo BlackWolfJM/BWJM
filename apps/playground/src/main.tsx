@@ -23,7 +23,7 @@ import {
   serializeScientificTable,
 } from "@mathmd/math";
 import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode, Parametric2DNode } from "@mathmd/ast";
-import type { VectorStudyResult } from "@mathmd/math";
+import type { VectorStudyResult, CrossProductStudy, CrossProductDeterminant } from "@mathmd/math";
 import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
@@ -40,6 +40,7 @@ import { FormulaModal } from "./FormulaModal.js";
 import { ChartModal } from "./ChartModal.js";
 import { CommandPalette, CommandItem } from "./CommandPalette.js";
 import { createInlinePlayback, supportsInlinePlayback, type InlinePlaybackController } from "./inlineGraphPlayback.js";
+import { matchScientificNodes } from "./scientificMountIdentity.js";
 import { readStoredTheme, persistStudioTheme, type StudioThemeId } from "./studioThemes.js";
 import "./theme.css";
 
@@ -685,6 +686,15 @@ function renderProseText(content: string, container: HTMLElement, definitions: s
   }
 }
 
+type MountedScientificCard = {
+  node: MathMDNode;
+  card: HTMLDivElement;
+  mountKey: string;
+  disposers: Array<() => void>;
+  refreshReports?: (data: { crossStudy?: CrossProductStudy; crossDeterminant?: CrossProductDeterminant }) => void;
+};
+
+/** Keep mount identities separate from document tab IDs and parsed AST IDs. */
 export function BWJMStudio() {
   const {
     documents, activeId, markdown, filename, selectedTemplate, setMarkdown,
@@ -730,6 +740,12 @@ export function BWJMStudio() {
   const coreRef = useRef<MathMDCore | null>(null);
   const activeTimersRef = useRef<Map<string, number>>(new Map());
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
+  const mountedCardsRef = useRef<MountedScientificCard[]>([]);
+  const mountAliasesRef = useRef<WeakMap<MathMDNode, MountedScientificCard>>(new WeakMap());
+  const mountedDocumentRef = useRef<string | null>(null);
+  const mountedSourceRef = useRef("");
+  const nextMountKeyRef = useRef(0);
+  const svgObserverDisposersRef = useRef<Map<Element, () => void>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
   const openGraphSettingsRef = useRef<Set<string>>(new Set());
   const openCrossProductStepsRef = useRef<Set<string>>(new Set());
@@ -776,6 +792,8 @@ export function BWJMStudio() {
   };
 
   const clearRenderers = () => {
+    svgObserverDisposersRef.current.forEach(dispose => dispose());
+    svgObserverDisposersRef.current.clear();
     parameterEditorDisposersRef.current.forEach(dispose => dispose());
     parameterEditorDisposersRef.current = [];
     playbackRef.current?.dispose();
@@ -783,7 +801,14 @@ export function BWJMStudio() {
     plotlyRenderersRef.current.forEach((renderer) => renderer.destroy());
     plotlyRenderersRef.current.clear();
     svgRenderersRef.current.clear();
+    mountedCardsRef.current = [];
+    mountAliasesRef.current = new WeakMap();
+    playbackRef.current = null;
   };
+
+  /** Long-lived handlers from an existing card always use its current AST node. */
+  const resolveLiveNode = <T extends MathMDNode>(node: T): T =>
+    (mountAliasesRef.current.get(node)?.node ?? node) as T;
 
   useEffect(() => {
     return () => {
@@ -1210,16 +1235,87 @@ export function BWJMStudio() {
   ];
 
   useEffect(() => {
-    clearTimers();
-    clearRenderers();
+    const sameDocument = mountedDocumentRef.current === activeId;
+    const previousCards = sameDocument ? mountedCardsRef.current : [];
+    const identity = sameDocument
+      ? matchScientificNodes(mountedSourceRef.current,
+        previousCards.map(record => record.node), markdown, doc.children)
+      : new Map<MathMDNode, MathMDNode>();
+    const byNode = new Map(previousCards.map(record => [record.node, record]));
+    const reusable = new Map<MathMDNode, MountedScientificCard>();
+    for (const [next, old] of identity) {
+      const record = byNode.get(old);
+      if (!record) continue;
+      const oldFence = mountedSourceRef.current.slice(old.range.start.offset, old.range.end.offset);
+      const newFence = markdown.slice(next.range.start.offset, next.range.end.offset);
+      const structurallyChanged =
+        ("paramControls" in old && "paramControls" in next &&
+          JSON.stringify(old.paramControls) !== JSON.stringify(next.paramControls)) ||
+        (old.type === "crossproduct" && next.type === "crossproduct" &&
+          (old.showSteps !== next.showSteps || old.showDeterminant !== next.showDeterminant ||
+           old.showCollapse !== next.showCollapse || old.showSignChallenge !== next.showSignChallenge)) ||
+        (old.type === "plane3d" && next.type === "plane3d" && old.mode !== next.mode);
+      const compatibleVisual = ["curve3d", "parametric2d", "surface3d", "plot2d",
+        "vector2d", "vector3d", "vectorfield2d", "flow2d", "crossproduct",
+        "line3d", "plane3d", "datachart", "calculusviz"].includes(next.type);
+      if (!structurallyChanged && (oldFence === newFence || compatibleVisual)) {
+        reusable.set(next, record);
+      }
+    }
+    if (!sameDocument) {
+      clearTimers();
+      clearRenderers();
+      openGraphSettingsRef.current.clear();
+      openCrossProductStepsRef.current.clear();
+    } else {
+      const retained = new Set(reusable.values());
+      for (const record of previousCards) {
+        if (retained.has(record)) continue;
+        record.disposers.forEach(dispose => {
+          dispose();
+          parameterEditorDisposersRef.current =
+            parameterEditorDisposersRef.current.filter(item => item !== dispose);
+        });
+        record.card.querySelectorAll(".bwjm-svg-plot").forEach(mount => {
+          svgObserverDisposersRef.current.get(mount)?.();
+          svgObserverDisposersRef.current.delete(mount);
+        });
+        const oldId = record.node.id;
+        plotlyRenderersRef.current.get(oldId)?.destroy();
+        plotlyRenderersRef.current.delete(oldId);
+        svgRenderersRef.current.delete(oldId);
+        if (record.node.type === "slider") {
+          const timer = activeTimersRef.current.get(record.node.name);
+          if (timer !== undefined) window.clearInterval(timer);
+          activeTimersRef.current.delete(record.node.name);
+        }
+      }
+    }
 
-    const previousVariables = coreRef.current?.getVariables() ?? {};
-    const previousCore = coreRef.current;
+    // Rekey all surviving renderers together. Implicit IDs can swap with
+    // previous ordinal IDs, so per-node mutations would overwrite a neighbor.
+    const survivingRenderers = [...reusable.entries()].map(([node, record]) => ({
+      id: node.id,
+      oldId: record.node.id,
+      svg: svgRenderersRef.current.get(record.node.id),
+      plotly: plotlyRenderersRef.current.get(record.node.id),
+    }));
+    for (const renderer of survivingRenderers) {
+      svgRenderersRef.current.delete(renderer.oldId);
+      plotlyRenderersRef.current.delete(renderer.oldId);
+    }
+    for (const renderer of survivingRenderers) {
+      if (renderer.svg) svgRenderersRef.current.set(renderer.id, renderer.svg);
+      if (renderer.plotly) plotlyRenderersRef.current.set(renderer.id, renderer.plotly);
+    }
+
+    const previousCore = sameDocument ? coreRef.current : null;
+    const previousVariables = previousCore?.getVariables() ?? {};
     coreRef.current = new MathMDCore(doc);
-    // Keep local values after unrelated text edits when the chart ID stays stable.
     doc.children.forEach(node => {
       if (!supportsAdaptiveParameters(node) || !node.paramControls?.enabled) return;
-      const previous = previousCore?.getGraphParameters(node.id) ?? {};
+      const oldId = identity.get(node)?.id ?? node.id;
+      const previous = previousCore?.getGraphParameters(oldId) ?? {};
       node.paramControls.parameters.forEach(parameter => {
         const value = previous[parameter.name];
         if (value !== undefined && value >= parameter.min && value <= parameter.max) {
@@ -1235,26 +1331,54 @@ export function BWJMStudio() {
     const container = sheetRef.current;
     if (!container) return;
 
-    container.replaceChildren();
-
-    const sheet = document.createElement("article");
+    let sheet = document.createElement("article");
     sheet.className = "bwjm-sheet";
-
+    const nextCards: MountedScientificCard[] = [];
+    const changedCards: MathMDNode[] = [];
     const segments = parseDocumentSegments(markdown, doc.children, doc.diagnostics);
     let inlinePlaybackMounted = false;
 
-    const svgSizeHandlers = new Map<Element, (width: number) => void>();
-    const pendingSvgSizes = new Map<Element, number>();
-    let svgResizeFrame: number | undefined;
-    const svgResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(entries => {
-      for (const entry of entries) pendingSvgSizes.set(entry.target, entry.contentRect.width);
-      if (svgResizeFrame !== undefined) return;
-      svgResizeFrame = window.requestAnimationFrame(() => {
-        svgResizeFrame = undefined;
-        pendingSvgSizes.forEach((width, element) => svgSizeHandlers.get(element)?.(width));
-        pendingSvgSizes.clear();
+    // One resize observer per SVG mount; it remains active for the lifetime of
+    // that mount rather than being disconnected on every markdown keystroke.
+    const observeSvg = (mount: HTMLElement, node: MathMDNode,
+      renderer: SVGRenderer, width: number, height: number) => {
+      if (typeof ResizeObserver === "undefined") return;
+      let renderedWidth = width;
+      let resizeFrame: number | undefined;
+      let pendingWidth: number | undefined;
+      const observer = new ResizeObserver(entries => {
+        pendingWidth = entries[entries.length - 1]?.contentRect.width;
+        if (resizeFrame !== undefined) return;
+        resizeFrame = window.requestAnimationFrame(() => {
+          resizeFrame = undefined;
+          const nextWidth = Math.min(width, Math.floor(pendingWidth ?? 0));
+          if (nextWidth <= 0 || nextWidth === renderedWidth) return;
+          renderedWidth = nextWidth;
+          renderer.resize(nextWidth, Math.max(240, Math.round(nextWidth * height / width)));
+          const live = resolveLiveNode(node);
+          renderer.render(coreRef.current?.getNodeData(live.id) ?? live);
+        });
       });
-    });
+      observer.observe(mount);
+      svgObserverDisposersRef.current.set(mount, () => {
+        observer.disconnect();
+        if (resizeFrame !== undefined) window.cancelAnimationFrame(resizeFrame);
+      });
+    };
+
+    const attachPlayback = (card: HTMLElement, node: MathMDNode) => {
+      if (inlinePlaybackMounted || !timelines.length || !supportsInlinePlayback(node)) return;
+      const transport = playbackRef.current ?? createInlinePlayback(
+        timelines,
+        () => coreRef.current?.getVariables() ?? {},
+        (name, value) => handleVariableChange(name, value),
+      );
+      transport.updateTimelines(timelines);
+      const controls = card.querySelector(".bwjm-graph-settings-controls");
+      (controls ?? card.querySelector(".bwjm-node-body") ?? card).appendChild(transport.element);
+      playbackRef.current = transport;
+      inlinePlaybackMounted = true;
+    };
 
     const mountSvg = (
       parent: HTMLElement, node: MathMDNode, width: number, height: number,
@@ -1269,16 +1393,7 @@ export function BWJMStudio() {
       svgRenderersRef.current.set(node.id, renderer);
       renderer.render(initialData);
 
-      let renderedWidth = width;
-      svgSizeHandlers.set(mount, availableWidth => {
-        const nextWidth = Math.min(width, Math.floor(availableWidth));
-        if (nextWidth <= 0 || nextWidth === renderedWidth) return;
-        renderedWidth = nextWidth;
-        const nextHeight = Math.max(240, Math.round(nextWidth * height / width));
-        renderer.resize(nextWidth, nextHeight);
-        renderer.render(coreRef.current?.getNodeData(node.id) ?? initialData);
-      });
-      svgResizeObserver?.observe(mount);
+      observeSvg(mount, node, renderer, width, height);
     };
 
     /** Recompute only the affected chart, not the editor or all other graphs. */
@@ -1299,6 +1414,9 @@ export function BWJMStudio() {
           showLegend: data.showLegend === true,
         } : {};
         plotly.render({ ...data, scope, currentT, ...extra });
+      }
+      if (data.type === "crossproduct") {
+        mountedCardsRef.current.find(record => record.node.id === id)?.refreshReports?.(data);
       }
       if (data.type === "vector2d" || data.type === "vector3d") {
         const report = sheet.querySelector<HTMLElement>("#node-" + id + " .bwjm-vector-report");
@@ -1353,9 +1471,55 @@ export function BWJMStudio() {
         sheet.appendChild(diagBox);
       } else if (segment.kind === "mathmd" && segment.node) {
         const node = segment.node;
+        const existing = reusable.get(node);
+        if (existing) {
+          const before = existing.node;
+          const beforeFence = mountedSourceRef.current.slice(
+            before.range.start.offset, before.range.end.offset);
+          const afterFence = markdown.slice(node.range.start.offset, node.range.end.offset);
+          existing.node = node;
+          existing.card.id = "node-" + node.id;
+          mountAliasesRef.current.set(node, existing);
+          const plotMount = existing.card.querySelector<HTMLElement>('[id^="mount-"]');
+          if (plotMount) plotMount.id = "mount-" + node.id;
+          const tag = existing.card.querySelector(".bwjm-node-tag");
+          if (tag?.lastChild?.nodeType === Node.TEXT_NODE) {
+            tag.lastChild.textContent = " " + node.type.toUpperCase() + " • " + node.id;
+          }
+          existing.card.querySelectorAll<HTMLInputElement>("input[data-graph-option]").forEach(input => {
+            const key = input.dataset.graphOption ?? "";
+            const value = (node as unknown as Record<string, unknown>)[key];
+            const defaultOn = node.type === "crossproduct"
+              ? ["showPlane", "showNormal", "showArea"].includes(key)
+              : key === "showSteps" || (key === "animated" && node.type === "parametric2d");
+            input.checked = typeof value === "boolean" ? value : defaultOn;
+          });
+          // Update the displayed preference without losing keyboard focus.
+          const trail = existing.card.querySelector<HTMLInputElement>('input[aria-label="Longitud de estela"]');
+          if (trail && node.type === "parametric2d" && document.activeElement !== trail) {
+            trail.value = String(Math.min(Number(trail.max), Math.max(2, node.trailLength ?? 100)));
+            const out = trail.parentElement?.querySelector("output");
+            if (out) out.textContent = trail.value;
+          }
+          // Keep the old card attached to the *connected* sheet. Moving it
+          // into this detached staging tree would blur its focused controls.
+          const slot = document.createElement("span");
+          slot.dataset.mountSlot = existing.mountKey;
+          sheet.appendChild(slot);
+          nextCards.push(existing);
+          attachPlayback(existing.card, node);
+          if (beforeFence !== afterFence) changedCards.push(node);
+          continue;
+        }
         const card = document.createElement("div");
         card.className = "bwjm-node-card";
         card.id = `node-${node.id}`;
+        const record: MountedScientificCard = {
+          node, card, mountKey: activeId + ":" + ++nextMountKeyRef.current,
+          disposers: [],
+        };
+        card.dataset.mountKey = record.mountKey;
+        mountAliasesRef.current.set(node, record);
 
         const cardHeader = document.createElement("div");
         cardHeader.className = "bwjm-node-header";
@@ -1382,7 +1546,7 @@ export function BWJMStudio() {
 
         const cardBody = document.createElement("div");
         cardBody.className = "bwjm-node-body";
-        const crossStepsKey = activeId + ":" + node.range.start.offset;
+        const crossStepsKey = record.mountKey;
         const crossReport = node.type === "crossproduct" && node.showSteps !== undefined
           ? createCrossProductReport(
               node.showSteps,
@@ -1393,11 +1557,15 @@ export function BWJMStudio() {
               },
               () => {
                 setMarkdown(previous => updateGraphOption(
-                  previous, node.range, node.type, "reverseOrder", !node.reverseOrder));
+                  previous, resolveLiveNode(node).range, node.type, "reverseOrder", !resolveLiveNode(node).reverseOrder));
               },
             ) : undefined;
         const determinant = node.type === "crossproduct" && node.showDeterminant
           ? createCrossProductDeterminant() : undefined;
+        record.refreshReports = data => {
+          if (crossReport && data.crossStudy) crossReport.update(data.crossStudy);
+          if (determinant && data.crossDeterminant) determinant.update(data.crossDeterminant);
+        };
 
         // Graph settings persist in the selected code fence, avoiding transient-only UI state.
         if (supportsAdaptiveParameters(node) || node.type === "crossproduct" ||
@@ -1451,7 +1619,7 @@ export function BWJMStudio() {
           ] : [];
           const details = document.createElement("details");
           details.className = "bwjm-graph-settings";
-          const settingsKey = node.type + ":" + node.range.start.offset;
+          const settingsKey = record.mountKey;
           details.open = openGraphSettingsRef.current.has(settingsKey);
           const summary = document.createElement("summary");
           summary.textContent = "Personalizar gráfica";
@@ -1462,6 +1630,7 @@ export function BWJMStudio() {
             const wrapper = document.createElement("label");
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
+            checkbox.dataset.graphOption = key;
             const configured = (node as unknown as Record<string, unknown>)[key];
             const defaultOn = node.type === "crossproduct" ? ["showPlane", "showNormal", "showArea"].includes(key) :
               key === "showSteps" || (key === "animated" && node.type === "parametric2d");
@@ -1474,7 +1643,7 @@ export function BWJMStudio() {
                 node.type !== "line3d" && node.type !== "plane3d") return;
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, key, checkbox.checked));
+                previous, resolveLiveNode(node).range, node.type, key, checkbox.checked));
             };
             wrapper.append(checkbox, document.createTextNode(label));
             controls.appendChild(wrapper);
@@ -1504,7 +1673,7 @@ export function BWJMStudio() {
             collapseRange.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "collapseFactor", Number(collapseRange.value)));
+                previous, resolveLiveNode(node).range, node.type, "collapseFactor", Number(collapseRange.value)));
             };
             collapseRow.append(textLabel, collapseRange, collapseValue);
             controls.appendChild(collapseRow);
@@ -1530,7 +1699,7 @@ export function BWJMStudio() {
             targetSelect.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "collapseTarget", targetSelect.value));
+                previous, resolveLiveNode(node).range, node.type, "collapseTarget", targetSelect.value));
             };
             targetRow.append(targetLabel, targetSelect);
             controls.appendChild(targetRow);
@@ -1559,7 +1728,7 @@ export function BWJMStudio() {
             modeSelect.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "signChallengeMode", modeSelect.value));
+                previous, resolveLiveNode(node).range, node.type, "signChallengeMode", modeSelect.value));
             };
             modeRow.append(modeLabel, modeSelect);
             controls.appendChild(modeRow);
@@ -1579,7 +1748,7 @@ export function BWJMStudio() {
             seedInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "signChallengeSeed", Number(seedInput.value)));
+                previous, resolveLiveNode(node).range, node.type, "signChallengeSeed", Number(seedInput.value)));
             };
             seedRow.append(seedLabel, seedInput);
             controls.appendChild(seedRow);
@@ -1587,17 +1756,20 @@ export function BWJMStudio() {
           if (node.type === "crossproduct") {
             controls.appendChild(createCrossProductEditor(node, {
               preview: (u, v) => {
+                const live = resolveLiveNode(node);
                 const study = crossReport
-                  ? computeCrossProductStudy(u, v, node.reverseOrder, node.showSteps && node.showDeterminant, node.w, node.showIdentities, node.origin)
+                  ? computeCrossProductStudy(u, v, live.reverseOrder, live.showSteps && live.showDeterminant,
+                    live.w, live.showIdentities, live.origin)
                   : undefined;
-                const crossScene = study?.scene ?? computeCrossProductScene(u, v, node.reverseOrder, node.w, node.origin);
-                plotlyRenderersRef.current.get(node.id)?.render({ ...node, u, v, crossScene });
+                const crossScene = study?.scene ??
+                  computeCrossProductScene(u, v, live.reverseOrder, live.w, live.origin);
+                plotlyRenderersRef.current.get(live.id)?.render({ ...live, u, v, crossScene });
                 if (study) crossReport?.update(study);
-                determinant?.update(describeCrossProductDeterminant(u, v, crossScene, node.reverseOrder));
+                determinant?.update(describeCrossProductDeterminant(u, v, crossScene, live.reverseOrder));
               },
               save: (key, value) => {
                 openGraphSettingsRef.current.add(settingsKey);
-                setMarkdown(previous => updateCrossProductVector(previous, node.range, key, value));
+                setMarkdown(previous => updateCrossProductVector(previous, resolveLiveNode(node).range, key, value));
               },
             }));
           }
@@ -1626,7 +1798,7 @@ export function BWJMStudio() {
             modeSelect.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "mode", modeSelect.value));
+                previous, resolveLiveNode(node).range, node.type, "mode", modeSelect.value));
             };
             modeRow.append(modeLabel, modeSelect);
             controls.appendChild(modeRow);
@@ -1653,7 +1825,7 @@ export function BWJMStudio() {
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
-                      previous, node.range, node.type, key, vals as [number, number, number]));
+                      previous, resolveLiveNode(node).range, node.type, key, vals as [number, number, number]));
                   }
                 };
                 row.append(label, input);
@@ -1677,7 +1849,7 @@ export function BWJMStudio() {
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
-                      previous, node.range, node.type, key, vals as [number, number, number]));
+                      previous, resolveLiveNode(node).range, node.type, key, vals as [number, number, number]));
                   }
                 };
                 row.append(label, input);
@@ -1702,7 +1874,7 @@ export function BWJMStudio() {
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
-                      previous, node.range, node.type, key, vals as [number, number, number]));
+                      previous, resolveLiveNode(node).range, node.type, key, vals as [number, number, number]));
                   }
                 };
                 row.append(label, input);
@@ -1725,7 +1897,7 @@ export function BWJMStudio() {
                 input.onchange = () => {
                   openGraphSettingsRef.current.add(settingsKey);
                   setMarkdown(previous => updateGraphOption(
-                    previous, node.range, node.type, key, Number(input.value)));
+                    previous, resolveLiveNode(node).range, node.type, key, Number(input.value)));
                 };
                 row.append(label, input);
                 controls.appendChild(row);
@@ -1750,9 +1922,9 @@ export function BWJMStudio() {
             tMinInput.setAttribute("aria-label", "Valor mínimo del parámetro t");
             tMinInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newTDomain = [Number(tMinInput.value), node.tDomain?.[1] ?? 10] as [number, number];
+              const newTDomain = [Number(tMinInput.value), resolveLiveNode(node).tDomain?.[1] ?? 10] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "tDomain", newTDomain));
+                previous, resolveLiveNode(node).range, node.type, "tDomain", newTDomain));
             };
             tMinRow.append(tMinLabel, tMinInput);
             controls.appendChild(tMinRow);
@@ -1769,9 +1941,9 @@ export function BWJMStudio() {
             tMaxInput.setAttribute("aria-label", "Valor máximo del parámetro t");
             tMaxInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newTDomain = [node.tDomain?.[0] ?? -10, Number(tMaxInput.value)] as [number, number];
+              const newTDomain = [resolveLiveNode(node).tDomain?.[0] ?? -10, Number(tMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "tDomain", newTDomain));
+                previous, resolveLiveNode(node).range, node.type, "tDomain", newTDomain));
             };
             tMaxRow.append(tMaxLabel, tMaxInput);
             controls.appendChild(tMaxRow);
@@ -1789,7 +1961,7 @@ export function BWJMStudio() {
             paramInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "paramName", paramInput.value));
+                previous, resolveLiveNode(node).range, node.type, "paramName", paramInput.value));
             };
             paramRow.append(paramLabel, paramInput);
             controls.appendChild(paramRow);
@@ -1809,9 +1981,9 @@ export function BWJMStudio() {
             xMinInput.setAttribute("aria-label", "Límite mínimo del dominio x");
             xMinInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newXDomain = [Number(xMinInput.value), node.xDomain?.[1] ?? 5] as [number, number];
+              const newXDomain = [Number(xMinInput.value), resolveLiveNode(node).xDomain?.[1] ?? 5] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "xDomain", newXDomain));
+                previous, resolveLiveNode(node).range, node.type, "xDomain", newXDomain));
             };
             xMinRow.append(xMinLabel, xMinInput);
             controls.appendChild(xMinRow);
@@ -1828,9 +2000,9 @@ export function BWJMStudio() {
             xMaxInput.setAttribute("aria-label", "Límite máximo del dominio x");
             xMaxInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newXDomain = [node.xDomain?.[0] ?? -5, Number(xMaxInput.value)] as [number, number];
+              const newXDomain = [resolveLiveNode(node).xDomain?.[0] ?? -5, Number(xMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "xDomain", newXDomain));
+                previous, resolveLiveNode(node).range, node.type, "xDomain", newXDomain));
             };
             xMaxRow.append(xMaxLabel, xMaxInput);
             controls.appendChild(xMaxRow);
@@ -1847,9 +2019,9 @@ export function BWJMStudio() {
             yMinInput.setAttribute("aria-label", "Límite mínimo del dominio y");
             yMinInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newYDomain = [Number(yMinInput.value), node.yDomain?.[1] ?? 5] as [number, number];
+              const newYDomain = [Number(yMinInput.value), resolveLiveNode(node).yDomain?.[1] ?? 5] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "yDomain", newYDomain));
+                previous, resolveLiveNode(node).range, node.type, "yDomain", newYDomain));
             };
             yMinRow.append(yMinLabel, yMinInput);
             controls.appendChild(yMinRow);
@@ -1866,9 +2038,9 @@ export function BWJMStudio() {
             yMaxInput.setAttribute("aria-label", "Límite máximo del dominio y");
             yMaxInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newYDomain = [node.yDomain?.[0] ?? -5, Number(yMaxInput.value)] as [number, number];
+              const newYDomain = [resolveLiveNode(node).yDomain?.[0] ?? -5, Number(yMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "yDomain", newYDomain));
+                previous, resolveLiveNode(node).range, node.type, "yDomain", newYDomain));
             };
             yMaxRow.append(yMaxLabel, yMaxInput);
             controls.appendChild(yMaxRow);
@@ -1895,7 +2067,7 @@ export function BWJMStudio() {
             trailRange.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphNumericOption(
-                previous, node.range, "parametric2d", "trailLength",
+                previous, resolveLiveNode(node).range, "parametric2d", "trailLength",
                 Number(trailRange.value)));
             };
             trailRow.append(textLabel, trailRange, trailValue);
@@ -1906,12 +2078,12 @@ export function BWJMStudio() {
             save: config => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => writeGraphParameterControls(
-                previous, node.range, node.type, config));
+                previous, resolveLiveNode(node).range, node.type, config));
             },
-            current: name => coreRef.current?.getGraphParameters(node.id)[name],
+            current: name => coreRef.current?.getGraphParameters(resolveLiveNode(node).id)[name],
             update: (name, value) => {
-              if (coreRef.current?.setGraphParameter(node.id, name, value)) {
-                refreshParameterizedGraph(node.id);
+              if (coreRef.current?.setGraphParameter(resolveLiveNode(node).id, name, value)) {
+                refreshParameterizedGraph(resolveLiveNode(node).id);
               }
             },
             updateMany: changes => {
@@ -1919,12 +2091,13 @@ export function BWJMStudio() {
               if (!engine) return;
               let changed = false;
               changes.forEach(([name, value]) => {
-                changed = engine.setGraphParameter(node.id, name, value) || changed;
+                changed = engine.setGraphParameter(resolveLiveNode(node).id, name, value) || changed;
               });
-              if (changed) refreshParameterizedGraph(node.id);
+              if (changed) refreshParameterizedGraph(resolveLiveNode(node).id);
             },
           });
           parameterEditorDisposersRef.current.push(editor.dispose);
+          record.disposers.push(editor.dispose);
           controls.appendChild(editor.element);
           }
           details.appendChild(controls);
@@ -1971,7 +2144,7 @@ export function BWJMStudio() {
             button.textContent = "↓ " + format.toUpperCase();
             button.setAttribute("aria-label", "Exportar tabla a " + format.toUpperCase());
             button.addEventListener("click", () => {
-              const live = coreRef.current?.getNodeData(node.id) as typeof tableNode ?? tableNode;
+              const live = coreRef.current?.getNodeData(resolveLiveNode(node).id) as typeof tableNode ?? tableNode;
               const data = serializeScientificTable(live.columns, live.rows, format);
               const contentType = format === "json" ? "application/json" : "text/plain";
               const blob = new Blob([data], { type: contentType + ";charset=utf-8" });
@@ -1988,7 +2161,7 @@ export function BWJMStudio() {
           copy.type = "button";
           copy.textContent = "Copiar TSV";
           copy.addEventListener("click", () => {
-            const live = coreRef.current?.getNodeData(node.id) as typeof tableNode ?? tableNode;
+            const live = coreRef.current?.getNodeData(resolveLiveNode(node).id) as typeof tableNode ?? tableNode;
             const data = serializeScientificTable(live.columns, live.rows, "tsv");
             void navigator.clipboard?.writeText(data);
           });
@@ -2331,20 +2504,8 @@ export function BWJMStudio() {
           mountSvg(cardBody, node, 720, 360);
         }
 
-        // The large global clock is removed. Insert one small transport alongside
-        // the first animated graph; existing layer checkboxes remain unchanged.
-        if (!inlinePlaybackMounted && timelines.length > 0 && supportsInlinePlayback(node)) {
-          const transport = createInlinePlayback(
-            timelines,
-            () => coreRef.current?.getVariables() ?? {},
-            (name, value) => handleVariableChange(name, value),
-          );
-          const settingsControls = cardBody.querySelector(".bwjm-graph-settings-controls");
-          if (settingsControls) settingsControls.appendChild(transport.element);
-          else cardBody.appendChild(transport.element);
-          playbackRef.current = transport;
-          inlinePlaybackMounted = true;
-        }
+        // Reattach one existing transport; do not duplicate listeners or RAF loops.
+        attachPlayback(cardBody, node);
 
         const svgRenderer = svgRenderersRef.current.get(node.id);
         if (svgRenderer) {
@@ -2360,7 +2521,7 @@ export function BWJMStudio() {
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement("a");
             anchor.href = url;
-            anchor.download = node.id + ".svg";
+            anchor.download = resolveLiveNode(node).id + ".svg";
             anchor.click();
             URL.revokeObjectURL(url);
           };
@@ -2379,8 +2540,42 @@ export function BWJMStudio() {
         }
         card.appendChild(cardBody);
         sheet.appendChild(card);
+        nextCards.push(record);
       }
     }
+
+    if (!inlinePlaybackMounted && playbackRef.current) {
+      playbackRef.current.dispose();
+      playbackRef.current = null;
+    }
+    // Reconcile in the *connected* old sheet. Remove obsolete prose first,
+    // then insert fresh text around retained cards without ever detaching them.
+    // This also preserves DOM focus and text selection in chart controls.
+    const oldSheet = sameDocument
+      ? container.querySelector<HTMLElement>(":scope > .bwjm-sheet")
+      : null;
+    if (oldSheet) {
+      const byKey = new Map(nextCards.map(record => [record.mountKey, record.card]));
+      const desired = [...sheet.children].map(child => {
+        const slot = (child as HTMLElement).dataset.mountSlot;
+        return slot ? byKey.get(slot) ?? child : child;
+      });
+      const wanted = new Set(desired);
+      for (const child of [...oldSheet.children]) {
+        if (!wanted.has(child)) child.remove();
+      }
+      desired.forEach((element, index) => {
+        const current = oldSheet.children.item(index);
+        if (current !== element) oldSheet.insertBefore(element, current);
+      });
+      sheet = oldSheet;
+    } else {
+      container.replaceChildren(sheet);
+    }
+    mountedCardsRef.current = nextCards;
+    mountedSourceRef.current = markdown;
+    mountedDocumentRef.current = activeId;
+    for (const changed of changedCards) refreshParameterizedGraph(changed.id);
 
     const livePanel = document.createElement("div");
     livePanel.className = "bwjm-live-analysis-panel";
@@ -2654,11 +2849,7 @@ export function BWJMStudio() {
     liveAnalysisRef.current = updateLiveScientificAnalysis;
     updateLiveScientificAnalysis();
 
-    container.appendChild(sheet);
-    return () => {
-      svgResizeObserver?.disconnect();
-      if (svgResizeFrame !== undefined) window.cancelAnimationFrame(svgResizeFrame);
-    };
+    // Sheet is already connected, including all retained scientific cards.
   }, [doc, markdown, filename, sliceX, activeId]);
 
   const handleVariableChange = (name: string, value: number) => {
