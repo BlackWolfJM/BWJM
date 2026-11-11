@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExtern
 import { createRoot } from "react-dom/client";
 import { parseMathMD, parseProseMarkdown, collectMarkdownDefinitions } from "@mathmd/parser";
 import { isSafeEmbeddedRasterUrl, MAX_LOCAL_IMAGE_BYTES, portableImageMarkdown, validateLocalRaster } from "./localImages.js";
+import { compactImageEditor } from "./compactImageEditor.js";
 import type { DocumentInsertSnapshot } from "./workspaceDocuments.js";
 import type { MdastNode } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
@@ -752,6 +753,7 @@ export function BWJMStudio() {
     }
   };
 
+  const editorView = useMemo(() => compactImageEditor(markdown), [markdown]);
   const doc = useMemo(() => parseMathMD(markdown), [markdown]);
   const outline = useMemo(() => extractOutline(markdown), [markdown]);
   
@@ -764,8 +766,9 @@ export function BWJMStudio() {
     return clean ? clean.split(/\s+/).length : 0;
   }, [markdown]);
 
-  const charCount = markdown.length;
-  const lineCount = markdown.split("\n").length;
+  // The visual editor shows short image markers; keep source bytes in markdown.
+  const charCount = editorView.text.length;
+  const lineCount = editorView.text.split("\n").length;
 
   const clearTimers = () => {
     activeTimersRef.current.forEach((id) => window.clearInterval(id));
@@ -795,16 +798,20 @@ export function BWJMStudio() {
       setMarkdown((prev) => prev + prefix + suffix);
       return;
     }
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = editorView.toSourceOffset(textarea.selectionStart, "start");
+    const end = editorView.toSourceOffset(textarea.selectionEnd, "end");
     const selected = markdown.substring(start, end);
     const replacement = prefix + selected + suffix;
     const next = markdown.substring(0, start) + replacement + markdown.substring(end);
+    const nextEditor = compactImageEditor(next);
     setMarkdown(next);
     if (compactWorkspace) setViewMode("editor");
     setTimeout(() => {
       textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+      textarea.setSelectionRange(
+        nextEditor.toVisibleOffset(start + prefix.length, "start"),
+        nextEditor.toVisibleOffset(start + prefix.length + selected.length, "end"),
+      );
     }, 10);
   };
 
@@ -901,9 +908,11 @@ export function BWJMStudio() {
     if (!input) return;
     const textarea = textareaRef.current;
     const start = viewMode === "reader"
-      ? markdown.length : Math.min(textarea?.selectionStart ?? markdown.length, markdown.length);
+      ? markdown.length
+      : editorView.toSourceOffset(Math.min(textarea?.selectionStart ?? editorView.text.length, editorView.text.length), "start");
     const end = viewMode === "reader"
-      ? markdown.length : Math.min(textarea?.selectionEnd ?? start, markdown.length);
+      ? markdown.length
+      : editorView.toSourceOffset(Math.min(textarea?.selectionEnd ?? editorView.text.length, editorView.text.length), "end");
     // The picker and FileReader are asynchronous. Never infer destination from the
     // active tab once the dialog is closed.
     imageDestinationRef.current = { documentId: activeId, content: markdown, start, end };
@@ -983,7 +992,10 @@ export function BWJMStudio() {
       }
       const selectHeading = () => {
         textarea.focus();
-        textarea.setSelectionRange(charIndex, charIndex + (lines[item.lineNumber - 1]?.length ?? 0));
+        textarea.setSelectionRange(
+          editorView.toVisibleOffset(charIndex, "start"),
+          editorView.toVisibleOffset(charIndex + (lines[item.lineNumber - 1]?.length ?? 0), "end"),
+        );
       };
       if (compactWorkspace) {
         setViewMode("editor");
@@ -1008,7 +1020,7 @@ export function BWJMStudio() {
       const textarea = textareaRef.current;
       if (!textarea) return;
       textarea.focus();
-      textarea.setSelectionRange(start, end);
+      textarea.setSelectionRange(editorView.toVisibleOffset(start, "start"), editorView.toVisibleOffset(end, "end"));
       const row = markdown.slice(0, start).split("\n").length - 1;
       const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight) || 23;
       textarea.scrollTop = Math.max(0, row * lineHeight - textarea.clientHeight / 3);
@@ -1029,7 +1041,7 @@ export function BWJMStudio() {
       case "italic": insertAtCursor("*", "*"); break;
       case "code": insertAtCursor(String.fromCharCode(96), String.fromCharCode(96)); break;
       case "quote": insertAtCursor("> "); break;
-      case "list": insertAtCursor(markdown.slice(0, textareaRef.current?.selectionStart ?? markdown.length).endsWith("\n") ? "- " : "\n\n- "); break;
+      case "list": insertAtCursor(markdown.slice(0, editorView.toSourceOffset(textareaRef.current?.selectionStart ?? editorView.text.length)).endsWith("\n") ? "- " : "\n\n- "); break;
       case "rule": insertAtCursor("\n\n---\n\n"); break;
       case "formula": setIsFormulaModalOpen(true); break;
       case "graph": setIsChartModalOpen(true); break;
@@ -2815,8 +2827,9 @@ export function BWJMStudio() {
             <textarea
               ref={textareaRef}
               className="bwjm-code-textarea"
-              value={markdown}
-              onChange={(e) => setMarkdown(e.target.value)}
+              value={editorView.text}
+              onChange={(e) => setMarkdown(editorView.restoreSource(e.target.value))}
+              aria-label="Editor del documento, imágenes embebidas con referencias cortas"
               spellCheck={false}
               autoCapitalize="off"
               autoComplete="off"

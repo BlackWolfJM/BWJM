@@ -96,13 +96,13 @@ async function insertPng(page, filename = "foto-vis06.png") {
   await choice.setFiles({ name: filename, mimeType: "image/png", buffer: Buffer.from(data, "base64") });
   await page.waitForFunction(name => {
     const input = document.querySelector(".bwjm-code-textarea");
-    return input?.value.includes("![" + name + "](data:image/png;base64,") ||
+    return input?.value.includes("![" + name + "](imagen-integrada-") ||
       !!document.querySelector(".bwjm-image-notice")?.textContent;
   }, filename.replace(/\.png$/, ""), { timeout: 10000 });
   const notice = await page.locator(".bwjm-image-notice").allTextContents();
   if (notice.length) {
     const current = await page.locator(".bwjm-code-textarea").inputValue();
-    if (!current.includes("data:image/png;base64,")) {
+    if (!current.includes("imagen-integrada-")) {
       throw new Error("Imagen local rechazada en el navegador: " + notice.join("; "));
     }
   }
@@ -114,6 +114,9 @@ async function insertPng(page, filename = "foto-vis06.png") {
     return element?.complete && element.naturalWidth > 0;
   }, filename.replace(/\.png$/, ""));
   assert((await img.getAttribute("src")).startsWith("data:image/png;base64,"));
+  const shown = await page.locator(".bwjm-code-textarea").inputValue();
+  assert(!shown.includes("base64,"), "El editor todavía muestra el Base64 enorme");
+  assert(shown.includes("imagen-integrada-"), "El editor no mostró la referencia corta");
 }
 
 async function downloadSource(page) {
@@ -179,6 +182,10 @@ async function portableRun(extension) {
   });
   await visit(reopened);
   await openText(reopened, "copia." + extension, exported.toString("utf8"));
+  const restoredEditor = await reopened.locator(".bwjm-code-textarea").inputValue();
+  assert(!restoredEditor.includes("base64,"), "Al reabrir reapareció la cadena Base64 en el editor");
+  assert(restoredEditor.includes("![foto-vis06](imagen-integrada-1)"),
+    "Al reabrir no se reconstruyó el marcador compacto");
   const image = reopened.locator('#bwjm-reader-panel img[alt="foto-vis06"]');
   await image.waitFor();
   await image.scrollIntoViewIfNeeded();
@@ -235,7 +242,7 @@ async function pickerErrors() {
   await firstTab.click();
   const originalAfterSwitch = await page.locator(".bwjm-code-textarea").inputValue();
   console.log("VIS06 pestaña original:", originalAfterSwitch.slice(0, 140));
-  assert(originalAfterSwitch.includes("data:image/"),
+  assert(originalAfterSwitch.includes("![otro](imagen-integrada-"),
     "Imagen no volvió a su pestaña original");
 
   // Editing the captured tab while its image is loading cancels safely.
@@ -264,7 +271,7 @@ async function pickerErrors() {
   choice = await picker(page);
   await choice.setFiles({ name: "repetida.png", mimeType: "image/png", buffer: png });
   await page.waitForFunction(() =>
-    (document.querySelector(".bwjm-code-textarea")?.value.match(/!\[repetida\]\(data:image\/png;base64,/g) ?? []).length === 2
+    (document.querySelector(".bwjm-code-textarea")?.value.match(/!\[repetida\]\(imagen-integrada-\d+\)/g) ?? []).length === 2
   );
   await ctx.close();
 }
