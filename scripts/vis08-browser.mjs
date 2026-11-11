@@ -139,7 +139,7 @@ try {
   assert(urls.length >= 15, "No se encontraron suficientes fuentes WOFF2");
   assert(urls.every(value => value.startsWith("data:font/woff2;base64,")),
     "Alguna fuente sigue dependiendo de URL externa");
-  assert(html.includes("<msqrt>") && html.includes("<mfrac>") && html.includes("<mtable>"),
+  assert(html.includes("<msqrt>") && html.includes("<mfrac>") && html.includes("<mtable "),
     "El archivo descargado no preserva el MathML y las estructuras");
   await context.close();
 
