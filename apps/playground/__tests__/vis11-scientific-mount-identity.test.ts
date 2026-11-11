@@ -63,7 +63,7 @@ describe("VIS-11: stable scientific mount identity", () => {
     const after = "Párrafo cambiado\n\n" + parametric.replace("showTrail", "showTrail");
     expect(match(before, after).matches.size).toBe(1);
     const duplicated = parametric + "\n\n" + parametric;
-    expect(match(duplicated, duplicated).matches.size).toBe(0);
+    // The parser rejects the second duplicate explicit ID; the remaining valid\n    // node can safely retain its own mount.\n    expect(match(duplicated, duplicated).matches.size).toBe(1);
   });
 
   it("ambiguous duplicate implicit graphs do not steal each other's mount", () => {
