@@ -1,0 +1,70 @@
+name: Redeploy verified Studio compact images
+
+on:
+  push:
+    branches: [codex/redeploy-studio-compact-images]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Studio
+        env:
+          BWJM_BASE_PATH: /BWJM-WEB-/
+        run: pnpm build
+      - name: Verify compact image editor is inside the published JavaScript
+        id: verify
+        run: |
+          test -f apps/playground/dist/index.html
+          grep -R -F -q 'imagen-integrada-' apps/playground/dist/assets
+          grep -R -F -q 'Seleccionar imagen local' apps/playground/dist/assets
+          ENTRY=$(grep -oE '/BWJM-WEB-/assets/index-[^"]+\.js' apps/playground/dist/index.html | head -n 1)
+          test -n "$ENTRY"
+          echo "entry=$ENTRY" >> "$GITHUB_OUTPUT"
+          echo "Studio verificado: $ENTRY"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/playground/dist
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Verify deployed HTML references new JavaScript bundle
+        env:
+          ENTRY: ${{ steps.verify.outputs.entry }}
+        run: |
+          for n in $(seq 1 24); do
+            HTML=$(curl -fsSL "https://blackwolfjm.github.io/BWJM-WEB-/?vis06=compact" || true)
+            if printf '%s' "$HTML" | grep -Fq "$ENTRY"; then
+              echo "Despliegue verificado: $ENTRY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "La web publica todavia no sirve $ENTRY" >&2
+          exit 1
