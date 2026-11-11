@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { parseMathMD, parseProseMarkdown, collectMarkdownDefinitions } from "@mathmd/parser";
 import { isSafeEmbeddedRasterUrl, MAX_LOCAL_IMAGE_BYTES, portableImageMarkdown, validateLocalRaster } from "./localImages.js";
 import { compactImageEditor } from "./compactImageEditor.js";
+import { insertDisplayMath, insertInlineMath } from "./formulaInsertion.js";
+import type { DisplayMathAction, MathRibbonInsertion } from "./formulaInsertion.js";
 import type { DocumentInsertSnapshot } from "./workspaceDocuments.js";
 import type { MdastNode } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
@@ -815,6 +817,30 @@ export function BWJMStudio() {
     }, 10);
   };
 
+  const applyMathRibbon = (action: DisplayMathAction | "inline-math"): void => {
+    const textarea = textareaRef.current;
+    const append = viewMode === "reader" || !textarea;
+    const start = append ? markdown.length :
+      editorView.toSourceOffset(textarea.selectionStart, "start");
+    const end = append ? markdown.length :
+      editorView.toSourceOffset(textarea.selectionEnd, "end");
+    const inserted: MathRibbonInsertion = action === "inline-math"
+      ? insertInlineMath(markdown, start, end)
+      : insertDisplayMath(markdown, start, end, action);
+    const nextProjection = compactImageEditor(inserted.text);
+    setMarkdown(inserted.text);
+    if (compactWorkspace) setViewMode("editor");
+    window.requestAnimationFrame(() => {
+      const target = textareaRef.current;
+      if (!target || viewMode === "reader" && !compactWorkspace) return;
+      target.focus();
+      target.setSelectionRange(
+        nextProjection.toVisibleOffset(inserted.selectionStart, "start"),
+        nextProjection.toVisibleOffset(inserted.selectionEnd, "end"),
+      );
+    });
+  };
+
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
@@ -1049,10 +1075,10 @@ export function BWJMStudio() {
         insertAtCursor("\n\n| Columna 1 | Columna 2 |\n|---|---|\n| Dato 1 | Dato 2 |\n\n");
         break;
       case "picture": pickLocalImage(); break;
-      case "equation": insertAtCursor("\n$\n\\int_0^1 f(x)\\,dx\n$\n"); break;
-      case "inline-math": insertAtCursor("$", "$"); break;
-      case "matrix": insertAtCursor("\n$\n\\begin{bmatrix}a & b \\\\ c & d\\end{bmatrix}\n$\n"); break;
-      case "integral": insertAtCursor("\\int_{a}^{b} f(x)\\,dx"); break;
+      case "equation": applyMathRibbon("equation"); break;
+      case "inline-math": applyMathRibbon("inline-math"); break;
+      case "matrix": applyMathRibbon("matrix"); break;
+      case "integral": applyMathRibbon("integral"); break;
       case "slider": insertAtCursor("\n" + fence +
         "slider\nname: a\nmin: 0.1\nmax: 5\nstep: 0.1\ndefault: 1\n" + fence + "\n"); break;
       case "data-table":
