@@ -115,6 +115,7 @@ try {
   assert(await capture(page), "Falta un montaje de prueba");
 
   const canvas = card(page, "curve3d").locator(".gl-container canvas").first();
+  await canvas.scrollIntoViewIfNeeded();
   const box = await canvas.boundingBox();
   assert(box, "La curva carece de WebGL");
   const initialCamera = await camera(page);
