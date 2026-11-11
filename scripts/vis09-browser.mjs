@@ -44,10 +44,12 @@ async function openText(page, filename, content) {
     document.querySelector(".bwjm-code-textarea")?.value.includes(value), content.slice(0, 12));
 }
 async function modal(page) {
-  await page.getByRole("tab", { name: "Insertar" }).click();
-  await page.getByRole("button", { name: "Fórmula", exact: true }).click();
   const latex = page.locator(".bwjm-modal-textarea");
-  await latex.waitFor();
+  if (!(await latex.isVisible())) {
+    await page.getByRole("tab", { name: "Insertar" }).click();
+    await page.getByRole("button", { name: "Fórmula", exact: true }).click();
+  }
+  await latex.waitFor({ state: "visible" });
   return latex;
 }
 async function mode(page, value) {
