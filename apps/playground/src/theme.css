@@ -1461,11 +1461,13 @@ body {
 
 /* Compact transport lives WITH an animated chart, never below the whole document. */
 .bwjm-inline-playback {
+  box-sizing:border-box;
   display:flex;
   align-items:center;
   flex-wrap:wrap;
   gap:.7rem;
   width:100%;
+  max-width:100%;
   min-width:0;
   padding:.55rem .65rem;
   margin:.55rem 0 .2rem;
@@ -1485,6 +1487,11 @@ body {
   cursor:pointer;
 }
 .bwjm-inline-playback-toggle:hover { background:#e0e7ff; }
+.bwjm-inline-playback-toggle:focus-visible,
+.bwjm-inline-playback-seek:focus-visible {
+  outline:2px solid #4f46e5;
+  outline-offset:2px;
+}
 .bwjm-inline-playback-seek,
 .bwjm-curve-layers .bwjm-inline-playback input[type="range"] {
   min-width:95px;
@@ -1502,6 +1509,13 @@ body {
 @media (max-width:550px) {
   .bwjm-inline-playback { gap:.45rem; padding:.5rem; }
   .bwjm-inline-playback-toggle { font-size:.73rem; }
+  .bwjm-inline-playback-value { margin-left:auto; }
+  .bwjm-inline-playback-seek {
+    order:3;
+    flex:1 1 100%;
+    width:100%;
+    min-width:0;
+  }
 }
 
 .bwjm-curve-layers { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 0.75rem; color:#334155; font-size:0.8rem; }
@@ -2512,8 +2526,8 @@ code.bwjm-property-value {
   width: 5rem;
 }
 
-.bwjm-graph-settings-controls .bwjm-inline-playback {
-  margin:.3rem 0 0;
+.bwjm-node-body > .bwjm-inline-playback {
+  margin:.7rem 0 .2rem;
 }
 
 

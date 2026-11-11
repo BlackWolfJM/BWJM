@@ -1,0 +1,40 @@
+name: VIS-14 pause always visible
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/playground/src/main.tsx
+      - apps/playground/src/theme.css
+      - scripts/vis14-browser.mjs
+      - .github/workflows/vis14-browser.yml
+  workflow_dispatch:
+
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install isolated browser runner
+        run: |
+          mkdir -p /tmp/bwjm-browser
+          npm install --prefix /tmp/bwjm-browser --no-save --no-package-lock playwright@1.58.2
+          /tmp/bwjm-browser/node_modules/.bin/playwright install chromium
+      - name: Test VIS-14 in Chromium
+        run: node scripts/vis14-browser.mjs
+      - name: Mobile screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vis14-mobile-screenshot
+          path: /tmp/vis14-screens/*.png
+          if-no-files-found: ignore
