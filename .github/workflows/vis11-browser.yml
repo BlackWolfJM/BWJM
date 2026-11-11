@@ -1,0 +1,45 @@
+name: VIS-11 preserve graph mounts
+
+on:
+  push:
+    branches: [codex/vis-11-preservar-graficas]
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/playground/src/main.tsx
+      - apps/playground/src/scientificMountIdentity.ts
+      - apps/playground/src/inlineGraphPlayback.ts
+      - apps/playground/__tests__/vis11-scientific-mount-identity.test.ts
+      - packages/renderer-plotly/src/plotlyRenderer.ts
+      - packages/renderer-plotly/__tests__/plotlyRenderer.test.ts
+      - scripts/vis11-browser.mjs
+      - .github/workflows/vis11-browser.yml
+
+jobs:
+  chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install isolated Playwright Chromium
+        run: |
+          mkdir -p /tmp/bwjm-browser
+          npm install --prefix /tmp/bwjm-browser --no-save --no-package-lock playwright@1.58.2
+          /tmp/bwjm-browser/node_modules/.bin/playwright install chromium
+      - name: Verify VIS-11 mounting in Chromium
+        run: node scripts/vis11-browser.mjs
+      - name: Save browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vis11-preserved-mounts
+          path: /tmp/vis11-screens/*.png
+          if-no-files-found: ignore
