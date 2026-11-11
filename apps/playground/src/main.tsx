@@ -1234,16 +1234,70 @@ export function BWJMStudio() {
   ];
 
   useEffect(() => {
-    clearTimers();
-    clearRenderers();
+    const sameDocument = mountedDocumentRef.current === activeId;
+    const previousCards = sameDocument ? mountedCardsRef.current : [];
+    const identity = sameDocument
+      ? matchScientificNodes(mountedSourceRef.current,
+        previousCards.map(record => record.node), markdown, doc.children)
+      : new Map<MathMDNode, MathMDNode>();
+    const byNode = new Map(previousCards.map(record => [record.node, record]));
+    const reusable = new Map<MathMDNode, MountedScientificCard>();
+    for (const [next, old] of identity) {
+      const record = byNode.get(old);
+      if (!record) continue;
+      const oldFence = mountedSourceRef.current.slice(old.range.start.offset, old.range.end.offset);
+      const newFence = markdown.slice(next.range.start.offset, next.range.end.offset);
+      const structurallyChanged =
+        ("paramControls" in old && "paramControls" in next &&
+          JSON.stringify(old.paramControls) !== JSON.stringify(next.paramControls)) ||
+        (old.type === "crossproduct" && next.type === "crossproduct" &&
+          (old.showSteps !== next.showSteps || old.showDeterminant !== next.showDeterminant ||
+           old.showCollapse !== next.showCollapse || old.showSignChallenge !== next.showSignChallenge)) ||
+        (old.type === "plane3d" && next.type === "plane3d" && old.mode !== next.mode);
+      const compatibleVisual = ["curve3d", "parametric2d", "surface3d", "plot2d",
+        "vector2d", "vector3d", "vectorfield2d", "flow2d", "crossproduct",
+        "line3d", "plane3d", "datachart", "calculusviz"].includes(next.type);
+      if (!structurallyChanged && (oldFence === newFence || compatibleVisual)) {
+        reusable.set(next, record);
+      }
+    }
+    if (!sameDocument) {
+      clearTimers();
+      clearRenderers();
+      openGraphSettingsRef.current.clear();
+      openCrossProductStepsRef.current.clear();
+    } else {
+      const retained = new Set(reusable.values());
+      for (const record of previousCards) {
+        if (retained.has(record)) continue;
+        record.disposers.forEach(dispose => {
+          dispose();
+          parameterEditorDisposersRef.current =
+            parameterEditorDisposersRef.current.filter(item => item !== dispose);
+        });
+        record.card.querySelectorAll(".bwjm-svg-plot").forEach(mount => {
+          svgObserverDisposersRef.current.get(mount)?.();
+          svgObserverDisposersRef.current.delete(mount);
+        });
+        const oldId = record.node.id;
+        plotlyRenderersRef.current.get(oldId)?.destroy();
+        plotlyRenderersRef.current.delete(oldId);
+        svgRenderersRef.current.delete(oldId);
+        if (record.node.type === "slider") {
+          const timer = activeTimersRef.current.get(record.node.name);
+          if (timer !== undefined) window.clearInterval(timer);
+          activeTimersRef.current.delete(record.node.name);
+        }
+      }
+    }
 
-    const previousVariables = coreRef.current?.getVariables() ?? {};
-    const previousCore = coreRef.current;
+    const previousCore = sameDocument ? coreRef.current : null;
+    const previousVariables = previousCore?.getVariables() ?? {};
     coreRef.current = new MathMDCore(doc);
-    // Keep local values after unrelated text edits when the chart ID stays stable.
     doc.children.forEach(node => {
       if (!supportsAdaptiveParameters(node) || !node.paramControls?.enabled) return;
-      const previous = previousCore?.getGraphParameters(node.id) ?? {};
+      const oldId = identity.get(node)?.id ?? node.id;
+      const previous = previousCore?.getGraphParameters(oldId) ?? {};
       node.paramControls.parameters.forEach(parameter => {
         const value = previous[parameter.name];
         if (value !== undefined && value >= parameter.min && value <= parameter.max) {
@@ -1259,26 +1313,54 @@ export function BWJMStudio() {
     const container = sheetRef.current;
     if (!container) return;
 
-    container.replaceChildren();
-
     const sheet = document.createElement("article");
     sheet.className = "bwjm-sheet";
-
+    const nextCards: MountedScientificCard[] = [];
+    const changedCards: MathMDNode[] = [];
     const segments = parseDocumentSegments(markdown, doc.children, doc.diagnostics);
     let inlinePlaybackMounted = false;
 
-    const svgSizeHandlers = new Map<Element, (width: number) => void>();
-    const pendingSvgSizes = new Map<Element, number>();
-    let svgResizeFrame: number | undefined;
-    const svgResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(entries => {
-      for (const entry of entries) pendingSvgSizes.set(entry.target, entry.contentRect.width);
-      if (svgResizeFrame !== undefined) return;
-      svgResizeFrame = window.requestAnimationFrame(() => {
-        svgResizeFrame = undefined;
-        pendingSvgSizes.forEach((width, element) => svgSizeHandlers.get(element)?.(width));
-        pendingSvgSizes.clear();
+    // One resize observer per SVG mount; it remains active for the lifetime of
+    // that mount rather than being disconnected on every markdown keystroke.
+    const observeSvg = (mount: HTMLElement, node: MathMDNode,
+      renderer: SVGRenderer, width: number, height: number) => {
+      if (typeof ResizeObserver === "undefined") return;
+      let renderedWidth = width;
+      let resizeFrame: number | undefined;
+      let pendingWidth: number | undefined;
+      const observer = new ResizeObserver(entries => {
+        pendingWidth = entries[entries.length - 1]?.contentRect.width;
+        if (resizeFrame !== undefined) return;
+        resizeFrame = window.requestAnimationFrame(() => {
+          resizeFrame = undefined;
+          const nextWidth = Math.min(width, Math.floor(pendingWidth ?? 0));
+          if (nextWidth <= 0 || nextWidth === renderedWidth) return;
+          renderedWidth = nextWidth;
+          renderer.resize(nextWidth, Math.max(240, Math.round(nextWidth * height / width)));
+          const live = resolveLiveNode(node);
+          renderer.render(coreRef.current?.getNodeData(live.id) ?? live);
+        });
       });
-    });
+      observer.observe(mount);
+      svgObserverDisposersRef.current.set(mount, () => {
+        observer.disconnect();
+        if (resizeFrame !== undefined) window.cancelAnimationFrame(resizeFrame);
+      });
+    };
+
+    const attachPlayback = (card: HTMLElement, node: MathMDNode) => {
+      if (inlinePlaybackMounted || !timelines.length || !supportsInlinePlayback(node)) return;
+      const transport = playbackRef.current ?? createInlinePlayback(
+        timelines,
+        () => coreRef.current?.getVariables() ?? {},
+        (name, value) => handleVariableChange(name, value),
+      );
+      transport.updateTimelines(timelines);
+      const controls = card.querySelector(".bwjm-graph-settings-controls");
+      (controls ?? card.querySelector(".bwjm-node-body") ?? card).appendChild(transport.element);
+      playbackRef.current = transport;
+      inlinePlaybackMounted = true;
+    };
 
     const mountSvg = (
       parent: HTMLElement, node: MathMDNode, width: number, height: number,
@@ -1293,16 +1375,7 @@ export function BWJMStudio() {
       svgRenderersRef.current.set(node.id, renderer);
       renderer.render(initialData);
 
-      let renderedWidth = width;
-      svgSizeHandlers.set(mount, availableWidth => {
-        const nextWidth = Math.min(width, Math.floor(availableWidth));
-        if (nextWidth <= 0 || nextWidth === renderedWidth) return;
-        renderedWidth = nextWidth;
-        const nextHeight = Math.max(240, Math.round(nextWidth * height / width));
-        renderer.resize(nextWidth, nextHeight);
-        renderer.render(coreRef.current?.getNodeData(node.id) ?? initialData);
-      });
-      svgResizeObserver?.observe(mount);
+      observeSvg(mount, node, renderer, width, height);
     };
 
     /** Recompute only the affected chart, not the editor or all other graphs. */
