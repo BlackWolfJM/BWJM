@@ -1,6 +1,6 @@
 import type { CrossProductNode, MathMDNode, Plane3DNode } from "@mathmd/ast";
 import {
-  angleBetweenLines, angleBetweenPlanes, computeCrossProductArea, computeCrossProductDistributivity,
+  angleBetweenLines, angleBetweenPlanes, computeCollapseStudy, computeCrossProductArea, computeCrossProductDistributivity,
   computeCrossProductScene, computeKinematics, computeParallelepipedVolume, computePlaneFromPoints,
   computePlaneFromVectors, identifyConicFromMode, isFiniteVector, linePlaneAngle, linesDistance,
   pointLineDistance, pointPlaneDistance, sampleParametricTrajectory, sampleSurface,
@@ -2272,7 +2272,10 @@ export class PlotlyRenderer {
       ? labelNormal + " (" + operation + ")" : (reverseOrder ? operation : labelNormal ?? operation);
     
     // Usar effectiveW si está disponible (para animación de colapso), sino w original
-    const effectiveW = node.effectiveW ?? w;
+    const collapseInfo = node.collapseInfo ?? (showCollapse && w
+      ? computeCollapseStudy(u, v, w, collapseFactor, collapseTarget)
+      : undefined);
+    const effectiveW = node.effectiveW ?? collapseInfo?.currentW ?? w;
     const scene = node.crossScene ?? computeCrossProductScene(u, v, reverseOrder, effectiveW, origin);
     this.layout.scene.aspectmode = "data";
     this.layout.uirevision = node.id;
@@ -2452,39 +2455,29 @@ export class PlotlyRenderer {
       }
     }
 
-    // Visualización del paralelepípedo con el tercer vector w
-    if (showVolume && w && scene.opposite && isFiniteVector(w, 3)) {
+    // All six faces share the same interpolated w as the collapse arrow and volume.
+    if (showVolume && effectiveW && scene.opposite && isFiniteVector(effectiveW, 3)) {
+      const [wx, wy, wz] = effectiveW;
       const [px, py, pz] = [ox + u[0], oy + u[1], oz + u[2]];
       const [qx, qy, qz] = [ox + v[0], oy + v[1], oz + v[2]];
-      const [rx, ry, rz] = [ox + w[0], oy + w[1], oz + w[2]];
-      const [sx, sy, sz] = [ox + u[0] + v[0] + w[0], oy + u[1] + v[1] + w[1], oz + u[2] + v[2] + w[2]];
-      const [tx, ty, tz] = [ox + u[0] + w[0], oy + u[1] + w[1], oz + u[2] + w[2]];
-      const [ux, uy, uz] = [ox + v[0] + w[0], oy + v[1] + w[1], oz + v[2] + w[2]];
+      const [rx, ry, rz] = [ox + wx, oy + wy, oz + wz];
+      const [sx, sy, sz] = [ox + u[0] + v[0] + wx, oy + u[1] + v[1] + wy, oz + u[2] + v[2] + wz];
+      const [tx, ty, tz] = [ox + u[0] + wx, oy + u[1] + wy, oz + u[2] + wz];
+      const [ux, uy, uz] = [ox + v[0] + wx, oy + v[1] + wy, oz + v[2] + wz];
+      const [bx, by, bz] = [ox + u[0] + v[0], oy + u[1] + v[1], oz + u[2] + v[2]];
 
-      // 6 caras del paralelepípedo (8 vértices: O, P, Q, R, S, T, U, S)
-      // Vértices: O(ox,oy,oz), P(px,py,pz), Q(qx,qy,qz), R(rx,ry,rz)
-      //           S(sx,sy,sz), T(tx,ty,tz), U(ux,uy,uz)
+      // O, P=u, Q=v, B=u+v, R=w, T=u+w, U=v+w, S=u+v+w.
+      // A consistent 8-vertex solid also remains finite when w collapses.
       const faces = [
-        // Cara base: u, v en el origen (O, P, S, T)
-        { x: [ox, px, sx, tx], y: [oy, py, sy, ty], z: [oz, pz, sz, tz], name: "Base (u,v)" },
-        // Cara superior: u, v desplazada por w (R, Q, U, S) - wait, let me reorder
-        // Actually: top face is Q (v), R (w), U (v+w), S (u+v+w)
-        // But we need the face parallel to base: R (w), U (v+w), S (u+v+w), T (u+w)
-        { x: [rx, ux, sx, tx], y: [ry, uy, sy, ty], z: [rz, uz, sz, tz], name: "Superior (u,v)+w" },
-        // Cara lateral: u, w en v=0 (O, P, T, R)
+        { x: [ox, px, bx, qx], y: [oy, py, by, qy], z: [oz, pz, bz, qz], name: "Base (u,v)" },
+        { x: [rx, tx, sx, ux], y: [ry, ty, sy, uy], z: [rz, tz, sz, uz], name: "Superior (u,v)+w" },
         { x: [ox, px, tx, rx], y: [oy, py, ty, ry], z: [oz, pz, tz, rz], name: "Lateral (u,w)" },
-        // Cara lateral opuesta: u, w en v (Q, S, U, U?) -> Q, S, U, R? wait
-        // The face parallel to u,w at v: Q(v), S(u+v), U(u+v+w), R(w) -> Q, S, U, R
-        { x: [qx, sx, ux, rx], y: [qy, sy, uy, ry], z: [qz, sz, uz, rz], name: "Lateral (u,w)+v" },
-        // Cara lateral: v, w en u=0 (O, Q, U, R)
+        { x: [qx, bx, sx, ux], y: [qy, by, sy, uy], z: [qz, bz, sz, uz], name: "Lateral (u,w)+v" },
         { x: [ox, qx, ux, rx], y: [oy, qy, uy, ry], z: [oz, qz, uz, rz], name: "Lateral (v,w)" },
-        // Cara lateral opuesta: v, w en u (P, S, U, T)
-        { x: [px, sx, ux, tx], y: [py, sy, uy, ty], z: [pz, sz, uz, tz], name: "Lateral (v,w)+u" },
+        { x: [px, bx, sx, tx], y: [py, by, sy, ty], z: [pz, bz, sz, tz], name: "Lateral (v,w)+u" },
       ];
 
       for (const face of faces) {
-        const faceVertices: number[] = [];
-        face.x.forEach((xi, i) => faceVertices.push(xi));
         this.data.push({
           type: "mesh3d",
           x: face.x, y: face.y, z: face.z,
@@ -2495,7 +2488,7 @@ export class PlotlyRenderer {
       }
 
       // El renderizador también admite nodos directos sin los datos precalculados de Core.
-      const volInfo = node.volumeInfo ?? computeParallelepipedVolume(u, v, w);
+      const volInfo = node.volumeInfo ?? computeParallelepipedVolume(u, v, effectiveW);
       const centroidX = (ox + px + qx + rx + tx + ux + sx) / 7;
       const centroidY = (oy + py + qy + ry + ty + uy + sy) / 7;
       const centroidZ = (oz + pz + qz + rz + tz + uz + sz) / 7;
@@ -2516,8 +2509,7 @@ export class PlotlyRenderer {
     }
 
     // Visualización de animación de colapso (T017)
-    if (showCollapse && node.collapseInfo && effectiveW && scene.opposite) {
-      const collapseInfo: CollapseStudy = node.collapseInfo;
+    if (showCollapse && collapseInfo && effectiveW && scene.opposite) {
       const percent = collapseInfo.volumeOriginal > 0 
         ? (collapseInfo.volumeAtFactor / collapseInfo.volumeOriginal * 100).toFixed(1)
         : "0";
@@ -2712,8 +2704,24 @@ export class PlotlyRenderer {
     return this.plotlyPromise;
   }
 
+  /** Capture the real Plotly 3D camera (including zoom) before a Markdown rebuild. */
+  getSceneCamera(): Record<string, unknown> | null {
+    const plot = this.plotlyDiv as HTMLDivElement & {
+      _fullLayout?: { scene?: { camera?: Record<string, unknown> } };
+    };
+    const camera = plot._fullLayout?.scene?.camera;
+    return camera ? JSON.parse(JSON.stringify(camera)) as Record<string, unknown> : null;
+  }
+
+  /** Restore a previously captured camera on the replacement scene. */
+  setSceneCamera(camera: Record<string, unknown>): void {
+    this.layout.scene.camera = JSON.parse(JSON.stringify(camera)) as Record<string, unknown>;
+  }
+
   private applyPlot(plotly: PlotlyApi): void {
     if (this.hasPlot) {
+      const camera = this.getSceneCamera();
+      if (camera) this.setSceneCamera(camera);
       void plotly.react(this.plotlyDiv, this.data, this.layout, this.config);
     } else {
       this.hasPlot = true;
