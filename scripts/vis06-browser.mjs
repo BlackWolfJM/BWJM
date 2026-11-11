@@ -67,14 +67,40 @@ async function picker(page) {
 }
 
 async function insertPng(page, filename = "foto-vis06.png") {
+  // Place the image between formula/table text and the graph, as in Word.
+  await page.locator(".bwjm-code-textarea").evaluate(textarea => {
+    const offset = textarea.value.indexOf("```plot2d");
+    textarea.focus();
+    textarea.setSelectionRange(offset, offset);
+  });
   const choice = await picker(page);
-  await choice.setFiles({ name: filename, mimeType: "image/png", buffer: png });
+  // Generate a real 1600x320 PNG to test image shrinking on a 390px viewport.
+  const data = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1600;
+    canvas.height = 320;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#e9f2ff";
+    context.fillRect(0, 0, 1600, 320);
+    context.strokeStyle = "#1d4ed8";
+    context.lineWidth = 12;
+    context.beginPath();
+    context.moveTo(20, 300);
+    context.lineTo(1580, 20);
+    context.stroke();
+    context.fillStyle = "#111827";
+    context.font = "bold 46px Arial";
+    context.fillText("Imagen portable VIS-06", 60, 95);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await choice.setFiles({ name: filename, mimeType: "image/png", buffer: Buffer.from(data, "base64") });
   await page.waitForFunction(name => {
     const input = document.querySelector(".bwjm-code-textarea");
     return input?.value.includes("![" + name + "](data:image/png;base64,");
   }, filename.replace(/\.png$/, ""));
   const img = page.locator('#bwjm-reader-panel img[alt="' + filename.replace(/\.png$/, "") + '"]');
   await img.waitFor();
+  await img.scrollIntoViewIfNeeded();
   await page.waitForFunction(alt => {
     const element = [...document.images].find(img => img.alt === alt);
     return element?.complete && element.naturalWidth > 0;
@@ -131,6 +157,8 @@ async function portableRun(extension) {
   await visit(page);
   await openText(page, "portatil." + extension, markdown);
   await insertPng(page);
+  const editor = page.locator(".bwjm-code-textarea");
+  await editor.fill((await editor.inputValue()) + "\n\nSe puede editar el documento después de incrustar la imagen.");
   const exported = await downloadSource(page);
   assert(exported.includes(Buffer.from("data:image/png;base64,")), "El archivo guardado no contiene la foto");
   await context.close(); // Reopen in a new browser session with no original image file.
@@ -145,6 +173,7 @@ async function portableRun(extension) {
   await openText(reopened, "copia." + extension, exported.toString("utf8"));
   const image = reopened.locator('#bwjm-reader-panel img[alt="foto-vis06"]');
   await image.waitFor();
+  await image.scrollIntoViewIfNeeded();
   await reopened.waitForFunction(() => {
     const img = [...document.images].find(image => image.alt === "foto-vis06");
     return img?.complete && img.naturalWidth > 0;
