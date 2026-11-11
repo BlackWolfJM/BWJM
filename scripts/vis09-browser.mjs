@@ -65,6 +65,8 @@ async function screenshot(page, name) {
 async function numberedButton() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 850 } });
   const page = await ctx.newPage();
+  page.on("console", msg => { if (msg.text().includes("VIS09 confirmation")) console.log(msg.text()); });
+  page.on("pageerror", error => console.log("VIS09 page error", error.message));
   await visit(page);
   await openText(page, "numero-vis09.bwjm", "# Número VIS-09\n\nTexto previo.");
   const editor = page.locator(".bwjm-code-textarea");
