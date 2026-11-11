@@ -143,7 +143,14 @@ async function buttonTest() {
         textarea.setSelectionRange(at, selected ? at + 7 : at);
       }, source.includes("palabra"));
       await page.getByRole("tab", { name: "Matemáticas" }).click();
-      await page.getByRole("button", { name: label, exact: true }).click();
+      const action = page.getByRole("button", { name: label, exact: true });
+      if (!(await action.count())) {
+        const available = await page.locator(".bwjm-ribbon-content .bwjm-ribbon-action").allTextContents();
+        const ribbon = await page.locator(".bwjm-ribbon").innerText();
+        throw new Error("No se mostró " + label + " (documento: " + filename +
+          ", cinta: " + ribbon.slice(0, 250) + ", acciones: " + JSON.stringify(available) + ")");
+      }
+      await action.click({ timeout: 6000 });
       await page.waitForTimeout(250);
       const actual = await editor.inputValue();
       assert(actual.includes("$$\n"), label + " sin apertura $$");
