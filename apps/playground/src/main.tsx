@@ -740,14 +740,6 @@ export function BWJMStudio() {
   const imageDestinationRef = useRef<DocumentInsertSnapshot | null>(null);
 
   useEffect(() => {
-    const input = imageFileInputRef.current;
-    if (!input) return;
-    const clearPendingChoice = () => { imageDestinationRef.current = null; };
-    input.addEventListener("cancel", clearPendingChoice);
-    return () => input.removeEventListener("cancel", clearPendingChoice);
-  }, []);
-
-  useEffect(() => {
     if (compactSidebarVisible) {
       workspaceLayoutRef.current?.querySelector<HTMLButtonElement>(".bwjm-sidebar-close")?.focus();
     }
