@@ -215,17 +215,44 @@ async function pickerErrors() {
   await page.getByRole("status").filter({ hasText: "3 MiB" }).waitFor();
   assert.equal(await page.locator(".bwjm-code-textarea").inputValue(), before);
 
-  // Capture the first tab before opening a picker, then switch tabs while it is open.
+  // Delay file reads and switch AFTER selection, while arrayBuffer is pending.
+  await page.evaluate(() => {
+    const original = Blob.prototype.arrayBuffer;
+    File.prototype.arrayBuffer = function () {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => original.call(this).then(resolve, reject), 950);
+      });
+    };
+  });
   const firstTab = page.getByRole("tab", { name: "errores.bwjm" });
   choice = await picker(page);
-  await page.getByRole("button", { name: "Nuevo documento" }).click();
   await choice.setFiles({ name: "otro.png", mimeType: "image/png", buffer: png });
-  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: "Nuevo documento" }).click();
+  await page.waitForTimeout(1600);
   assert(!(await page.locator(".bwjm-code-textarea").inputValue()).includes("data:image/"),
     "Imagen apareció en la pestaña equivocada");
   await firstTab.click();
   assert((await page.locator(".bwjm-code-textarea").inputValue()).includes("data:image/"),
     "Imagen no volvió a su pestaña original");
+
+  // Editing the captured tab while its image is loading cancels safely.
+  choice = await picker(page);
+  await choice.setFiles({ name: "no-sobrescribir.png", mimeType: "image/png", buffer: png });
+  const editor = page.locator(".bwjm-code-textarea");
+  await editor.fill((await editor.inputValue()) + "\nTexto nuevo durante lectura.");
+  await page.waitForTimeout(1600);
+  const edited = await editor.inputValue();
+  assert(edited.includes("Texto nuevo durante lectura."), "Se perdió la edición del usuario");
+  assert(!edited.includes("![no-sobrescribir]("), "Se insertó encima de texto editado");
+
+  // Closing a target tab during image loading never inserts into another tab.
+  choice = await picker(page);
+  await choice.setFiles({ name: "no-reabrir.png", mimeType: "image/png", buffer: png });
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Cerrar errores.bwjm" }).click();
+  await page.waitForTimeout(1600);
+  assert(!(await page.locator(".bwjm-code-textarea").inputValue()).includes("no-reabrir"),
+    "La imagen terminó en otra pestaña tras cerrar la original");
   await ctx.close();
 }
 
