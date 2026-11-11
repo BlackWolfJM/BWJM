@@ -96,6 +96,20 @@ async function acceptanceTest() {
   assert(html.includes("math-display-box"), "Exportar HTML perdió las fórmulas en bloque");
   assert(html.includes("vis07-curva"), "Exportar HTML perdió la gráfica");
 
+  // VIS-05: very long math must scroll *inside* its own keyboard-focusable box.
+  await openText(page, "vis07-formula-larga.bwjm",
+    "# Fórmula larga\\n\\n$\\n" + "x^2 + ".repeat(220) + "1\\n$");
+  const formula = page.locator(".math-display-box").last();
+  await formula.waitFor();
+  const longLayout = await formula.evaluate(element => ({
+    client: element.clientWidth,
+    scroll: element.scrollWidth,
+    tabIndex: element.tabIndex,
+  }));
+  assert(longLayout.scroll > longLayout.client,
+    "La fórmula larga no conservó el scroll local: " + JSON.stringify(longLayout));
+  assert(longLayout.tabIndex >= 0, "La fórmula larga no tiene foco de teclado");
+
   await ctx.close();
   const session = await browser.newContext({ viewport: { width: 1280, height: 850 },
     acceptDownloads: true });
