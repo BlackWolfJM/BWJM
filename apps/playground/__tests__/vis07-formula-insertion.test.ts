@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseMathMD, parseProseMarkdown } from "@mathmd/parser";
+import { updateGraphOption } from "../src/graphOptionSource.js";
 import {
   insertDisplayMath, insertInlineMath, DISPLAY_MATH_TEMPLATES,
 } from "../src/formulaInsertion.js";
@@ -52,6 +53,27 @@ describe("VIS-07: botones matemáticos de la cinta", () => {
       expect(parseMathMD(result.text).source).toBe(result.text);
     }
   );
+
+  it("Personalizar gráfica escribe solo en el bloque correcto tras $ al final del TeX", () => {
+    const fence = String.fromCharCode(96).repeat(3);
+    const source = [
+      "# Antes", "", "$", "\\frac{1}{2} $", "",
+      "Párrafo intacto.", "",
+      fence + "parametric2d", "id: vis07-ajustes", "x: cos(t)",
+      "y: sin(t)", "tDomain: [0, 6.28]", fence, "",
+      "Texto final.",
+    ].join("\n");
+    const graph = parseMathMD(source).children[0];
+    expect(graph?.type).toBe("parametric2d");
+    const fenced = source.slice(graph.range.start.offset, graph.range.end.offset);
+    expect(fenced.startsWith(fence + "parametric2d")).toBe(true);
+    expect(fenced.endsWith(fence)).toBe(true);
+    const updated = updateGraphOption(source, graph.range, "parametric2d", "showVelocity", true);
+    expect(updated).toContain("showVelocity: true");
+    expect(updated.startsWith("# Antes\n\n$\n\\frac{1}{2} $\n\nPárrafo intacto.")).toBe(true);
+    expect(updated.endsWith("Texto final.")).toBe(true);
+    expect(parseMathMD(updated).children).toHaveLength(1);
+  });
 
   it("Fórmula en línea encierra la selección y mantiene lo que hay alrededor", () => {
     const source = "Antes x^2 después";
