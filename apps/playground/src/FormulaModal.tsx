@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IconX, IconCheck, IconFunction } from "./icons.js";
+import { renderMath } from "./mathRenderer.js";
 
 interface FormulaModalProps {
   isOpen: boolean;
@@ -45,22 +46,9 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
 
   useEffect(() => {
     if (!isOpen) return;
-    if (typeof window !== "undefined" && window.katex) {
-      try {
-        const rendered = window.katex.renderToString(latex.trim() || "\\text{...}", {
-          displayMode: mode !== "inline",
-          throwOnError: true,
-        });
-        setPreviewHtml(rendered);
-        setHasError(false);
-      } catch {
-        setHasError(true);
-        setPreviewHtml(`<span class="bwjm-modal-error">Error de sintaxis LaTeX</span>`);
-      }
-    } else {
-      setPreviewHtml(`<code>${latex}</code>`);
-      setHasError(false);
-    }
+    const rendered = renderMath(latex.trim() || "\\text{...}", mode !== "inline");
+    setPreviewHtml(rendered.html);
+    setHasError(!rendered.valid);
   }, [latex, mode, isOpen]);
 
   if (!isOpen) return null;

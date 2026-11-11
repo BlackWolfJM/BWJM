@@ -3,6 +3,9 @@ import { createRoot } from "react-dom/client";
 import { parseMathMD, parseProseMarkdown, collectMarkdownDefinitions } from "@mathmd/parser";
 import { isSafeEmbeddedRasterUrl, MAX_LOCAL_IMAGE_BYTES, portableImageMarkdown, validateLocalRaster } from "./localImages.js";
 import { compactImageEditor } from "./compactImageEditor.js";
+import { renderMath } from "./mathRenderer.js";
+import { loadOfflineKaTeXCss } from "./katexOfflineExport.js";
+import "katex/dist/katex.min.css";
 import type { DocumentInsertSnapshot } from "./workspaceDocuments.js";
 import type { MdastNode } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
@@ -42,14 +45,6 @@ import { CommandPalette, CommandItem } from "./CommandPalette.js";
 import { createInlinePlayback, supportsInlinePlayback, type InlinePlaybackController } from "./inlineGraphPlayback.js";
 import { readStoredTheme, persistStudioTheme, type StudioThemeId } from "./studioThemes.js";
 import "./theme.css";
-
-declare global {
-  interface Window {
-    katex?: {
-      renderToString(tex: string, options?: { displayMode?: boolean; throwOnError?: boolean }): string;
-    };
-  }
-}
 
 /** The document and interactive slider share this one educational readout. */
 function updateVectorStudyReport(
@@ -110,41 +105,8 @@ export function escapeHtml(str: string): string {
 }
 
 function renderMathToString(tex: string, displayMode: boolean): string {
-  if (typeof window !== "undefined" && window.katex) {
-    try {
-      return window.katex.renderToString(tex, { displayMode, throwOnError: false });
-    } catch (_err) {
-      void _err;
-    }
-  }
-
-  const cleaned = escapeHtml(
-    tex
-      .replace(/\\implies/g, " ⟹ ")
-      .replace(/\\ge/g, " ≥ ")
-      .replace(/\\le/g, " ≤ ")
-      .replace(/\\approx/g, " ≈ ")
-      .replace(/\\int_{([^}]+)}\^{([^}]+)}/g, "∫_{$1}^{$2} ")
-      .replace(/\\frac{([^}]+)}{([^}]+)}/g, "($1 / $2)")
-      .replace(/\\left\[/g, "[")
-      .replace(/\\right\]_0\^1/g, "]_{0}^{1}")
-      .replace(/\\left\(/g, "(")
-      .replace(/\\right\)/g, ")")
-      .replace(/\\cdot/g, " · ")
-      .replace(/\\pi/g, "π")
-      .replace(/\\alpha/g, "α")
-      .replace(/\\omega/g, "ω")
-      .replace(/\\,/g, " ")
-      .replace(/\\;/g, " ")
-      .replace(/\\/g, "")
-  );
-
-  if (displayMode) {
-    return `<div style="font-family: 'Cambria Math', KaTeX_Math, serif; font-size: 1.25rem; font-style: italic; color: #0284c7;">${cleaned}</div>`;
-  }
-  return `<span style="font-family: 'Cambria Math', KaTeX_Math, serif; font-style: italic; color: #0369a1; padding: 0 2px;">${cleaned}</span>`;
+  return renderMath(tex, displayMode).html;
 }
-
 
 
 function renderTableBody(
@@ -947,7 +909,11 @@ export function BWJMStudio() {
 
   const handleNewDocument = () => createDocument();
 
-  const handleExportHtml = () => {
+  const handleExportHtml = async () => {
+    try {
+      // The CSS and all WOFF2 fonts are in a local, lazy-loaded Vite chunk.
+      // Embedding them in the downloaded file makes it fully portable.
+      const offlineKaTeXCss = await loadOfflineKaTeXCss();
     const renderedBody = sheetRef.current ? sheetRef.current.innerHTML : "";
     const html = `<!DOCTYPE html>
 <html lang="es">
@@ -955,7 +921,7 @@ export function BWJMStudio() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(filename)} • BWJM Document</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <style id="bwjm-katex-offline">${offlineKaTeXCss}</style>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b1120; color: #0f172a; padding: 2rem; display: flex; justify-content: center; }
     .bwjm-sheet { box-sizing: border-box; background: #ffffff; max-width: 860px; width: 100%; min-width: 0; padding: clamp(1rem, 5vw, 3rem); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
@@ -980,6 +946,9 @@ export function BWJMStudio() {
     a.download = filename.replace(/\.(bwjm|jm|md)$/, "") + ".html";
     a.click();
     URL.revokeObjectURL(url);
+    } catch {
+      setImageMessage("No se pudo exportar el HTML: faltan las fuentes matemáticas locales.");
+    }
   };
 
   const handleNavigateOutline = (item: OutlineItem) => {
