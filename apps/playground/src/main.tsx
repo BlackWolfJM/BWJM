@@ -492,7 +492,7 @@ function appendDisplayMath(container: HTMLElement, tex: string): void {
 
 /** Only HTTP(S), relative paths and document fragments may be navigation/media targets. */
 function safeMarkdownUrl(value: string | undefined): string | null {
-  if (!value || /[\u0000-\u001f\u007f]/.test(value)) return null;
+  if (!value || [...value].some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)) return null;
   const target = value.trim();
   if (!target || /^\/\//.test(target)) return null;
   try {
