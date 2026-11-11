@@ -740,6 +740,14 @@ export function BWJMStudio() {
   const imageDestinationRef = useRef<DocumentInsertSnapshot | null>(null);
 
   useEffect(() => {
+    const input = imageFileInputRef.current;
+    if (!input) return;
+    const clearPendingChoice = () => { imageDestinationRef.current = null; };
+    input.addEventListener("cancel", clearPendingChoice);
+    return () => input.removeEventListener("cancel", clearPendingChoice);
+  }, []);
+
+  useEffect(() => {
     if (compactSidebarVisible) {
       workspaceLayoutRef.current?.querySelector<HTMLButtonElement>(".bwjm-sidebar-close")?.focus();
     }
@@ -924,7 +932,6 @@ export function BWJMStudio() {
       const status = insertAtDocumentSnapshot(target, markup);
       if (status === "inserted") {
         setImageMessage("Imagen integrada en el documento original. Guárdalo para conservarla sin el archivo de origen.");
-        if (compactWorkspace && activeId === target.documentId) setViewMode("editor");
       } else if (status === "too-large") {
         setImageMessage("El documento superaría el límite de 12 MiB. Reduce la imagen o utiliza un documento más pequeño.");
       } else if (status === "edited") {
@@ -2743,7 +2750,6 @@ export function BWJMStudio() {
         aria-label="Seleccionar imagen local"
         style={{ display: "none" }}
         onChange={handleImageFile}
-        onCancel={() => { imageDestinationRef.current = null; }}
       />
 
       <header className="bwjm-studio-header">
