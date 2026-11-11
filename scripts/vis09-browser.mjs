@@ -185,7 +185,7 @@ async function palette() {
   await latex.evaluate(input => { input.focus(); input.setSelectionRange(2, 2); });
   await pi.click();
   assert.equal(await latex.inputValue(), "ab\\pi");
-  assert.equal(await latex.evaluate(input => input.selectionStart), 6);
+  assert.equal(await latex.evaluate(input => input.selectionStart), 5);
 
   await latex.fill("preOLDpost");
   await latex.evaluate(input => { input.focus(); input.setSelectionRange(3, 6); });
