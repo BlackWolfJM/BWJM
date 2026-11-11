@@ -200,7 +200,9 @@ try {
   });
   const legendEntry = curve.locator(".js-plotly-plot g.legend g.traces").first();
   await legendEntry.waitFor({ timeout: 15000 });
-  await legendEntry.click();
+  // In a narrow split pane Plotly's camera modebar can overlay the legend.
+  // Dispatch the legend's real click handler without hitting the modebar.
+  await legendEntry.dispatchEvent("click", { bubbles: true, cancelable: true });
   await page.waitForFunction(() => {
     const curve = [...document.querySelectorAll(".bwjm-node-card")]
       .find(card => card.querySelector(".bwjm-node-tag")?.textContent?.includes("CURVE3D"));
