@@ -1,0 +1,47 @@
+name: VIS-10 cross-product browser
+
+on:
+  push:
+    branches: [codex/vis-10-escena-producto-cruz]
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/core/src/crossProductNodeData.ts
+      - packages/core/src/index.ts
+      - packages/renderer-plotly/src/plotlyRenderer.ts
+      - packages/renderer-plotly/__tests__/plotlyRenderer.test.ts
+      - apps/playground/src/CrossProductEditor.ts
+      - apps/playground/src/main.tsx
+      - apps/playground/src/theme.css
+      - apps/playground/__tests__/vis10-cross-summary.test.ts
+      - scripts/vis10-browser.mjs
+      - .github/workflows/vis10-browser.yml
+
+jobs:
+  chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install isolated Playwright Chromium
+        run: |
+          mkdir -p /tmp/bwjm-browser
+          npm install --prefix /tmp/bwjm-browser --no-save --no-package-lock playwright@1.58.2
+          /tmp/bwjm-browser/node_modules/.bin/playwright install chromium
+      - name: Verify VIS-10 scene in Chromium
+        run: node scripts/vis10-browser.mjs
+      - name: Save VIS-10 screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vis10-crossproduct-responsive
+          path: /tmp/vis10-screens/*.png
+          if-no-files-found: ignore
