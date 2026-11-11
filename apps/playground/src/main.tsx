@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
-import { parseMathMD } from "@mathmd/parser";
+import { parseMathMD, parseProseMarkdown, collectMarkdownDefinitions } from "@mathmd/parser";
+import type { MdastNode } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
 import { SVGRenderer } from "@mathmd/renderer-svg";
 import { PlotlyRenderer } from "@mathmd/renderer-plotly";
@@ -141,29 +142,6 @@ function renderMathToString(tex: string, displayMode: boolean): string {
   return `<span style="font-family: 'Cambria Math', KaTeX_Math, serif; font-style: italic; color: #0369a1; padding: 0 2px;">${cleaned}</span>`;
 }
 
-export function formatInlineMarkdown(text: string): string {
-  const mathMatches: string[] = [];
-  let sanitized = text.replace(/\$([^$]+)\$/g, (_, math) => {
-    const idx = mathMatches.length;
-    mathMatches.push(renderMathToString(math.trim(), false));
-    return `__MATH_TOKEN_${idx}__`;
-  });
-
-  sanitized = escapeHtml(sanitized);
-
-  sanitized = sanitized.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  sanitized = sanitized.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
-  sanitized = sanitized.replace(
-    /`([^`]+)`/g,
-    '<code style="background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.88em; color: #0f172a;">$1</code>'
-  );
-
-  sanitized = sanitized.replace(/__MATH_TOKEN_(\d+)__/g, (_, idx) => {
-    return mathMatches[parseInt(idx, 10)] || "";
-  });
-
-  return sanitized;
-}
 
 
 function renderTableBody(
@@ -512,81 +490,193 @@ function appendDisplayMath(container: HTMLElement, tex: string): void {
   container.appendChild(formula);
 }
 
-function renderProseText(content: string, container: HTMLElement): void {
-  const lines = content.split("\n");
-  let inMathBlock = false;
-  let mathBuffer: string[] = [];
-  let inCodeBlock = false;
-  let codeBuffer: string[] = [];
+/** Only HTTP(S), relative paths and document fragments may be navigation/media targets. */
+function safeMarkdownUrl(value: string | undefined): string | null {
+  if (!value || /[\u0000-\u001f\u007f]/.test(value)) return null;
+  const target = value.trim();
+  if (!target || /^\/\//.test(target)) return null;
+  try {
+    const parsed = new URL(target, document.baseURI);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+function appendInlineMath(container: HTMLElement, tex: string): void {
+  const span = document.createElement("span");
+  span.className = "bwjm-inline-math";
+  // This markup comes only from the trusted KaTeX renderer (or escaped fallback).
+  span.innerHTML = renderMathToString(tex, false);
+  container.appendChild(span);
+}
 
-    if (line.trim().startsWith("```")) {
-      if (inCodeBlock) {
-        const pre = document.createElement("pre");
-        const code = document.createElement("code");
-        code.textContent = codeBuffer.join("\n");
-        pre.appendChild(code);
-        container.appendChild(pre);
-        codeBuffer = [];
-        inCodeBlock = false;
-      } else {
-        inCodeBlock = true;
+/** Convert Remark nodes to safe DOM; never interpret user-provided HTML. */
+function appendMarkdownNode(parent: HTMLElement, node: MdastNode, source: string): void {
+  const children = (target: HTMLElement) => {
+    for (const child of node.children ?? []) appendMarkdownNode(target, child, source);
+  };
+  const element = (tag: string, className?: string): HTMLElement => {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    parent.appendChild(el);
+    children(el);
+    return el;
+  };
+
+  switch (node.type) {
+    case "root":
+    case "listItem":
+    case "tableRow":
+    case "tableCell":
+      children(parent);
+      return;
+    case "definition":
+      return;
+    case "text":
+      parent.appendChild(document.createTextNode(node.value ?? ""));
+      return;
+    case "paragraph": {
+      // remark-math can represent standalone $$tex$$ as inlineMath.
+      const only = node.children?.length === 1 ? node.children[0] : undefined;
+      const raw = node.position
+        ? source.slice(node.position.start.offset, node.position.end.offset).trim()
+        : "";
+      if (only?.type === "inlineMath" && /^\$\$[\s\S]*\$\$$/.test(raw)) {
+        appendDisplayMath(parent, only.value ?? "");
+        return;
       }
-      continue;
+      element("p");
+      return;
     }
-
-    if (inCodeBlock) {
-      codeBuffer.push(line);
-      continue;
+    case "heading":
+      element("h" + Math.min(6, Math.max(1, node.depth ?? 1)));
+      return;
+    case "strong": element("strong"); return;
+    case "emphasis": element("em"); return;
+    case "delete": element("del"); return;
+    case "blockquote": element("blockquote", "markdown-callout"); return;
+    case "thematicBreak": parent.appendChild(document.createElement("hr")); return;
+    case "break": parent.appendChild(document.createElement("br")); return;
+    case "inlineCode": {
+      const code = document.createElement("code");
+      code.textContent = node.value ?? "";
+      parent.appendChild(code);
+      return;
     }
-
-    if (line.trim().startsWith("$$")) {
-      if (inMathBlock) {
-        appendDisplayMath(container, mathBuffer.join(" "));
-        mathBuffer = [];
-        inMathBlock = false;
+    case "code": {
+      const pre = document.createElement("pre");
+      const code = document.createElement("code");
+      code.textContent = node.value ?? "";
+      pre.appendChild(code);
+      parent.appendChild(pre);
+      return;
+    }
+    case "html":
+      parent.appendChild(document.createTextNode(node.value ?? ""));
+      return;
+    case "inlineMath":
+      appendInlineMath(parent, node.value ?? "");
+      return;
+    case "math":
+      appendDisplayMath(parent, node.value ?? "");
+      return;
+    case "link": {
+      const href = safeMarkdownUrl(node.url);
+      if (!href) { children(parent); return; }
+      const link = document.createElement("a");
+      link.href = href;
+      if (node.title) link.title = node.title;
+      children(link);
+      parent.appendChild(link);
+      return;
+    }
+    case "image": {
+      const wrapper = document.createElement("span");
+      wrapper.className = "bwjm-markdown-image";
+      const description = node.alt || "Imagen";
+      const src = safeMarkdownUrl(node.url);
+      if (src) {
+        const img = document.createElement("img");
+        img.alt = node.alt ?? "";
+        img.src = src;
+        img.loading = "lazy";
+        const error = document.createElement("span");
+        error.className = "bwjm-image-error";
+        error.setAttribute("role", "status");
+        error.hidden = true;
+        error.textContent = "No se pudo cargar la imagen: " + description;
+        img.addEventListener("error", () => {
+          img.hidden = true;
+          error.hidden = false;
+        });
+        wrapper.append(img, error);
       } else {
-        inMathBlock = true;
-        const remaining = line.trim().slice(2).trim();
-        if (remaining.endsWith("$$") && remaining.length > 2) {
-          appendDisplayMath(container, remaining.slice(0, -2).trim());
-          inMathBlock = false;
-        } else if (remaining.length > 0) {
-          mathBuffer.push(remaining);
+        const error = document.createElement("span");
+        error.className = "bwjm-image-error";
+        error.setAttribute("role", "status");
+        error.textContent = "No se pudo cargar la imagen: " + description;
+        wrapper.appendChild(error);
+      }
+      parent.appendChild(wrapper);
+      return;
+    }
+    case "list": {
+      const list = document.createElement(node.ordered ? "ol" : "ul");
+      if (node.ordered && typeof node.start === "number" && node.start !== 1) {
+        (list as HTMLOListElement).start = node.start;
+      }
+      for (const item of node.children ?? []) {
+        const li = document.createElement("li");
+        if (typeof item.checked === "boolean") {
+          const marker = document.createElement("input");
+          marker.type = "checkbox";
+          marker.disabled = true;
+          marker.checked = item.checked;
+          li.appendChild(marker);
         }
+        for (const child of item.children ?? []) appendMarkdownNode(li, child, source);
+        list.appendChild(li);
       }
-      continue;
+      parent.appendChild(list);
+      return;
     }
+    case "table": {
+      const scroll = document.createElement("div");
+      scroll.className = "bwjm-markdown-table-scroll";
+      scroll.tabIndex = 0;
+      scroll.setAttribute("role", "region");
+      scroll.setAttribute("aria-label", "Tabla del documento, desplazamiento horizontal");
+      const table = document.createElement("table");
+      const rows = node.children ?? [];
+      for (const [rowIndex, row] of rows.entries()) {
+        const section = document.createElement(rowIndex === 0 ? "thead" : "tbody");
+        const tr = document.createElement("tr");
+        for (const [cellIndex, cell] of (row.children ?? []).entries()) {
+          const td = document.createElement(rowIndex === 0 ? "th" : "td");
+          if (rowIndex === 0) td.setAttribute("scope", "col");
+          const alignment = node.align?.[cellIndex];
+          if (alignment) td.style.textAlign = alignment;
+          for (const child of cell.children ?? []) appendMarkdownNode(td, child, source);
+          tr.appendChild(td);
+        }
+        section.appendChild(tr);
+        table.appendChild(section);
+      }
+      scroll.appendChild(table);
+      parent.appendChild(scroll);
+      return;
+    }
+    default:
+      children(parent);
+  }
+}
 
-    if (inMathBlock) {
-      mathBuffer.push(line.trim());
-      continue;
-    }
-
-    if (line.startsWith("# ")) {
-      const h1 = document.createElement("h1");
-      h1.innerHTML = formatInlineMarkdown(line.slice(2));
-      container.appendChild(h1);
-    } else if (line.startsWith("## ")) {
-      const h2 = document.createElement("h2");
-      h2.innerHTML = formatInlineMarkdown(line.slice(3));
-      container.appendChild(h2);
-    } else if (line.startsWith("### ")) {
-      const h3 = document.createElement("h3");
-      h3.innerHTML = formatInlineMarkdown(line.slice(4));
-      container.appendChild(h3);
-    } else if (line.startsWith("> ")) {
-      const callout = document.createElement("div");
-      callout.className = "markdown-callout";
-      callout.innerHTML = `<p>${formatInlineMarkdown(line.slice(2))}</p>`;
-      container.appendChild(callout);
-    } else if (line.trim().length > 0) {
-      const p = document.createElement("p");
-      p.innerHTML = formatInlineMarkdown(line);
-      container.appendChild(p);
-    }
+function renderProseText(content: string, container: HTMLElement, definitions: string): void {
+  const root = parseProseMarkdown(content, definitions);
+  for (const node of root.children ?? []) {
+    // Definitions are metadata, not visible content.
+    if (node.type !== "definition") appendMarkdownNode(container, node, content);
   }
 }
 
@@ -854,14 +944,14 @@ export function BWJMStudio() {
       case "italic": insertAtCursor("*", "*"); break;
       case "code": insertAtCursor(String.fromCharCode(96), String.fromCharCode(96)); break;
       case "quote": insertAtCursor("> "); break;
-      case "list": insertAtCursor("- "); break;
-      case "rule": insertAtCursor("\n---\n"); break;
+      case "list": insertAtCursor(markdown.slice(0, textareaRef.current?.selectionStart ?? markdown.length).endsWith("\n") ? "- " : "\n\n- "); break;
+      case "rule": insertAtCursor("\n\n---\n\n"); break;
       case "formula": setIsFormulaModalOpen(true); break;
       case "graph": setIsChartModalOpen(true); break;
       case "table":
-        insertAtCursor("\n| Columna 1 | Columna 2 |\n|---|---|\n| Dato 1 | Dato 2 |\n");
+        insertAtCursor("\n\n| Columna 1 | Columna 2 |\n|---|---|\n| Dato 1 | Dato 2 |\n\n");
         break;
-      case "picture": insertAtCursor("\n![Descripción de la imagen](ruta-a-la-imagen.png)\n"); break;
+      case "picture": insertAtCursor("\n\n![Descripción de la imagen](ruta-a-la-imagen.png)\n\n"); break;
       case "equation": insertAtCursor("\n$\n\\int_0^1 f(x)\\,dx\n$\n"); break;
       case "inline-math": insertAtCursor("$", "$"); break;
       case "matrix": insertAtCursor("\n$\n\\begin{bmatrix}a & b \\\\ c & d\\end{bmatrix}\n$\n"); break;
@@ -1148,11 +1238,12 @@ export function BWJMStudio() {
       }
     };
 
+    const markdownDefinitions = collectMarkdownDefinitions(markdown);
     for (const segment of segments) {
       if (segment.kind === "prose" && segment.content) {
         const proseDiv = document.createElement("div");
         proseDiv.className = "bwjm-prose-block";
-        renderProseText(segment.content, proseDiv);
+        renderProseText(segment.content, proseDiv, markdownDefinitions);
         sheet.appendChild(proseDiv);
       } else if (segment.kind === "diagnostic" && segment.diagnostic) {
         const diagBox = document.createElement("div");
