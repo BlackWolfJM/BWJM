@@ -156,7 +156,6 @@ try {
     await awaitScene(page,spec,0,spec.volumes[0]);
     verifyScene(await readPlot(page,spec.id),spec,0,spec.volumes[0],spec.w);
     const otherId=cases.find(other=>other.id!==spec.id).id;
-    const otherPlot=await page.locator("#mount-"+otherId+" .js-plotly-plot").evaluate(el=>el);
     const unchanged=JSON.stringify((await readPlot(page,otherId))?.traces);
 
     await rotateCamera(page,spec.id);
