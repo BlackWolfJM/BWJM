@@ -1,0 +1,48 @@
+name: VIS-08 KaTeX offline
+
+on:
+  push:
+    branches: [codex/vis-08-katex-local]
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/playground/src/**
+      - apps/playground/index.html
+      - apps/playground/vite.config.ts
+      - apps/playground/package.json
+      - pnpm-lock.yaml
+      - scripts/vis08-browser.mjs
+      - .github/workflows/vis08-browser.yml
+
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build production Studio with Pages base
+        run: pnpm --filter @mathmd/playground build
+        env:
+          BWJM_BASE_PATH: /BWJM-WEB-/
+      - name: Install isolated Chromium
+        run: |
+          mkdir -p /tmp/bwjm-browser
+          npm install --prefix /tmp/bwjm-browser --no-save --no-package-lock playwright@1.58.2
+          /tmp/bwjm-browser/node_modules/.bin/playwright install chromium
+      - name: Test Studio and standalone offline HTML
+        run: node scripts/vis08-browser.mjs
+      - name: Save offline screenshots and exported HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vis08-katex-offline-proof
+          path: /tmp/vis08-screens/*
+          if-no-files-found: ignore
