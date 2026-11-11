@@ -47,12 +47,42 @@ interface MdastPosition {
   end: { line: number; column: number; offset: number };
 }
 
-interface MdastNode {
+/** Minimal, renderer-neutral Markdown AST returned by Remark (also used by the reader). */
+export interface MdastNode {
   type: string;
   lang?: string | null;
   value?: string;
   position?: MdastPosition;
   children?: MdastNode[];
+  depth?: number;
+  ordered?: boolean;
+  start?: number | null;
+  checked?: boolean | null;
+  url?: string;
+  title?: string | null;
+  alt?: string;
+  identifier?: string;
+  align?: Array<"left" | "right" | "center" | null>;
+}
+
+/** Keep Markdown, GFM and math parsing identical to the scientific parser. */
+export function parseProseMarkdown(markdown: string, definitions = ""): MdastNode {
+  const source = definitions ? markdown + "\n\n" + definitions : markdown;
+  return unified().use(remarkParse).use(remarkGfm).use(remarkMath)
+    .parse(source) as unknown as MdastNode;
+}
+
+/**
+ * Collect source-authentic Markdown reference definitions from the complete document.
+ * The reader parses prose in separate spans around scientific blocks; supplying these
+ * definitions to each span lets references resolve across such a block.
+ */
+export function collectMarkdownDefinitions(source: string): string {
+  const root = parseProseMarkdown(source);
+  return (root.children ?? [])
+    .filter(node => node.type === "definition" && node.position)
+    .map(node => source.slice(node.position!.start.offset, node.position!.end.offset))
+    .join("\n\n");
 }
 
 const SUPPORTED_MATHMD_TYPES = new Set([
@@ -1185,7 +1215,7 @@ function buildMathMDNode(
  * detects duplicates, and collects structured diagnostics without modifying unrelated Markdown.
  */
 export function parseMathMD(markdown: string): MathMDDocument {
-  const root = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(markdown) as unknown as MdastNode;
+  const root = parseProseMarkdown(markdown);
   const mathmdNodes: MathMDNode[] = [];
   const diagnostics: MathMDDiagnostic[] = [];
   const seenIds = new Set<string>();
