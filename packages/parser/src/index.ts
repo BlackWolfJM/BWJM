@@ -2,7 +2,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { prepareRemarkMath, originalSourcePosition } from "./mathSource.js";
+import { prepareRemarkMath, sourcePositionLocator } from "./mathSource.js";
 import YAML from "yaml";
 import {
   MathMDDocument,
@@ -82,11 +82,12 @@ export function parseProseMarkdown(markdown: string, definitions = ""): MdastNod
   // Remark offsets refer to the normalized input. Remap all nodes before
   // any consumer (including graph settings) accesses source ranges.
   if (prepared.text !== source) {
+    const positionAt = sourcePositionLocator(source);
     visit(root, node => {
       if (!node.position) return;
-      node.position.start = originalSourcePosition(source,
+      node.position.start = positionAt(
         prepared.toOriginalOffset(node.position.start.offset));
-      node.position.end = originalSourcePosition(source,
+      node.position.end = positionAt(
         prepared.toOriginalOffset(node.position.end.offset));
     });
   }
