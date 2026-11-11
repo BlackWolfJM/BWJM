@@ -74,10 +74,10 @@ async function numberedButton() {
   const label = page.locator(".bwjm-modal-tag-input");
   const preview = page.getByRole("region", { name: "Vista previa de la fórmula" });
   await label.fill("7");
-  await preview.locator("annotation").filter({ hasText: "\\tag{7}" }).waitFor();
+  await preview.locator("annotation").filter({ hasText: "\\tag{7}" }).waitFor({ state: "attached" });
   assert((await preview.innerText()).includes("(7)"), "Preview missing (7)");
   await label.fill("8");
-  await preview.locator("annotation").filter({ hasText: "\\tag{8}" }).waitFor();
+  await preview.locator("annotation").filter({ hasText: "\\tag{8}" }).waitFor({ state: "attached" });
   assert(!(await preview.innerText()).includes("(7)"), "Stale (7) preview");
   assert((await preview.innerText()).includes("(8)"), "Preview missing (8)");
   await screenshot(page, "preview-8");
@@ -94,7 +94,7 @@ async function numberedButton() {
   await mode(page, "numbered");
   await existing.fill("y^2 \\tag{A.2}");
   await page.locator(".bwjm-modal-tag-input").fill("99");
-  await preview.locator("annotation").filter({ hasText: "\\tag{A.2}" }).waitFor();
+  await preview.locator("annotation").filter({ hasText: "\\tag{A.2}" }).waitFor({ state: "attached" });
   await page.getByRole("button", { name: "Insertar Fórmula" }).click();
   await page.waitForFunction(() =>
     document.querySelector(".bwjm-code-textarea")?.value.includes("\\tag{A.2}"));
