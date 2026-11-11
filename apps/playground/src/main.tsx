@@ -1538,7 +1538,7 @@ export function BWJMStudio() {
 
         const cardBody = document.createElement("div");
         cardBody.className = "bwjm-node-body";
-        const crossStepsKey = activeId + ":" + node.range.start.offset;
+        const crossStepsKey = record.mountKey;
         const crossReport = node.type === "crossproduct" && node.showSteps !== undefined
           ? createCrossProductReport(
               node.showSteps,
@@ -1549,7 +1549,7 @@ export function BWJMStudio() {
               },
               () => {
                 setMarkdown(previous => updateGraphOption(
-                  previous, node.range, node.type, "reverseOrder", !node.reverseOrder));
+                  previous, resolveLiveNode(node).range, node.type, "reverseOrder", !resolveLiveNode(node).reverseOrder));
               },
             ) : undefined;
         const determinant = node.type === "crossproduct" && node.showDeterminant
@@ -1607,7 +1607,7 @@ export function BWJMStudio() {
           ] : [];
           const details = document.createElement("details");
           details.className = "bwjm-graph-settings";
-          const settingsKey = node.type + ":" + node.range.start.offset;
+          const settingsKey = record.mountKey;
           details.open = openGraphSettingsRef.current.has(settingsKey);
           const summary = document.createElement("summary");
           summary.textContent = "Personalizar gráfica";
@@ -1618,6 +1618,7 @@ export function BWJMStudio() {
             const wrapper = document.createElement("label");
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
+            checkbox.dataset.graphOption = key;
             const configured = (node as unknown as Record<string, unknown>)[key];
             const defaultOn = node.type === "crossproduct" ? ["showPlane", "showNormal", "showArea"].includes(key) :
               key === "showSteps" || (key === "animated" && node.type === "parametric2d");
@@ -1630,7 +1631,7 @@ export function BWJMStudio() {
                 node.type !== "line3d" && node.type !== "plane3d") return;
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, key, checkbox.checked));
+                previous, resolveLiveNode(node).range, node.type, key, checkbox.checked));
             };
             wrapper.append(checkbox, document.createTextNode(label));
             controls.appendChild(wrapper);
@@ -1660,7 +1661,7 @@ export function BWJMStudio() {
             collapseRange.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "collapseFactor", Number(collapseRange.value)));
+                previous, resolveLiveNode(node).range, node.type, "collapseFactor", Number(collapseRange.value)));
             };
             collapseRow.append(textLabel, collapseRange, collapseValue);
             controls.appendChild(collapseRow);
@@ -1686,7 +1687,7 @@ export function BWJMStudio() {
             targetSelect.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "collapseTarget", targetSelect.value));
+                previous, resolveLiveNode(node).range, node.type, "collapseTarget", targetSelect.value));
             };
             targetRow.append(targetLabel, targetSelect);
             controls.appendChild(targetRow);
@@ -1715,7 +1716,7 @@ export function BWJMStudio() {
             modeSelect.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "signChallengeMode", modeSelect.value));
+                previous, resolveLiveNode(node).range, node.type, "signChallengeMode", modeSelect.value));
             };
             modeRow.append(modeLabel, modeSelect);
             controls.appendChild(modeRow);
@@ -1735,7 +1736,7 @@ export function BWJMStudio() {
             seedInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "signChallengeSeed", Number(seedInput.value)));
+                previous, resolveLiveNode(node).range, node.type, "signChallengeSeed", Number(seedInput.value)));
             };
             seedRow.append(seedLabel, seedInput);
             controls.appendChild(seedRow);
@@ -1753,7 +1754,7 @@ export function BWJMStudio() {
               },
               save: (key, value) => {
                 openGraphSettingsRef.current.add(settingsKey);
-                setMarkdown(previous => updateCrossProductVector(previous, node.range, key, value));
+                setMarkdown(previous => updateCrossProductVector(previous, resolveLiveNode(node).range, key, value));
               },
             }));
           }
@@ -1782,7 +1783,7 @@ export function BWJMStudio() {
             modeSelect.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "mode", modeSelect.value));
+                previous, resolveLiveNode(node).range, node.type, "mode", modeSelect.value));
             };
             modeRow.append(modeLabel, modeSelect);
             controls.appendChild(modeRow);
@@ -1809,7 +1810,7 @@ export function BWJMStudio() {
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
-                      previous, node.range, node.type, key, vals as [number, number, number]));
+                      previous, resolveLiveNode(node).range, node.type, key, vals as [number, number, number]));
                   }
                 };
                 row.append(label, input);
@@ -1833,7 +1834,7 @@ export function BWJMStudio() {
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
-                      previous, node.range, node.type, key, vals as [number, number, number]));
+                      previous, resolveLiveNode(node).range, node.type, key, vals as [number, number, number]));
                   }
                 };
                 row.append(label, input);
@@ -1858,7 +1859,7 @@ export function BWJMStudio() {
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
-                      previous, node.range, node.type, key, vals as [number, number, number]));
+                      previous, resolveLiveNode(node).range, node.type, key, vals as [number, number, number]));
                   }
                 };
                 row.append(label, input);
@@ -1881,7 +1882,7 @@ export function BWJMStudio() {
                 input.onchange = () => {
                   openGraphSettingsRef.current.add(settingsKey);
                   setMarkdown(previous => updateGraphOption(
-                    previous, node.range, node.type, key, Number(input.value)));
+                    previous, resolveLiveNode(node).range, node.type, key, Number(input.value)));
                 };
                 row.append(label, input);
                 controls.appendChild(row);
@@ -1906,9 +1907,9 @@ export function BWJMStudio() {
             tMinInput.setAttribute("aria-label", "Valor mínimo del parámetro t");
             tMinInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newTDomain = [Number(tMinInput.value), node.tDomain?.[1] ?? 10] as [number, number];
+              const newTDomain = [Number(tMinInput.value), resolveLiveNode(node).tDomain?.[1] ?? 10] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "tDomain", newTDomain));
+                previous, resolveLiveNode(node).range, node.type, "tDomain", newTDomain));
             };
             tMinRow.append(tMinLabel, tMinInput);
             controls.appendChild(tMinRow);
@@ -1925,9 +1926,9 @@ export function BWJMStudio() {
             tMaxInput.setAttribute("aria-label", "Valor máximo del parámetro t");
             tMaxInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newTDomain = [node.tDomain?.[0] ?? -10, Number(tMaxInput.value)] as [number, number];
+              const newTDomain = [resolveLiveNode(node).tDomain?.[0] ?? -10, Number(tMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "tDomain", newTDomain));
+                previous, resolveLiveNode(node).range, node.type, "tDomain", newTDomain));
             };
             tMaxRow.append(tMaxLabel, tMaxInput);
             controls.appendChild(tMaxRow);
@@ -1945,7 +1946,7 @@ export function BWJMStudio() {
             paramInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "paramName", paramInput.value));
+                previous, resolveLiveNode(node).range, node.type, "paramName", paramInput.value));
             };
             paramRow.append(paramLabel, paramInput);
             controls.appendChild(paramRow);
@@ -1965,9 +1966,9 @@ export function BWJMStudio() {
             xMinInput.setAttribute("aria-label", "Límite mínimo del dominio x");
             xMinInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newXDomain = [Number(xMinInput.value), node.xDomain?.[1] ?? 5] as [number, number];
+              const newXDomain = [Number(xMinInput.value), resolveLiveNode(node).xDomain?.[1] ?? 5] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "xDomain", newXDomain));
+                previous, resolveLiveNode(node).range, node.type, "xDomain", newXDomain));
             };
             xMinRow.append(xMinLabel, xMinInput);
             controls.appendChild(xMinRow);
@@ -1984,9 +1985,9 @@ export function BWJMStudio() {
             xMaxInput.setAttribute("aria-label", "Límite máximo del dominio x");
             xMaxInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newXDomain = [node.xDomain?.[0] ?? -5, Number(xMaxInput.value)] as [number, number];
+              const newXDomain = [resolveLiveNode(node).xDomain?.[0] ?? -5, Number(xMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "xDomain", newXDomain));
+                previous, resolveLiveNode(node).range, node.type, "xDomain", newXDomain));
             };
             xMaxRow.append(xMaxLabel, xMaxInput);
             controls.appendChild(xMaxRow);
@@ -2003,9 +2004,9 @@ export function BWJMStudio() {
             yMinInput.setAttribute("aria-label", "Límite mínimo del dominio y");
             yMinInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newYDomain = [Number(yMinInput.value), node.yDomain?.[1] ?? 5] as [number, number];
+              const newYDomain = [Number(yMinInput.value), resolveLiveNode(node).yDomain?.[1] ?? 5] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "yDomain", newYDomain));
+                previous, resolveLiveNode(node).range, node.type, "yDomain", newYDomain));
             };
             yMinRow.append(yMinLabel, yMinInput);
             controls.appendChild(yMinRow);
@@ -2022,9 +2023,9 @@ export function BWJMStudio() {
             yMaxInput.setAttribute("aria-label", "Límite máximo del dominio y");
             yMaxInput.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
-              const newYDomain = [node.yDomain?.[0] ?? -5, Number(yMaxInput.value)] as [number, number];
+              const newYDomain = [resolveLiveNode(node).yDomain?.[0] ?? -5, Number(yMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "yDomain", newYDomain));
+                previous, resolveLiveNode(node).range, node.type, "yDomain", newYDomain));
             };
             yMaxRow.append(yMaxLabel, yMaxInput);
             controls.appendChild(yMaxRow);
@@ -2051,7 +2052,7 @@ export function BWJMStudio() {
             trailRange.onchange = () => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphNumericOption(
-                previous, node.range, "parametric2d", "trailLength",
+                previous, resolveLiveNode(node).range, "parametric2d", "trailLength",
                 Number(trailRange.value)));
             };
             trailRow.append(textLabel, trailRange, trailValue);
@@ -2062,12 +2063,12 @@ export function BWJMStudio() {
             save: config => {
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => writeGraphParameterControls(
-                previous, node.range, node.type, config));
+                previous, resolveLiveNode(node).range, node.type, config));
             },
-            current: name => coreRef.current?.getGraphParameters(node.id)[name],
+            current: name => coreRef.current?.getGraphParameters(resolveLiveNode(node).id)[name],
             update: (name, value) => {
-              if (coreRef.current?.setGraphParameter(node.id, name, value)) {
-                refreshParameterizedGraph(node.id);
+              if (coreRef.current?.setGraphParameter(resolveLiveNode(node).id, name, value)) {
+                refreshParameterizedGraph(resolveLiveNode(node).id);
               }
             },
             updateMany: changes => {
@@ -2075,12 +2076,13 @@ export function BWJMStudio() {
               if (!engine) return;
               let changed = false;
               changes.forEach(([name, value]) => {
-                changed = engine.setGraphParameter(node.id, name, value) || changed;
+                changed = engine.setGraphParameter(resolveLiveNode(node).id, name, value) || changed;
               });
-              if (changed) refreshParameterizedGraph(node.id);
+              if (changed) refreshParameterizedGraph(resolveLiveNode(node).id);
             },
           });
           parameterEditorDisposersRef.current.push(editor.dispose);
+          record.disposers.push(editor.dispose);
           controls.appendChild(editor.element);
           }
           details.appendChild(controls);
@@ -2127,7 +2129,7 @@ export function BWJMStudio() {
             button.textContent = "↓ " + format.toUpperCase();
             button.setAttribute("aria-label", "Exportar tabla a " + format.toUpperCase());
             button.addEventListener("click", () => {
-              const live = coreRef.current?.getNodeData(node.id) as typeof tableNode ?? tableNode;
+              const live = coreRef.current?.getNodeData(resolveLiveNode(node).id) as typeof tableNode ?? tableNode;
               const data = serializeScientificTable(live.columns, live.rows, format);
               const contentType = format === "json" ? "application/json" : "text/plain";
               const blob = new Blob([data], { type: contentType + ";charset=utf-8" });
@@ -2144,7 +2146,7 @@ export function BWJMStudio() {
           copy.type = "button";
           copy.textContent = "Copiar TSV";
           copy.addEventListener("click", () => {
-            const live = coreRef.current?.getNodeData(node.id) as typeof tableNode ?? tableNode;
+            const live = coreRef.current?.getNodeData(resolveLiveNode(node).id) as typeof tableNode ?? tableNode;
             const data = serializeScientificTable(live.columns, live.rows, "tsv");
             void navigator.clipboard?.writeText(data);
           });
@@ -2487,20 +2489,8 @@ export function BWJMStudio() {
           mountSvg(cardBody, node, 720, 360);
         }
 
-        // The large global clock is removed. Insert one small transport alongside
-        // the first animated graph; existing layer checkboxes remain unchanged.
-        if (!inlinePlaybackMounted && timelines.length > 0 && supportsInlinePlayback(node)) {
-          const transport = createInlinePlayback(
-            timelines,
-            () => coreRef.current?.getVariables() ?? {},
-            (name, value) => handleVariableChange(name, value),
-          );
-          const settingsControls = cardBody.querySelector(".bwjm-graph-settings-controls");
-          if (settingsControls) settingsControls.appendChild(transport.element);
-          else cardBody.appendChild(transport.element);
-          playbackRef.current = transport;
-          inlinePlaybackMounted = true;
-        }
+        // Reattach one existing transport; do not duplicate listeners or RAF loops.
+        attachPlayback(cardBody, node);
 
         const svgRenderer = svgRenderersRef.current.get(node.id);
         if (svgRenderer) {
@@ -2516,7 +2506,7 @@ export function BWJMStudio() {
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement("a");
             anchor.href = url;
-            anchor.download = node.id + ".svg";
+            anchor.download = resolveLiveNode(node).id + ".svg";
             anchor.click();
             URL.revokeObjectURL(url);
           };
