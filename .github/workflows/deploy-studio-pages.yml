@@ -1,0 +1,59 @@
+name: Publicar BWJM Studio en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Obtener el código de main
+        uses: actions/checkout@v4
+      - name: Preparar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Compilar Studio para el prefijo de GitHub Pages
+        env:
+          BWJM_BASE_PATH: /BWJM-WEB-/
+        run: pnpm --filter @mathmd/playground run build
+      - name: Comprobar que la web publicada contiene el selector de imágenes VIS-06
+        run: |
+          test -f apps/playground/dist/index.html
+          grep -q '/BWJM-WEB-/assets/' apps/playground/dist/index.html
+          grep -R -F -q 'Seleccionar imagen local' apps/playground/dist/assets
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+      - name: Subir la web compilada
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/playground/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
