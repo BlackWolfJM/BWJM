@@ -217,9 +217,11 @@ async function graphCustomizationTest() {
   await card.locator(".bwjm-graph-settings summary").click();
   const checkbox = card.getByRole("checkbox", { name: "Velocidad" });
   await checkbox.check();
-  await page.waitForFunction(() => document.querySelector(".bwjm-code-textarea")
-    ?.value.includes("showVelocity: true"));
+  await page.waitForTimeout(850);
   const edited = await page.locator(".bwjm-code-textarea").inputValue();
+  console.log("VIS-07 Personalizar gráfica source:", edited.slice(0, 570));
+  assert(edited.includes("showVelocity: true"),
+    "Personalizar gráfica no escribió en el bloque parametric2d");
   assert(edited.startsWith("# Rangos VIS-07\n\n$$\n\\frac{1}{2} $$\n\nEste párrafo permanece."));
   assert(edited.includes("showVelocity: true"));
   assert(edited.trim().endsWith("Después."));
