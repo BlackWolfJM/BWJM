@@ -70,19 +70,19 @@ export function parseProseMarkdown(markdown: string, definitions = ""): MdastNod
   const source = definitions ? markdown + "\n\n" + definitions : markdown;
   const root = unified().use(remarkParse).use(remarkGfm).use(remarkMath)
     .parse(source) as unknown as MdastNode;
-  const definitions = new Map<string, MdastNode>();
+  const definitionNodes = new Map<string, MdastNode>();
   const visit = (node: MdastNode, callback: (node: MdastNode) => void): void => {
     callback(node);
     node.children?.forEach(child => visit(child, callback));
   };
   visit(root, node => {
     if (node.type === "definition" && node.identifier) {
-      definitions.set(node.identifier.toLowerCase(), node);
+      definitionNodes.set(node.identifier.toLowerCase(), node);
     }
   });
   visit(root, node => {
     if ((node.type === "linkReference" || node.type === "imageReference") && node.identifier) {
-      const definition = definitions.get(node.identifier.toLowerCase());
+      const definition = definitionNodes.get(node.identifier.toLowerCase());
       if (definition) {
         node.type = node.type === "linkReference" ? "link" : "image";
         node.url = definition.url;
