@@ -40,6 +40,7 @@ import { FormulaModal } from "./FormulaModal.js";
 import { ChartModal } from "./ChartModal.js";
 import { CommandPalette, CommandItem } from "./CommandPalette.js";
 import { createInlinePlayback, supportsInlinePlayback, type InlinePlaybackController } from "./inlineGraphPlayback.js";
+import { matchScientificNodes } from "./scientificMountIdentity.js";
 import { readStoredTheme, persistStudioTheme, type StudioThemeId } from "./studioThemes.js";
 import "./theme.css";
 
@@ -685,6 +686,14 @@ function renderProseText(content: string, container: HTMLElement, definitions: s
   }
 }
 
+type MountedScientificCard = {
+  node: MathMDNode;
+  card: HTMLDivElement;
+  mountKey: string;
+  disposers: Array<() => void>;
+};
+
+/** Keep mount identities separate from document tab IDs and parsed AST IDs. */
 export function BWJMStudio() {
   const {
     documents, activeId, markdown, filename, selectedTemplate, setMarkdown,
@@ -730,6 +739,12 @@ export function BWJMStudio() {
   const coreRef = useRef<MathMDCore | null>(null);
   const activeTimersRef = useRef<Map<string, number>>(new Map());
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
+  const mountedCardsRef = useRef<MountedScientificCard[]>([]);
+  const mountAliasesRef = useRef<WeakMap<MathMDNode, MountedScientificCard>>(new WeakMap());
+  const mountedDocumentRef = useRef<string | null>(null);
+  const mountedSourceRef = useRef("");
+  const nextMountKeyRef = useRef(0);
+  const svgObserverDisposersRef = useRef<Map<Element, () => void>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
   const openGraphSettingsRef = useRef<Set<string>>(new Set());
   const openCrossProductStepsRef = useRef<Set<string>>(new Set());
@@ -776,6 +791,8 @@ export function BWJMStudio() {
   };
 
   const clearRenderers = () => {
+    svgObserverDisposersRef.current.forEach(dispose => dispose());
+    svgObserverDisposersRef.current.clear();
     parameterEditorDisposersRef.current.forEach(dispose => dispose());
     parameterEditorDisposersRef.current = [];
     playbackRef.current?.dispose();
@@ -783,7 +800,14 @@ export function BWJMStudio() {
     plotlyRenderersRef.current.forEach((renderer) => renderer.destroy());
     plotlyRenderersRef.current.clear();
     svgRenderersRef.current.clear();
+    mountedCardsRef.current = [];
+    mountAliasesRef.current = new WeakMap();
+    playbackRef.current = null;
   };
+
+  /** Long-lived handlers from an existing card always use its current AST node. */
+  const resolveLiveNode = <T extends MathMDNode>(node: T): T =>
+    (mountAliasesRef.current.get(node)?.node ?? node) as T;
 
   useEffect(() => {
     return () => {
