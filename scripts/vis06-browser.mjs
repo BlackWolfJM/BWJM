@@ -96,8 +96,16 @@ async function insertPng(page, filename = "foto-vis06.png") {
   await choice.setFiles({ name: filename, mimeType: "image/png", buffer: Buffer.from(data, "base64") });
   await page.waitForFunction(name => {
     const input = document.querySelector(".bwjm-code-textarea");
-    return input?.value.includes("![" + name + "](data:image/png;base64,");
-  }, filename.replace(/\.png$/, ""));
+    return input?.value.includes("![" + name + "](data:image/png;base64,") ||
+      !!document.querySelector(".bwjm-image-notice")?.textContent;
+  }, filename.replace(/\.png$/, ""), { timeout: 10000 });
+  const notice = await page.locator(".bwjm-image-notice").allTextContents();
+  if (notice.length) {
+    const current = await page.locator(".bwjm-code-textarea").inputValue();
+    if (!current.includes("data:image/png;base64,")) {
+      throw new Error("Imagen local rechazada en el navegador: " + notice.join("; "));
+    }
+  }
   const img = page.locator('#bwjm-reader-panel img[alt="' + filename.replace(/\.png$/, "") + '"]');
   await img.waitFor();
   await img.scrollIntoViewIfNeeded();
