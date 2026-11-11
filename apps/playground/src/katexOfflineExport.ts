@@ -8,9 +8,11 @@ export function assertOfflineKaTeXCss(css: string): void {
       !css.includes("data:font/woff2;base64,")) {
     throw new Error("No se pudieron integrar las fuentes matemáticas de KaTeX.");
   }
-  if (/url\(\s*["']?(?!data:)/i.test(css) ||
-      /https?:\/\//i.test(css)) {
-    throw new Error("El CSS matemático aún necesita recursos externos.");
+  for (const match of css.matchAll(/url\(\s*([^)]*?)\s*\)/gi)) {
+    const target = match[1].trim().replace(/^["']|["']$/g, "");
+    if (!target.startsWith("data:")) {
+      throw new Error("El CSS matemático aún necesita recursos externos.");
+    }
   }
 }
 
