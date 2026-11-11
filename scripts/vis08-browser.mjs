@@ -137,6 +137,8 @@ try {
   assert(!style.includes("cdn.jsdelivr.net"), "HTML exportado conserva CDN");
   const urls = [...style.matchAll(/url\(([^)]+)\)/g)].map(match => match[1].replace(/^["']|["']$/g, ""));
   assert(urls.length >= 15, "No se encontraron suficientes fuentes WOFF2");
+  assert((style.match(/@font-face/g) ?? []).length >= 15,
+    "El CSS minificado perdió reglas @font-face");
   assert(urls.every(value => value.startsWith("data:font/woff2;base64,")),
     "Alguna fuente sigue dependiendo de URL externa");
   assert(html.includes("<msqrt>") && html.includes("<mfrac>") && html.includes("<mtable "),
