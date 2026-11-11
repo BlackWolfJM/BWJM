@@ -25,19 +25,25 @@ function katexOfflineExportPlugin(): Plugin {
       if (id !== resolvedKatexId) return null;
       const cssFile = require.resolve("katex/dist/katex.min.css");
       let fontCount = 0;
+      // The minified KaTeX CSS deliberately omits the final semicolon
+      // inside each @font-face. Match each rule separately, never across
+      // its closing brace (that would erase every font except the last).
       const css = readFileSync(cssFile, "utf8").replace(
-        /src\s*:\s*([^;]+);/g,
-        (declaration, sources: string) => {
-          const woff2 = sources.match(/url\(["']?([^)"']+\.woff2)["']?\)/);
-          if (!woff2) return declaration;
+        /@font-face\\s*\\{([^}]*)\\}/g,
+        (rule, declarations: string) => {
+          const src = /src\\s*:\\s*([^;]+)(?=;|$)/.exec(declarations);
+          if (!src) return rule;
+          const woff2 = src[1].match(/url\\(["']?([^)"']+\\.woff2)["']?\\)/);
+          if (!woff2) return rule;
           const relative = woff2[1];
-          if (!/^fonts\/[a-zA-Z0-9_-]+\.woff2$/.test(relative)) {
+          if (!/^fonts\\/[a-zA-Z0-9_-]+\\.woff2$/.test(relative)) {
             throw new Error("Ruta de fuente KaTeX inesperada: " + relative);
           }
           const bytes = readFileSync(path.resolve(path.dirname(cssFile), relative));
           fontCount++;
-          return 'src:url("data:font/woff2;base64,' +
-            bytes.toString("base64") + '") format("woff2");';
+          const embedded = 'src:url("data:font/woff2;base64,' +
+            bytes.toString("base64") + '") format("woff2")';
+          return "@font-face{" + declarations.replace(src[0], embedded) + "}";
         },
       );
       if (fontCount < 15 || /url\((?!["']?data:)/.test(css)) {
