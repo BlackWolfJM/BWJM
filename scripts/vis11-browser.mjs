@@ -167,7 +167,7 @@ try {
   await checkbox.press("Space");
   await page.waitForFunction(() =>
     document.querySelector(".bwjm-code-textarea")?.value.includes("showLegend: true"));
-  assert(await checkbox.isFocused(), "El cambio por teclado eliminó el foco");
+  assert(await checkbox.evaluate(input => document.activeElement === input), "El cambio por teclado eliminó el foco");
   await refs(page);
   assert.equal(await card(page, "curve3d").getAttribute("data-mount-key"), key);
   const vectors = curve.getByRole("checkbox", { name: "Vectores velocidad y aceleración" });
