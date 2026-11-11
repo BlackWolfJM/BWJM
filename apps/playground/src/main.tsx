@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { parseMathMD, parseProseMarkdown, collectMarkdownDefinitions } from "@mathmd/parser";
+import { isSafeEmbeddedRasterUrl, MAX_LOCAL_IMAGE_BYTES, portableImageMarkdown, validateLocalRaster } from "./localImages.js";
+import type { DocumentInsertSnapshot } from "./workspaceDocuments.js";
 import type { MdastNode } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
 import { SVGRenderer } from "@mathmd/renderer-svg";
@@ -595,7 +597,9 @@ function appendMarkdownNode(parent: HTMLElement, node: MdastNode, source: string
       const wrapper = document.createElement("span");
       wrapper.className = "bwjm-markdown-image";
       const description = node.alt || "Imagen";
-      const src = safeMarkdownUrl(node.url);
+      const src = node.url?.startsWith("data:")
+        ? (isSafeEmbeddedRasterUrl(node.url) ? node.url : null)
+        : safeMarkdownUrl(node.url);
       if (src) {
         const img = document.createElement("img");
         img.alt = node.alt ?? "";
@@ -684,6 +688,7 @@ export function BWJMStudio() {
   const {
     documents, activeId, markdown, filename, selectedTemplate, setMarkdown,
     openDocument, createDocument, selectDocument, closeDocument, markSaved, renameDocument,
+    insertAtDocumentSnapshot,
   } = useDocumentWorkspace(SAMPLE_LESSONS.riemann.filename, SAMPLE_LESSONS.riemann.content, "riemann");
   const compactWorkspace = useSyncExternalStore(subscribeToCompactWorkspace, isCompactWorkspace);
   const [desktopView, setDesktopView] = useState<ViewMode>("split");
@@ -714,6 +719,7 @@ export function BWJMStudio() {
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState<boolean>(false);
   const [isChartModalOpen, setIsChartModalOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [imageMessage, setImageMessage] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -730,6 +736,8 @@ export function BWJMStudio() {
   const playbackRef = useRef<InlinePlaybackController | null>(null);
   const liveAnalysisRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const imageFileInputRef = useRef<HTMLInputElement | null>(null);
+  const imageDestinationRef = useRef<DocumentInsertSnapshot | null>(null);
 
   useEffect(() => {
     if (compactSidebarVisible) {
@@ -851,6 +859,84 @@ export function BWJMStudio() {
     e.target.value = "";
   };
 
+  /** Validate both the file signature and browser decoding before embedding any bytes. */
+  const readLocalImageData = async (file: File): Promise<string> => {
+    if (file.size > MAX_LOCAL_IMAGE_BYTES) {
+      throw new Error("La imagen supera 3 MiB. Comprímela antes de insertarla.");
+    }
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const mime = validateLocalRaster(bytes, file.name, file.type);
+    const blob = new Blob([bytes], { type: mime });
+    try {
+      if (typeof window.createImageBitmap === "function") {
+        const bitmap = await window.createImageBitmap(blob);
+        bitmap.close();
+      } else {
+        await new Promise<void>((resolve, reject) => {
+          const url = URL.createObjectURL(blob);
+          const image = new Image();
+          image.onload = () => { URL.revokeObjectURL(url); resolve(); };
+          image.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error("La imagen está corrupta o no se puede decodificar."));
+          };
+          image.src = url;
+        });
+      }
+    } catch {
+      throw new Error("La imagen está corrupta o no se puede decodificar.");
+    }
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => typeof reader.result === "string"
+        ? resolve(reader.result) : reject(new Error("La lectura de la imagen no produjo datos."));
+      reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
+      reader.onabort = () => reject(new Error("La lectura de la imagen fue cancelada."));
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const pickLocalImage = (): void => {
+    const input = imageFileInputRef.current;
+    if (!input) return;
+    const textarea = textareaRef.current;
+    const start = viewMode === "reader"
+      ? markdown.length : Math.min(textarea?.selectionStart ?? markdown.length, markdown.length);
+    const end = viewMode === "reader"
+      ? markdown.length : Math.min(textarea?.selectionEnd ?? start, markdown.length);
+    // The picker and FileReader are asynchronous. Never infer destination from the
+    // active tab once the dialog is closed.
+    imageDestinationRef.current = { documentId: activeId, content: markdown, start, end };
+    setImageMessage(null);
+    input.value = ""; // selecting the same file again must fire a change event
+    input.click();
+  };
+
+  const handleImageFile = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0];
+    const target = imageDestinationRef.current;
+    imageDestinationRef.current = null;
+    event.target.value = "";
+    if (!file || !target) return; // Cancel never changes the document.
+    try {
+      const dataUrl = await readLocalImageData(file);
+      const markup = portableImageMarkdown(file.name, dataUrl);
+      const status = insertAtDocumentSnapshot(target, markup);
+      if (status === "inserted") {
+        setImageMessage("Imagen integrada en el documento original. Guárdalo para conservarla sin el archivo de origen.");
+        if (compactWorkspace && activeId === target.documentId) setViewMode("editor");
+      } else if (status === "too-large") {
+        setImageMessage("El documento superaría el límite de 12 MiB. Reduce la imagen o utiliza un documento más pequeño.");
+      } else if (status === "edited") {
+        setImageMessage("El documento se editó durante la lectura. No se insertó la imagen y se conservaron todos los cambios; inténtalo de nuevo.");
+      } else {
+        setImageMessage("La pestaña de destino se cerró o ya no admite la posición original. No se modificó ningún documento.");
+      }
+    } catch (error) {
+      setImageMessage(error instanceof Error ? error.message : "No se pudo insertar la imagen.");
+    }
+  };
+
   const handleNewDocument = () => createDocument();
 
   const handleExportHtml = () => {
@@ -951,7 +1037,7 @@ export function BWJMStudio() {
       case "table":
         insertAtCursor("\n\n| Columna 1 | Columna 2 |\n|---|---|\n| Dato 1 | Dato 2 |\n\n");
         break;
-      case "picture": insertAtCursor("\n\n![Descripción de la imagen](ruta-a-la-imagen.png)\n\n"); break;
+      case "picture": pickLocalImage(); break;
       case "equation": insertAtCursor("\n$\n\\int_0^1 f(x)\\,dx\n$\n"); break;
       case "inline-math": insertAtCursor("$", "$"); break;
       case "matrix": insertAtCursor("\n$\n\\begin{bmatrix}a & b \\\\ c & d\\end{bmatrix}\n$\n"); break;
@@ -2650,6 +2736,15 @@ export function BWJMStudio() {
         style={{ display: "none" }}
         onChange={handleOpenFile}
       />
+      <input
+        ref={imageFileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+        aria-label="Seleccionar imagen local"
+        style={{ display: "none" }}
+        onChange={handleImageFile}
+        onCancel={() => { imageDestinationRef.current = null; }}
+      />
 
       <header className="bwjm-studio-header">
         <div className="bwjm-studio-brand">
@@ -2673,6 +2768,7 @@ export function BWJMStudio() {
       <Ribbon activeView={viewMode} compactWorkspace={compactWorkspace} onAction={handleRibbonAction}
         theme={theme} onThemeChange={setTheme}
         collapsed={isRibbonCollapsed} onCollapseChange={setIsRibbonCollapsed}/>
+      {imageMessage && <div className="bwjm-image-notice" role="status">{imageMessage}</div>}
 
       {compactWorkspace && (
         <div ref={compactViewRef} className="bwjm-compact-view" role="group" aria-label="Vista del documento">
