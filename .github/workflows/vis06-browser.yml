@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - codex/vis-06-markdown-lector
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/playground/src/**
+      - apps/playground/__tests__/vis06-local-images.test.ts
+      - scripts/vis06-browser.mjs
+      - .github/workflows/vis06-browser.yml
   workflow_dispatch:
 
 jobs:
