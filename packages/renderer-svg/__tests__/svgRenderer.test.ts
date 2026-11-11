@@ -91,6 +91,30 @@ describe('SVGRenderer', () => {
     expect(lines).toHaveLength(1);
   });
 
+  it('keeps ticks legible after redrawing in a narrow panel', () => {
+    const container = createMockElement('div');
+    const renderer = new SVGRenderer(container as unknown as HTMLElement, 720, 360);
+    const plot = {
+      id: 'narrow-plot', range, type: 'plot2d', equation: 'x-1', domain: [0, 2],
+      points: [[0, -1], [1, 0], [2, 1]], grid: false,
+    } as const;
+    renderer.resize(220, 240);
+    renderer.render(plot as never);
+
+    const svg = renderer.getElement() as unknown as MockElement;
+    const nodes = allDescendants(svg);
+    const xAxis = nodes.find(element =>
+      element.tagName === 'line' && element.attributes.y1 === element.attributes.y2 &&
+      element.attributes.x1 !== element.attributes.x2,
+    )!;
+    const xLabels = nodes.filter(element =>
+      element.tagName === 'text' && Number(element.attributes.y) === Number(xAxis.attributes.y1) - 10,
+    );
+    expect(svg.attributes.viewBox).toBe('0 0 220 240');
+    expect(xLabels).toHaveLength(3);
+    expect(xLabels.map(label => label.attributes['text-anchor'])).toEqual(['start', 'middle', 'end']);
+  });
+
   it('renders contour line segments from sampled surface data', () => {
     const container = createMockElement('div');
     const renderer = new SVGRenderer(container as unknown as HTMLElement, 300, 200);

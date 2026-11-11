@@ -47,4 +47,14 @@ describe("vector study numeric engine — lote 01", () => {
     expect(() => run("scale",{factor:Infinity})).toThrow(/finito/);
     expect(() => run("sum",{vector:[Number.NaN,2]})).toThrow(/finitos/);
   });
+  it("compares negative, zero and positive products of the actual vector", () => {
+    const data = run("scale", { vector: [0, 3, 4], origin: [0, 0, 0] });
+    expect(data.steps.slice(1).map(step => step.expression)).toEqual([
+      "⟨0, -3, -4⟩ · norma 5",
+      "⟨0, 0, 0⟩ · norma 0",
+      "⟨0, 3, 4⟩ · norma 5",
+    ]);
+    expect(run("scale", { vector: [0, 0], factor: -2 }).explanation)
+      .toContain("no tiene dirección ni sentido");
+  });
 });

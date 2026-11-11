@@ -1,0 +1,16 @@
+# Verificación algebraica de perpendicularidad y casos colineales (T010 - MED-03.05-C)
+
+En $\mathbb{R}^3$, el vector normal resultante $\mathbf{n} = \mathbf{u} \times \mathbf{v}$ satisface simultáneamente las ecuaciones de perpendicularidad mediante el producto escalar:
+$$\mathbf{u} \cdot \mathbf{n} = 0 \quad \text{y} \quad \mathbf{v} \cdot \mathbf{n} = 0$$
+
+```crossproduct
+id: cross-perp-check
+u: [2, 3, 1]
+v: [4, 1, 5]
+showSteps: true
+showPlane: true
+showNormal: true
+```
+
+Si los vectores son colineales (por ejemplo $\mathbf{u} = (1, 2, 3)$ y $\mathbf{v} = (2, 4, 6)$) o alguno es nulo, el producto cruz se anula ($\mathbf{u} \times \mathbf{v} = \mathbf{0}$) y el informe didáctico desglosa que no existe una normal única determinada por esos vectores.
+

@@ -1,0 +1,17 @@
+# Regla de la mano derecha · T005 MED-03.03-V
+
+La regla de la mano derecha establece que al cerrar los dedos desde el vector u
+hacia el vector v sobre el plano generado, el pulgar extendido apunta en la
+dirección de la normal resultante u × v. Esta orientación es intrínseca y no
+depende de la posición de la cámara.
+
+```crossproduct
+id: cross-rh
+u: [1, 0, 0]
+v: [0, 1, 0]
+showRightHand: true
+```
+
+En **Personalizar gráfica**, activa **Invertir orden** y observa cómo el arco
+de giro cambia hacia v → u y el pulgar se invierte apuntando en la dirección
+opuesta (−z), comprobando la propiedad anticonmutativa del producto cruz.

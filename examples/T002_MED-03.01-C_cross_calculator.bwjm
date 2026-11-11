@@ -1,0 +1,16 @@
+# Calculadora de producto cruz · T002 MED-03.01-C
+
+Expande **Ver procedimiento** para seguir el cálculo y comprobar la
+perpendicularidad. En **Personalizar gráfica**, usa **Invertir orden** y
+observa cómo cambia el signo de la normal. También puedes editar o arrastrar
+los vectores mientras el procedimiento se actualiza.
+
+```crossproduct
+id: cross-calc
+u: [2, 1, 3]
+v: [1, 4, -2]
+showSteps: true
+reverseOrder: false
+```
+
+Prueba un múltiplo de uno de los vectores para obtener un producto nulo.

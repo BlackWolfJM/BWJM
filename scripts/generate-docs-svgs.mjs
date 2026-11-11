@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const outDir = 'e:/mathmd/docs/images';
+const outDir = fileURLToPath(new URL('../docs/images/', import.meta.url));
 if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }

@@ -1,0 +1,15 @@
+# Determinante por i, j, k · T003 MED-03.02-V
+
+La primera fila muestra los vectores de la base canónica. Las dos filas
+numéricas siguen el orden del producto cruz. Cada color vincula un eje con
+su coeficiente firmado.
+
+```crossproduct
+id: cross-det
+u: [1, 0, 0]
+v: [0, 1, 0]
+showDeterminant: true
+```
+
+En **Personalizar gráfica**, edita los vectores o invierte su orden y
+observa cómo se actualizan las filas, los coeficientes y la normal.

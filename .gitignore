@@ -41,10 +41,18 @@ ESTADO_IMPLEMENTACION_*.md
 MEJORAS_BWJM.md
 REVISION_*.md
 
+# Local planning kits and prompts
+/PROMPT_*.md
+/BWJM_Kit_*/
+/BWJM_Kit_*.zip
+/BWJM_Todas_las_Tareas_*.md
+/docs/requirements/
+
 # Environment and logs
 *.log
 .env
-.env.*.local
+.env.*
+!.env.example
 .eslintcache
 acl-recovery/
 

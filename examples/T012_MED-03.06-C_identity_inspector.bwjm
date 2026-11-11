@@ -1,0 +1,26 @@
+# Inspector de identidades algebraicas del producto cruz con pruebas guiadas (T012 - MED-03.06-C)
+
+En $\mathbb{R}^3$, el producto vectorial satisface identidades estructurales fundamentales que lo diferencian completamente del producto escalar:
+
+1. **Anticonmutatividad**: $\mathbf{u} \times \mathbf{v} = -(\mathbf{v} \times \mathbf{u})$ (mientras que $\mathbf{u} \cdot \mathbf{v} = \mathbf{v} \cdot \mathbf{u}$).
+2. **Autoproducto / Nilpotencia**: $\mathbf{u} \times \mathbf{u} = \mathbf{0}$ (mientras que $\mathbf{u} \cdot \mathbf{u} = \|\mathbf{u}\|^2$).
+3. **Homogeneidad escalar**: $(c\mathbf{u}) \times \mathbf{v} = c(\mathbf{u} \times \mathbf{v})$.
+4. **Distributividad sobre suma vectorial**: $\mathbf{u} \times (\mathbf{v} + \mathbf{w}) = (\mathbf{u} \times \mathbf{v}) + (\mathbf{u} \times \mathbf{w})$.
+
+```crossproduct
+id: cross-identity-inspector-demo
+u: [1, 2, 0]
+v: [0, 3, 1]
+w: [1, 0, 2]
+showPlane: true
+showNormal: true
+showSteps: true
+showIdentities: true
+showAnticommutative: true
+showDistributive: true
+labelU: u
+labelV: v
+labelW: w
+```
+
+Al abrir el procedimiento paso a paso, la tarjeta didáctica `.bwjm-cross-identities-card` despliega la demostración analítica de cada identidad, evaluando las expresiones simbólicas de ambos lados y comprobando que el residuo algebraico se anula a cero.

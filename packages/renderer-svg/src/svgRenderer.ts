@@ -548,8 +548,10 @@ export class SVGRenderer {
       }
       if (!segment.dashed) {
         const label=document.createElementNS("http://www.w3.org/2000/svg","text");
-        label.setAttribute("x",String(bx+5));
-        label.setAttribute("y",String(by-7));
+        const labelOnLeft = bx > this.width / 2;
+        label.setAttribute("x", String(bx + (labelOnLeft ? -5 : 5)));
+        label.setAttribute("y", String(by - 7));
+        label.setAttribute("text-anchor", labelOnLeft ? "end" : "start");
         label.setAttribute("fill",color);
         label.setAttribute("font-size","12");
         label.textContent=segment.label;
@@ -794,55 +796,54 @@ export class SVGRenderer {
       this.svgElement.appendChild(yAxis);
     }
     
-    // Add tick marks and labels
-    const tickCount = 5;
-    for (let i = 0; i <= tickCount; i++) {
-      // X ticks
-      const x = xMin + (xMax - xMin) * (i / tickCount);
-      if (0 >= yMin && 0 <= yMax) {
+    if (0 >= yMin && 0 <= yMax) {
+      const xIntervals = Math.min(5, Math.max(1, Math.floor((transform.x(xMax) - transform.x(xMin)) / 72)));
+      const labelY = xAxisY < 28 ? xAxisY + 17 : xAxisY - 10;
+      for (let i = 0; i <= xIntervals; i++) {
+        const x = xMin + (xMax - xMin) * (i / xIntervals);
         const xPos = transform.x(x);
-        const tickSize = 6;
-        
         const tickLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
         tickLine.setAttribute("x1", xPos.toString());
-        tickLine.setAttribute("y1", (xAxisY - tickSize/2).toString());
+        tickLine.setAttribute("y1", (xAxisY - 3).toString());
         tickLine.setAttribute("x2", xPos.toString());
-        tickLine.setAttribute("y2", (xAxisY + tickSize/2).toString());
+        tickLine.setAttribute("y2", (xAxisY + 3).toString());
         tickLine.setAttribute("class", "axis");
         this.svgElement.appendChild(tickLine);
-        
-        if (Math.abs(x) > 1e-6) { // Avoid labeling 0 if it's crowded
+
+        if (Math.abs(x) > 1e-6) {
           const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
           text.setAttribute("class", "label");
           text.setAttribute("x", xPos.toString());
-          text.setAttribute("y", (xAxisY - 10).toString());
-          text.setAttribute("text-anchor", "middle");
-          text.textContent = x.toFixed(2);
+          text.setAttribute("y", labelY.toString());
+          text.setAttribute("text-anchor", i === 0 ? "start" : i === xIntervals ? "end" : "middle");
+          text.textContent = Math.abs(x) >= 1e4 ? x.toExponential(1) : x.toFixed(2);
           this.svgElement.appendChild(text);
         }
       }
-      
-      // Y ticks
-      const y = yMin + (yMax - yMin) * (i / tickCount);
-      if (0 >= xMin && 0 <= xMax) {
+    }
+
+    if (0 >= xMin && 0 <= xMax) {
+      const yIntervals = Math.min(5, Math.max(1, Math.floor((transform.y(yMin) - transform.y(yMax)) / 32)));
+      const labelOnRight = yAxisX < 60;
+      const labelX = yAxisX + (labelOnRight ? 10 : -10);
+      for (let i = 0; i <= yIntervals; i++) {
+        const y = yMin + (yMax - yMin) * (i / yIntervals);
         const yPos = transform.y(y);
-        const tickSize = 6;
-        
         const tickLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        tickLine.setAttribute("x1", (yAxisX - tickSize/2).toString());
+        tickLine.setAttribute("x1", (yAxisX - 3).toString());
         tickLine.setAttribute("y1", yPos.toString());
-        tickLine.setAttribute("x2", (yAxisX + tickSize/2).toString());
+        tickLine.setAttribute("x2", (yAxisX + 3).toString());
         tickLine.setAttribute("y2", yPos.toString());
         tickLine.setAttribute("class", "axis");
         this.svgElement.appendChild(tickLine);
-        
-        if (Math.abs(y) > 1e-6) { // Avoid labeling 0 if it's crowded
+
+        if (Math.abs(y) > 1e-6) {
           const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
           text.setAttribute("class", "label");
-          text.setAttribute("x", (yAxisX - 10).toString());
+          text.setAttribute("x", labelX.toString());
           text.setAttribute("y", yPos.toString());
-          text.setAttribute("text-anchor", "end");
-          text.textContent = y.toFixed(2);
+          text.setAttribute("text-anchor", labelOnRight ? "start" : "end");
+          text.textContent = Math.abs(y) >= 1e4 ? y.toExponential(1) : y.toFixed(2);
           this.svgElement.appendChild(text);
         }
       }

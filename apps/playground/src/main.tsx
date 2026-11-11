@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, ChangeEvent } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { parseMathMD } from "@mathmd/parser";
 import { MathMDCore } from "@mathmd/core";
@@ -11,6 +11,9 @@ import {
   computeRevolutionVolume,
   computeCrossSection,
   computeKinematics,
+  computeCrossProductScene,
+  computeCrossProductStudy,
+  describeCrossProductDeterminant,
   sampleVectorField2D,
   expressionToLatex,
   serializeScientificTable,
@@ -21,10 +24,11 @@ import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
 import { createAdaptiveParameterEditor } from "./AdaptiveParameterEditor.js";
+import { createCrossProductDeterminant, createCrossProductEditor, createCrossProductReport } from "./CrossProductEditor.js";
 import {
   supportsAdaptiveParameters, writeGraphParameterControls,
 } from "./adaptiveGraphParameters.js";
-import { updateGraphOption, updateGraphNumericOption } from "./graphOptionSource.js";
+import { updateCrossProductVector, updateGraphOption, updateGraphNumericOption } from "./graphOptionSource.js";
 import { DocumentSearch, type TextMatch } from "./DocumentSearch.js";
 import { useDocumentWorkspace } from "./workspaceDocuments.js";
 import { IconAtom, IconCheck } from "./icons.js";
@@ -391,6 +395,17 @@ color: "#0284c7"
 };
 
 type ViewMode = "editor" | "split" | "reader";
+const compactWorkspaceQuery = "(max-width: 960px)";
+
+function subscribeToCompactWorkspace(listener: () => void): () => void {
+  const query = window.matchMedia(compactWorkspaceQuery);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+
+function isCompactWorkspace(): boolean {
+  return window.matchMedia(compactWorkspaceQuery).matches;
+}
 
 interface DocumentSegment {
   kind: "prose" | "mathmd" | "diagnostic";
@@ -487,6 +502,16 @@ function extractOutline(source: string): OutlineItem[] {
   return items;
 }
 
+function appendDisplayMath(container: HTMLElement, tex: string): void {
+  const formula = document.createElement("div");
+  formula.className = "math-display-box";
+  formula.tabIndex = 0;
+  formula.setAttribute("role", "region");
+  formula.setAttribute("aria-label", "Fórmula");
+  formula.innerHTML = renderMathToString(tex, true);
+  container.appendChild(formula);
+}
+
 function renderProseText(content: string, container: HTMLElement): void {
   const lines = content.split("\n");
   let inMathBlock = false;
@@ -519,20 +544,14 @@ function renderProseText(content: string, container: HTMLElement): void {
 
     if (line.trim().startsWith("$$")) {
       if (inMathBlock) {
-        const mathDiv = document.createElement("div");
-        mathDiv.className = "math-display-box";
-        mathDiv.innerHTML = renderMathToString(mathBuffer.join(" "), true);
-        container.appendChild(mathDiv);
+        appendDisplayMath(container, mathBuffer.join(" "));
         mathBuffer = [];
         inMathBlock = false;
       } else {
         inMathBlock = true;
         const remaining = line.trim().slice(2).trim();
         if (remaining.endsWith("$$") && remaining.length > 2) {
-          const mathDiv = document.createElement("div");
-          mathDiv.className = "math-display-box";
-          mathDiv.innerHTML = renderMathToString(remaining.slice(0, -2).trim(), true);
-          container.appendChild(mathDiv);
+          appendDisplayMath(container, remaining.slice(0, -2).trim());
           inMathBlock = false;
         } else if (remaining.length > 0) {
           mathBuffer.push(remaining);
@@ -576,14 +595,30 @@ export function BWJMStudio() {
     documents, activeId, markdown, filename, selectedTemplate, setMarkdown,
     openDocument, createDocument, selectDocument, closeDocument, markSaved, renameDocument,
   } = useDocumentWorkspace(SAMPLE_LESSONS.riemann.filename, SAMPLE_LESSONS.riemann.content, "riemann");
-  const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const compactWorkspace = useSyncExternalStore(subscribeToCompactWorkspace, isCompactWorkspace);
+  const [desktopView, setDesktopView] = useState<ViewMode>("split");
+  const [compactView, setCompactView] = useState<Exclude<ViewMode, "split">>("reader");
+  const viewMode = compactWorkspace ? compactView : desktopView;
 
   const [sliceX] = useState<number>(0.5);
   const [theme, setTheme] = useState<StudioThemeId>(readStoredTheme);
   // Appearance is a Studio preference, not a property of the scientific document.
   useEffect(() => { persistStudioTheme(theme); }, [theme]);
 
-  const [isSidebarLeftOpen, setIsSidebarLeftOpen] = useState<boolean>(true);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [compactSidebarOpen, setCompactSidebarOpen] = useState(false);
+  const [isSidebarLeftOpen, setIsSidebarLeftOpen] = compactWorkspace
+    ? [compactSidebarOpen, setCompactSidebarOpen]
+    : [desktopSidebarOpen, setDesktopSidebarOpen];
+  const compactSidebarVisible = compactWorkspace && compactSidebarOpen;
+  const setViewMode = (mode: ViewMode) => {
+    if (!compactWorkspace) {
+      setDesktopView(mode);
+    } else if (mode !== "split") {
+      setCompactView(mode);
+      setCompactSidebarOpen(false);
+    }
+  };
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("outline");
   const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(false);
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState<boolean>(false);
@@ -593,15 +628,31 @@ export function BWJMStudio() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const workspaceLayoutRef = useRef<HTMLDivElement>(null);
+  const compactViewRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<MathMDCore | null>(null);
   const activeTimersRef = useRef<Map<string, number>>(new Map());
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
   const openGraphSettingsRef = useRef<Set<string>>(new Set());
+  const openCrossProductStepsRef = useRef<Set<string>>(new Set());
   const parameterEditorDisposersRef = useRef<Array<() => void>>([]);
   const playbackRef = useRef<InlinePlaybackController | null>(null);
   const liveAnalysisRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (compactSidebarVisible) {
+      workspaceLayoutRef.current?.querySelector<HTMLButtonElement>(".bwjm-sidebar-close")?.focus();
+    }
+  }, [compactSidebarVisible]);
+
+  const closeSidebar = () => {
+    setIsSidebarLeftOpen(false);
+    if (compactWorkspace) {
+      compactViewRef.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')?.focus();
+    }
+  };
 
   const doc = useMemo(() => parseMathMD(markdown), [markdown]);
   const outline = useMemo(() => extractOutline(markdown), [markdown]);
@@ -652,6 +703,7 @@ export function BWJMStudio() {
     const replacement = prefix + selected + suffix;
     const next = markdown.substring(0, start) + replacement + markdown.substring(end);
     setMarkdown(next);
+    if (compactWorkspace) setViewMode("editor");
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
@@ -722,11 +774,13 @@ export function BWJMStudio() {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b1120; color: #0f172a; padding: 2rem; display: flex; justify-content: center; }
-    .bwjm-sheet { background: #ffffff; max-width: 860px; width: 100%; padding: 3rem; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .bwjm-sheet { box-sizing: border-box; background: #ffffff; max-width: 860px; width: 100%; min-width: 0; padding: clamp(1rem, 5vw, 3rem); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
     h1 { font-size: 2rem; font-weight: 800; color: #0f172a; margin-bottom: 1.5rem; }
     h2 { font-size: 1.4rem; font-weight: 700; color: #1e293b; margin: 2rem 0 1rem; }
     p { font-size: 1.05rem; line-height: 1.7; color: #334155; margin-bottom: 1rem; }
-    .math-display-box { text-align: center; margin: 1.5rem 0; padding: 1rem; background: #f8fafc; border-radius: 6px; }
+    .math-display-box { display: flex; overflow-x: auto; margin: 1.5rem 0; padding: 1rem; background: #f8fafc; border-radius: 6px; }
+    .math-display-box > * { flex: none; margin-inline: auto; }
+    .bwjm-svg-plot > svg { display: block; max-inline-size: 100%; block-size: auto; }
   </style>
 </head>
 <body>
@@ -752,8 +806,16 @@ export function BWJMStudio() {
       for (let i = 0; i < item.lineNumber - 1 && i < lines.length; i++) {
         charIndex += lines[i].length + 1;
       }
-      textarea.focus();
-      textarea.setSelectionRange(charIndex, charIndex + (lines[item.lineNumber - 1]?.length || 0));
+      const selectHeading = () => {
+        textarea.focus();
+        textarea.setSelectionRange(charIndex, charIndex + (lines[item.lineNumber - 1]?.length ?? 0));
+      };
+      if (compactWorkspace) {
+        setViewMode("editor");
+        window.requestAnimationFrame(selectHeading);
+      } else {
+        selectHeading();
+      }
     }
   };
 
@@ -765,7 +827,8 @@ export function BWJMStudio() {
   };
 
   const handleSearchLocate = ({ start, end }: TextMatch) => {
-    if (viewMode === "reader") setViewMode("split");
+    if (compactWorkspace) setViewMode("editor");
+    else if (viewMode === "reader") setViewMode("split");
     window.requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (!textarea) return;
@@ -993,6 +1056,44 @@ export function BWJMStudio() {
     const segments = parseDocumentSegments(markdown, doc.children, doc.diagnostics);
     let inlinePlaybackMounted = false;
 
+    const svgSizeHandlers = new Map<Element, (width: number) => void>();
+    const pendingSvgSizes = new Map<Element, number>();
+    let svgResizeFrame: number | undefined;
+    const svgResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(entries => {
+      for (const entry of entries) pendingSvgSizes.set(entry.target, entry.contentRect.width);
+      if (svgResizeFrame !== undefined) return;
+      svgResizeFrame = window.requestAnimationFrame(() => {
+        svgResizeFrame = undefined;
+        pendingSvgSizes.forEach((width, element) => svgSizeHandlers.get(element)?.(width));
+        pendingSvgSizes.clear();
+      });
+    });
+
+    const mountSvg = (
+      parent: HTMLElement, node: MathMDNode, width: number, height: number,
+      initialData = coreRef.current?.getNodeData(node.id) ?? node,
+    ) => {
+      const mount = document.createElement("div");
+      mount.id = "mount-" + node.id;
+      mount.className = "bwjm-svg-plot";
+      parent.appendChild(mount);
+
+      const renderer = new SVGRenderer(mount, width, height);
+      svgRenderersRef.current.set(node.id, renderer);
+      renderer.render(initialData);
+
+      let renderedWidth = width;
+      svgSizeHandlers.set(mount, availableWidth => {
+        const nextWidth = Math.min(width, Math.floor(availableWidth));
+        if (nextWidth <= 0 || nextWidth === renderedWidth) return;
+        renderedWidth = nextWidth;
+        const nextHeight = Math.max(240, Math.round(nextWidth * height / width));
+        renderer.resize(nextWidth, nextHeight);
+        renderer.render(coreRef.current?.getNodeData(node.id) ?? initialData);
+      });
+      svgResizeObserver?.observe(mount);
+    };
+
     /** Recompute only the affected chart, not the editor or all other graphs. */
     const refreshParameterizedGraph = (id: string): void => {
       const engine = coreRef.current;
@@ -1093,9 +1194,26 @@ export function BWJMStudio() {
 
         const cardBody = document.createElement("div");
         cardBody.className = "bwjm-node-body";
+        const crossStepsKey = activeId + ":" + node.range.start.offset;
+        const crossReport = node.type === "crossproduct" && node.showSteps !== undefined
+          ? createCrossProductReport(
+              node.showSteps,
+              openCrossProductStepsRef.current.has(crossStepsKey),
+              open => {
+                if (open) openCrossProductStepsRef.current.add(crossStepsKey);
+                else openCrossProductStepsRef.current.delete(crossStepsKey);
+              },
+              () => {
+                setMarkdown(previous => updateGraphOption(
+                  previous, node.range, node.type, "reverseOrder", !node.reverseOrder));
+              },
+            ) : undefined;
+        const determinant = node.type === "crossproduct" && node.showDeterminant
+          ? createCrossProductDeterminant() : undefined;
 
         // Graph settings persist in the selected code fence, avoiding transient-only UI state.
-        if (supportsAdaptiveParameters(node) ||
+        if (supportsAdaptiveParameters(node) || node.type === "crossproduct" ||
+          node.type === "line3d" || node.type === "plane3d" ||
           ((node.type === "vector2d" || node.type === "vector3d") && Boolean(node.mode))) {
           const options: Array<[string, string]> = node.type === "curve3d" ? [
             ["animated", "Animar partícula"],
@@ -1115,6 +1233,31 @@ export function BWJMStudio() {
             ["showTangent", "Tangente"],
             ["showNormal", "Normal"],
             ["followParticle", "Seguir partícula"],
+          ] : node.type === "crossproduct" ? [
+            ["showPlane", "Plano generado"],
+            ["showNormal", "Normal orientada"],
+            ["showArea", "Área del paralelogramo"],
+            ["showTriangle", "Triángulo sombreado (1/2 |u×v|)"],
+            ["showVolume", "Volumen paralelepípedo (u·(v×w))"],
+            ["showCollapse", "Animar colapso paralelepípedo"],
+            ["showSignChallenge", "Desafío visual de signos"],
+            ["showSteps", "Mostrar procedimiento matemático"],
+            ["reverseOrder", "Invertir orden"],
+            ["showDeterminant", "Mostrar determinante i, j, k"],
+            ["showRightHand", "Regla de la mano derecha"],
+            ["showAnticommutative", "Superponer normal opuesta (anticonmutatividad)"],
+            ["showDistributive", "Distribución sobre suma u × (v + w)"],
+            ["showIdentities", "Inspector de identidades guiadas"],
+          ] : node.type === "line3d" ? [
+            ["showPoint", "Mostrar punto P"],
+            ["showDirection", "Mostrar vector director v"],
+            ["showSegment", "Mostrar segmento"],
+            ["showSteps", "Mostrar procedimiento matemático"],
+          ] : node.type === "plane3d" ? [
+            ["showPoint", "Mostrar punto P"],
+            ["showNormal", "Mostrar normal n"],
+            ["showIntercepts", "Mostrar interceptos ejes"],
+            ["showSteps", "Mostrar procedimiento matemático"],
           ] : (node.type === "vector2d" || node.type === "vector3d") ? [
             ["showSteps", "Mostrar procedimiento matemático"],
           ] : [];
@@ -1132,13 +1275,15 @@ export function BWJMStudio() {
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             const configured = (node as unknown as Record<string, unknown>)[key];
-            checkbox.checked = key === "showSteps" ? configured !== false :
-              key === "animated" && node.type === "parametric2d"
-                ? configured !== false : configured === true;
+            const defaultOn = node.type === "crossproduct" ? ["showPlane", "showNormal", "showArea"].includes(key) :
+              key === "showSteps" || (key === "animated" && node.type === "parametric2d");
+            checkbox.checked = typeof configured === "boolean" ? configured : defaultOn;
+            checkbox.setAttribute("aria-label", label);
             checkbox.onchange = () => {
               if (node.type !== "curve3d" && node.type !== "surface3d" &&
                 node.type !== "parametric2d" && node.type !== "vector2d" &&
-                node.type !== "vector3d") return;
+                node.type !== "vector3d" && node.type !== "crossproduct" &&
+                node.type !== "line3d" && node.type !== "plane3d") return;
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, key, checkbox.checked));
@@ -1150,6 +1295,397 @@ export function BWJMStudio() {
             if (details.open) openGraphSettingsRef.current.add(settingsKey);
             else openGraphSettingsRef.current.delete(settingsKey);
           });
+          // Slider para collapseFactor en crossproduct (animación de colapso T017)
+          if (node.type === "crossproduct" && node.showCollapse) {
+            const collapseRow = document.createElement("label");
+            collapseRow.className = "bwjm-graph-collapse-factor";
+            const textLabel = document.createElement("span");
+            textLabel.textContent = "Factor de colapso";
+            const collapseRange = document.createElement("input");
+            collapseRange.type = "range";
+            collapseRange.min = "0";
+            collapseRange.max = "1";
+            collapseRange.step = "0.01";
+            collapseRange.value = String(node.collapseFactor ?? 0);
+            collapseRange.setAttribute("aria-label", "Factor de colapso del paralelepípedo");
+            const collapseValue = document.createElement("output");
+            collapseValue.textContent = `${Math.round((node.collapseFactor ?? 0) * 100)}%`;
+            collapseRange.oninput = () => { 
+              collapseValue.textContent = `${Math.round(Number(collapseRange.value) * 100)}%`; 
+            };
+            collapseRange.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "collapseFactor", Number(collapseRange.value)));
+            };
+            collapseRow.append(textLabel, collapseRange, collapseValue);
+            controls.appendChild(collapseRow);
+            
+            // Selector de objetivo de colapso (zero vs coplanar)
+            const targetRow = document.createElement("label");
+            targetRow.className = "bwjm-graph-collapse-target";
+            const targetLabel = document.createElement("span");
+            targetLabel.textContent = "Objetivo colapso";
+            const targetSelect = document.createElement("select");
+            targetSelect.setAttribute("aria-label", "Objetivo de colapso");
+            const targetOptions = [
+              { value: "coplanar", label: "Coplanar (w en plano u,v)" },
+              { value: "zero", label: "Vector cero (w → 0)" },
+            ];
+            targetOptions.forEach(opt => {
+              const option = document.createElement("option");
+              option.value = opt.value;
+              option.textContent = opt.label;
+              targetSelect.appendChild(option);
+            });
+            targetSelect.value = node.collapseTarget ?? "coplanar";
+            targetSelect.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "collapseTarget", targetSelect.value));
+            };
+            targetRow.append(targetLabel, targetSelect);
+            controls.appendChild(targetRow);
+          }
+
+          // Selector de modo de desafío de signos (T019)
+          if (node.type === "crossproduct" && node.showSignChallenge) {
+            const modeRow = document.createElement("label");
+            modeRow.className = "bwjm-graph-sign-challenge-mode";
+            const modeLabel = document.createElement("span");
+            modeLabel.textContent = "Modo desafío";
+            const modeSelect = document.createElement("select");
+            modeSelect.setAttribute("aria-label", "Modo de desafío de signos");
+            const modeOptions = [
+              { value: "random", label: "Aleatorio (nuevos vectores cada vez)" },
+              { value: "fixed", label: "Fijo (usar u, v actuales)" },
+              { value: "quiz", label: "Quiz (preguntas secuenciales)" },
+            ];
+            modeOptions.forEach(opt => {
+              const option = document.createElement("option");
+              option.value = opt.value;
+              option.textContent = opt.label;
+              modeSelect.appendChild(option);
+            });
+            modeSelect.value = node.signChallengeMode ?? "random";
+            modeSelect.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "signChallengeMode", modeSelect.value));
+            };
+            modeRow.append(modeLabel, modeSelect);
+            controls.appendChild(modeRow);
+
+            // Seed input para modo aleatorio reproducible
+            const seedRow = document.createElement("label");
+            seedRow.className = "bwjm-graph-sign-challenge-seed";
+            const seedLabel = document.createElement("span");
+            seedLabel.textContent = "Semilla aleatoria";
+            const seedInput = document.createElement("input");
+            seedInput.type = "number";
+            seedInput.min = "0";
+            seedInput.max = "2147483647";
+            seedInput.step = "1";
+            seedInput.value = String(node.signChallengeSeed ?? Math.floor(Math.random() * 1000000));
+            seedInput.setAttribute("aria-label", "Semilla para generación aleatoria");
+            seedInput.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "signChallengeSeed", Number(seedInput.value)));
+            };
+            seedRow.append(seedLabel, seedInput);
+            controls.appendChild(seedRow);
+          }
+          if (node.type === "crossproduct") {
+            controls.appendChild(createCrossProductEditor(node, {
+              preview: (u, v) => {
+                const study = crossReport
+                  ? computeCrossProductStudy(u, v, node.reverseOrder, node.showSteps && node.showDeterminant, node.w, node.showIdentities, node.origin)
+                  : undefined;
+                const crossScene = study?.scene ?? computeCrossProductScene(u, v, node.reverseOrder, node.w, node.origin);
+                plotlyRenderersRef.current.get(node.id)?.render({ ...node, u, v, crossScene });
+                if (study) crossReport?.update(study);
+                determinant?.update(describeCrossProductDeterminant(u, v, crossScene, node.reverseOrder));
+              },
+              save: (key, value) => {
+                openGraphSettingsRef.current.add(settingsKey);
+                setMarkdown(previous => updateCrossProductVector(previous, node.range, key, value));
+              },
+            }));
+          }
+          // Selector de modo para plane3d (T031-T048)
+          if (node.type === "plane3d") {
+            const modeRow = document.createElement("label");
+            modeRow.className = "bwjm-graph-plane3d-mode";
+            const modeLabel = document.createElement("span");
+            modeLabel.textContent = "Modo de plano";
+            const modeSelect = document.createElement("select");
+            modeSelect.setAttribute("aria-label", "Modo de definición del plano");
+            const modeOptions = [
+              { value: "point-normal", label: "Punto + Normal (punto + normal)" },
+              { value: "three-points", label: "3 Puntos (A, B, C no colineales)" },
+              { value: "point-vectors", label: "Punto + 2 Vectores (P + u, v)" },
+              { value: "parametric", label: "Paramétrico (P + s·u + t·v)" },
+              { value: "general", label: "Ecuación General (Ax + By + Cz + D = 0)" },
+            ];
+            modeOptions.forEach(opt => {
+              const option = document.createElement("option");
+              option.value = opt.value;
+              option.textContent = opt.label;
+              modeSelect.appendChild(option);
+            });
+            modeSelect.value = node.mode ?? "point-normal";
+            modeSelect.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "mode", modeSelect.value));
+            };
+            modeRow.append(modeLabel, modeSelect);
+            controls.appendChild(modeRow);
+          }
+
+          // Controles específicos para cada modo de plane3d
+          if (node.type === "plane3d") {
+            const mode = node.mode ?? "point-normal";
+            
+            if (mode === "point-normal") {
+              // point + normal inputs
+              const addVectorInput = (key: "point" | "normal", labelText: string, defaultVal: number[]) => {
+                const row = document.createElement("label");
+                row.className = `bwjm-graph-plane3d-${key}`;
+                const label = document.createElement("span");
+                label.textContent = labelText;
+                const input = document.createElement("input");
+                input.type = "text";
+                input.value = (node[key] ?? [0, 0, 0]).join(", ");
+                input.placeholder = "x, y, z";
+                input.setAttribute("aria-label", labelText);
+                input.onchange = () => {
+                  openGraphSettingsRef.current.add(settingsKey);
+                  const vals = input.value.split(",").map(v => parseFloat(v.trim()));
+                  if (vals.length === 3 && vals.every(Number.isFinite)) {
+                    setMarkdown(previous => updateGraphOption(
+                      previous, node.range, node.type, key, vals as [number, number, number]));
+                  }
+                };
+                row.append(label, input);
+                controls.appendChild(row);
+              };
+              addVectorInput("point", "Punto P", [0, 0, 0]);
+              addVectorInput("normal", "Normal n", [1, 1, 1]);
+            } else if (mode === "three-points") {
+              const addPointInput = (key: "pointA" | "pointB" | "pointC", labelText: string, defaultVal: number[]) => {
+                const row = document.createElement("label");
+                row.className = `bwjm-graph-plane3d-${key}`;
+                const label = document.createElement("span");
+                label.textContent = labelText;
+                const input = document.createElement("input");
+                input.type = "text";
+                input.value = (node[key] ?? [0, 0, 0]).join(", ");
+                input.placeholder = "x, y, z";
+                input.setAttribute("aria-label", labelText);
+                input.onchange = () => {
+                  openGraphSettingsRef.current.add(settingsKey);
+                  const vals = input.value.split(",").map(v => parseFloat(v.trim()));
+                  if (vals.length === 3 && vals.every(Number.isFinite)) {
+                    setMarkdown(previous => updateGraphOption(
+                      previous, node.range, node.type, key, vals as [number, number, number]));
+                  }
+                };
+                row.append(label, input);
+                controls.appendChild(row);
+              };
+              addPointInput("pointA", "Punto A", [0, 0, 0]);
+              addPointInput("pointB", "Punto B", [1, 0, 0]);
+              addPointInput("pointC", "Punto C", [0, 1, 0]);
+            } else if (mode === "point-vectors" || mode === "parametric") {
+              const addVectorInput = (key: "point" | "vectorU" | "vectorV", labelText: string, defaultVal: number[]) => {
+                const row = document.createElement("label");
+                row.className = `bwjm-graph-plane3d-${key}`;
+                const label = document.createElement("span");
+                label.textContent = labelText;
+                const input = document.createElement("input");
+                input.type = "text";
+                input.value = (node[key] ?? [0, 0, 0]).join(", ");
+                input.placeholder = "x, y, z";
+                input.setAttribute("aria-label", labelText);
+                input.onchange = () => {
+                  openGraphSettingsRef.current.add(settingsKey);
+                  const vals = input.value.split(",").map(v => parseFloat(v.trim()));
+                  if (vals.length === 3 && vals.every(Number.isFinite)) {
+                    setMarkdown(previous => updateGraphOption(
+                      previous, node.range, node.type, key, vals as [number, number, number]));
+                  }
+                };
+                row.append(label, input);
+                controls.appendChild(row);
+              };
+              addVectorInput("point", "Punto P", [0, 0, 0]);
+              addVectorInput("vectorU", "Vector u", [1, 0, 0]);
+              addVectorInput("vectorV", "Vector v", [0, 1, 0]);
+            } else if (mode === "general") {
+              const addCoeffInput = (key: "A" | "B" | "C" | "D", labelText: string, defaultVal: number) => {
+                const row = document.createElement("label");
+                row.className = `bwjm-graph-plane3d-${key.toLowerCase()}`;
+                const label = document.createElement("span");
+                label.textContent = labelText;
+                const input = document.createElement("input");
+                input.type = "number";
+                input.step = "0.1";
+                input.value = String(node[key] ?? defaultVal);
+                input.setAttribute("aria-label", labelText);
+                input.onchange = () => {
+                  openGraphSettingsRef.current.add(settingsKey);
+                  setMarkdown(previous => updateGraphOption(
+                    previous, node.range, node.type, key, Number(input.value)));
+                };
+                row.append(label, input);
+                controls.appendChild(row);
+              };
+              addCoeffInput("A", "A", 1);
+              addCoeffInput("B", "B", 0);
+              addCoeffInput("C", "C", 0);
+              addCoeffInput("D", "D", 0);
+            }
+          }
+          // Controles numéricos para line3d (T021-T026)
+          if (node.type === "line3d") {
+            // tDomain min
+            const tMinRow = document.createElement("label");
+            tMinRow.className = "bwjm-graph-line3d-tmin";
+            const tMinLabel = document.createElement("span");
+            tMinLabel.textContent = "t mín";
+            const tMinInput = document.createElement("input");
+            tMinInput.type = "number";
+            tMinInput.step = "0.1";
+            tMinInput.value = String(node.tDomain?.[0] ?? -10);
+            tMinInput.setAttribute("aria-label", "Valor mínimo del parámetro t");
+            tMinInput.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              const newTDomain = [Number(tMinInput.value), node.tDomain?.[1] ?? 10] as [number, number];
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "tDomain", newTDomain));
+            };
+            tMinRow.append(tMinLabel, tMinInput);
+            controls.appendChild(tMinRow);
+
+            // tDomain max
+            const tMaxRow = document.createElement("label");
+            tMaxRow.className = "bwjm-graph-line3d-tmax";
+            const tMaxLabel = document.createElement("span");
+            tMaxLabel.textContent = "t máx";
+            const tMaxInput = document.createElement("input");
+            tMaxInput.type = "number";
+            tMaxInput.step = "0.1";
+            tMaxInput.value = String(node.tDomain?.[1] ?? 10);
+            tMaxInput.setAttribute("aria-label", "Valor máximo del parámetro t");
+            tMaxInput.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              const newTDomain = [node.tDomain?.[0] ?? -10, Number(tMaxInput.value)] as [number, number];
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "tDomain", newTDomain));
+            };
+            tMaxRow.append(tMaxLabel, tMaxInput);
+            controls.appendChild(tMaxRow);
+
+            // paramName
+            const paramRow = document.createElement("label");
+            paramRow.className = "bwjm-graph-line3d-param";
+            const paramLabel = document.createElement("span");
+            paramLabel.textContent = "Parámetro";
+            const paramInput = document.createElement("input");
+            paramInput.type = "text";
+            paramInput.value = node.paramName ?? "t";
+            paramInput.maxLength = 1;
+            paramInput.setAttribute("aria-label", "Nombre del parámetro (t, s, u, etc.)");
+            paramInput.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "paramName", paramInput.value));
+            };
+            paramRow.append(paramLabel, paramInput);
+            controls.appendChild(paramRow);
+          }
+
+          // Controles numéricos para plane3d (T031-T034)
+          if (node.type === "plane3d") {
+            // xDomain min
+            const xMinRow = document.createElement("label");
+            xMinRow.className = "bwjm-graph-plane3d-xmin";
+            const xMinLabel = document.createElement("span");
+            xMinLabel.textContent = "x mín";
+            const xMinInput = document.createElement("input");
+            xMinInput.type = "number";
+            xMinInput.step = "0.5";
+            xMinInput.value = String(node.xDomain?.[0] ?? -5);
+            xMinInput.setAttribute("aria-label", "Límite mínimo del dominio x");
+            xMinInput.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              const newXDomain = [Number(xMinInput.value), node.xDomain?.[1] ?? 5] as [number, number];
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "xDomain", newXDomain));
+            };
+            xMinRow.append(xMinLabel, xMinInput);
+            controls.appendChild(xMinRow);
+
+            // xDomain max
+            const xMaxRow = document.createElement("label");
+            xMaxRow.className = "bwjm-graph-plane3d-xmax";
+            const xMaxLabel = document.createElement("span");
+            xMaxLabel.textContent = "x máx";
+            const xMaxInput = document.createElement("input");
+            xMaxInput.type = "number";
+            xMaxInput.step = "0.5";
+            xMaxInput.value = String(node.xDomain?.[1] ?? 5);
+            xMaxInput.setAttribute("aria-label", "Límite máximo del dominio x");
+            xMaxInput.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              const newXDomain = [node.xDomain?.[0] ?? -5, Number(xMaxInput.value)] as [number, number];
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "xDomain", newXDomain));
+            };
+            xMaxRow.append(xMaxLabel, xMaxInput);
+            controls.appendChild(xMaxRow);
+
+            // yDomain min
+            const yMinRow = document.createElement("label");
+            yMinRow.className = "bwjm-graph-plane3d-ymin";
+            const yMinLabel = document.createElement("span");
+            yMinLabel.textContent = "y mín";
+            const yMinInput = document.createElement("input");
+            yMinInput.type = "number";
+            yMinInput.step = "0.5";
+            yMinInput.value = String(node.yDomain?.[0] ?? -5);
+            yMinInput.setAttribute("aria-label", "Límite mínimo del dominio y");
+            yMinInput.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              const newYDomain = [Number(yMinInput.value), node.yDomain?.[1] ?? 5] as [number, number];
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "yDomain", newYDomain));
+            };
+            yMinRow.append(yMinLabel, yMinInput);
+            controls.appendChild(yMinRow);
+
+            // yDomain max
+            const yMaxRow = document.createElement("label");
+            yMaxRow.className = "bwjm-graph-plane3d-ymax";
+            const yMaxLabel = document.createElement("span");
+            yMaxLabel.textContent = "y máx";
+            const yMaxInput = document.createElement("input");
+            yMaxInput.type = "number";
+            yMaxInput.step = "0.5";
+            yMaxInput.value = String(node.yDomain?.[1] ?? 5);
+            yMaxInput.setAttribute("aria-label", "Límite máximo del dominio y");
+            yMaxInput.onchange = () => {
+              openGraphSettingsRef.current.add(settingsKey);
+              const newYDomain = [node.yDomain?.[0] ?? -5, Number(yMaxInput.value)] as [number, number];
+              setMarkdown(previous => updateGraphOption(
+                previous, node.range, node.type, "yDomain", newYDomain));
+            };
+            yMaxRow.append(yMaxLabel, yMaxInput);
+            controls.appendChild(yMaxRow);
+          }
+
           // A single source of truth: all curve layers and numeric preferences
           // are edited here and persisted in the selected .bwjm block.
           if (node.type === "parametric2d") {
@@ -1380,36 +1916,20 @@ export function BWJMStudio() {
           label.appendChild(checkbox);
           label.appendChild(textSpan);
           cardBody.appendChild(label);
-        } else if (node.type === "flow2d") {
-          const mount = document.createElement("div");
-          mount.style.width = "100%";
-          mount.style.minHeight = "380px";
-          cardBody.appendChild(mount);
-          const renderer = new SVGRenderer(mount, 720, 380);
-          svgRenderersRef.current.set(node.id, renderer);
-          renderer.render(coreRef.current.getNodeData(node.id));
-        } else if (node.type === "parametric2d") {
-          const mount = document.createElement("div");
-          mount.style.width = "100%";
-          mount.style.minHeight = "380px";
-          cardBody.appendChild(mount);
-          const renderer = new SVGRenderer(mount, 720, 380);
-          svgRenderersRef.current.set(node.id, renderer);
-          renderer.render(coreRef.current.getNodeData(node.id));
+        } else if (node.type === "flow2d" || node.type === "parametric2d") {
+          mountSvg(cardBody, node, 720, 380);
         } else if (node.type === "calculusviz") {
           const data = coreRef.current.getNodeData(node.id);
-          const mount = document.createElement("div");
-          mount.style.width = "100%";
-          mount.style.height = node.mode === "revolution" ? "440px" : "380px";
-          cardBody.appendChild(mount);
           if (node.mode === "revolution") {
+            const mount = document.createElement("div");
+            mount.style.width = "100%";
+            mount.style.height = "440px";
+            cardBody.appendChild(mount);
             const renderer = new PlotlyRenderer(mount);
             plotlyRenderersRef.current.set(node.id, renderer);
             renderer.render(data);
           } else {
-            const renderer = new SVGRenderer(mount, 760, 390);
-            svgRenderersRef.current.set(node.id, renderer);
-            renderer.render(data);
+            mountSvg(cardBody, node, 760, 390, data);
           }
           const report = document.createElement("div");
           report.className = "bwjm-calculus-report";
@@ -1441,35 +1961,20 @@ export function BWJMStudio() {
           }
           cardBody.appendChild(report);
         } else if (node.type === "plot2d") {
-          const mount = document.createElement("div");
-          mount.id = `mount-${node.id}`;
-          mount.style.width = "100%";
-          mount.style.minHeight = "360px";
-          cardBody.appendChild(mount);
-
-          const renderer = new SVGRenderer(mount, 720, 360);
-          svgRenderersRef.current.set(node.id, renderer);
-
-          const nodeData = coreRef.current.getNodeData(node.id);
-          if (nodeData) {
-            renderer.render(nodeData);
-          }
+          mountSvg(cardBody, node, 720, 360);
         } else if (node.type === "vector2d" || node.type === "vector3d") {
-          const mount = document.createElement("div");
-          mount.id = `mount-${node.id}`;
-          mount.style.width = "100%";
-          mount.style.minHeight = node.type === "vector3d" ? "420px" : "360px";
-          mount.style.height = node.type === "vector3d" ? "420px" : "360px";
-          cardBody.appendChild(mount);
           const data = coreRef.current.getNodeData(node.id);
           if (node.type === "vector3d") {
+            const mount = document.createElement("div");
+            mount.id = `mount-${node.id}`;
+            mount.style.width = "100%";
+            mount.style.height = "420px";
+            cardBody.appendChild(mount);
             const renderer = new PlotlyRenderer(mount);
             plotlyRenderersRef.current.set(node.id, renderer);
             renderer.render(data);
           } else {
-            const renderer = new SVGRenderer(mount, 720, 360);
-            svgRenderersRef.current.set(node.id, renderer);
-            renderer.render(data);
+            mountSvg(cardBody, node, 720, 360, data);
           }
           if (node.mode || data.error) {
             const report = document.createElement("section");
@@ -1478,7 +1983,7 @@ export function BWJMStudio() {
             updateVectorStudyReport(report, data);
             cardBody.appendChild(report);
           }
-        } else if (node.type === "surface3d") {
+        } else if (node.type === "surface3d" || node.type === "crossproduct") {
           const mount = document.createElement("div");
           mount.id = `mount-${node.id}`;
           mount.style.width = "100%";
@@ -1491,6 +1996,14 @@ export function BWJMStudio() {
           const nodeData = coreRef.current.getNodeData(node.id);
           if (nodeData) {
             renderer.render(nodeData);
+            if (crossReport && nodeData.crossStudy) {
+              crossReport.update(nodeData.crossStudy);
+              cardBody.appendChild(crossReport.element);
+            }
+            if (determinant && nodeData.crossDeterminant) {
+              determinant.update(nodeData.crossDeterminant);
+              cardBody.appendChild(determinant.element);
+            }
           }
         } else if (node.type === "curve3d") {
           const mount = document.createElement("div");
@@ -1627,17 +2140,7 @@ export function BWJMStudio() {
             scope: currentVars,
           } as any);
         } else if (node.type === "vectorfield2d") {
-          const mount = document.createElement("div");
-          mount.id = `mount-${node.id}`;
-          mount.style.width = "100%";
-          mount.style.minHeight = "360px";
-          cardBody.appendChild(mount);
-
-          const renderer = new SVGRenderer(mount, 720, 360);
-          svgRenderersRef.current.set(node.id, renderer);
-
-          const nodeData = coreRef.current.getNodeData(node.id) || node;
-          renderer.render(nodeData);
+          mountSvg(cardBody, node, 720, 360);
         }
 
         // The large global clock is removed. Insert one small transport alongside
@@ -1964,7 +2467,11 @@ export function BWJMStudio() {
     updateLiveScientificAnalysis();
 
     container.appendChild(sheet);
-  }, [doc, markdown, filename, sliceX]);
+    return () => {
+      svgResizeObserver?.disconnect();
+      if (svgResizeFrame !== undefined) window.cancelAnimationFrame(svgResizeFrame);
+    };
+  }, [doc, markdown, filename, sliceX, activeId]);
 
   const handleVariableChange = (name: string, value: number) => {
     if (!coreRef.current) return;
@@ -2044,7 +2551,7 @@ export function BWJMStudio() {
   const currentVariables = coreRef.current ? coreRef.current.getVariables() : {};
 
   return (
-    <div className={`bwjm-app-container mode-${viewMode} theme-${theme}`}>
+    <div className={`bwjm-app-container mode-${viewMode} theme-${theme}${compactWorkspace ? " is-compact" : ""}`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -2072,11 +2579,21 @@ export function BWJMStudio() {
       <DocumentTabs documents={documents} activeId={activeId}
         onSelect={selectDocument} onClose={handleCloseDocument} onNew={handleNewDocument}
         onRename={renameDocument}/>
-      <Ribbon activeView={viewMode} onAction={handleRibbonAction}
+      <Ribbon activeView={viewMode} compactWorkspace={compactWorkspace} onAction={handleRibbonAction}
         theme={theme} onThemeChange={setTheme}
         collapsed={isRibbonCollapsed} onCollapseChange={setIsRibbonCollapsed}/>
 
-      <div className="bwjm-workspace-layout">
+      {compactWorkspace && (
+        <div ref={compactViewRef} className="bwjm-compact-view" role="group" aria-label="Vista del documento">
+          <button type="button" aria-pressed={viewMode === "editor"} aria-controls="bwjm-editor-panel"
+            onClick={() => setViewMode("editor")}>Editor</button>
+          <button type="button" aria-pressed={viewMode === "reader"} aria-controls="bwjm-reader-panel"
+            onClick={() => setViewMode("reader")}>Lector</button>
+        </div>
+      )}
+
+      <div ref={workspaceLayoutRef} className="bwjm-workspace-layout"
+        onKeyDown={event => { if (compactSidebarVisible && event.key === "Escape") closeSidebar(); }}>
         <SidebarLeft
           tab={sidebarTab}
           onTabChange={setSidebarTab}
@@ -2086,19 +2603,23 @@ export function BWJMStudio() {
           nodes={doc.children}
           diagnostics={doc.diagnostics}
           isOpen={isSidebarLeftOpen}
-          onClose={() => setIsSidebarLeftOpen(false)}
+          onClose={closeSidebar}
           outline={outline}
           variables={currentVariables}
           lessons={SAMPLE_LESSONS}
           currentLessonKey={selectedTemplate}
           onSelectLesson={(key: string) => {
             openDocument(SAMPLE_LESSONS[key].filename, SAMPLE_LESSONS[key].content, key);
+            if (compactWorkspace) closeSidebar();
           }}
           onNavigateOutline={handleNavigateOutline}
         />
 
-        <main id="bwjm-workspace-active" className="bwjm-main-split" role="tabpanel" aria-labelledby={"tab-" + activeId}>
+        <main id="bwjm-workspace-active" className="bwjm-main-split" role="tabpanel"
+          aria-labelledby={"tab-" + activeId} aria-hidden={compactSidebarVisible || undefined}
+          style={{ visibility: compactSidebarVisible ? "hidden" : undefined }}>
           <section
+            id="bwjm-editor-panel"
             className="bwjm-editor-panel"
             style={{ display: viewMode === "reader" ? "none" : undefined }}
           >
@@ -2118,6 +2639,7 @@ export function BWJMStudio() {
           </section>
 
           <section
+            id="bwjm-reader-panel"
             className="bwjm-preview-panel"
             style={{ display: viewMode === "editor" ? "none" : undefined }}
           >
@@ -2144,7 +2666,7 @@ export function BWJMStudio() {
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        commands={commandsList}
+        commands={compactWorkspace ? commandsList.filter(command => command.id !== "mode-split") : commandsList}
       />
     </div>
   );

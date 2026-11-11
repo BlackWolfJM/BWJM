@@ -1,0 +1,30 @@
+# Propiedades algebraicas del producto cruz: Anticonmutatividad y Distributividad (T011 - MED-03.06-V)
+
+En $\mathbb{R}^3$, el producto vectorial posee dos propiedades fundamentales:
+
+1. **Anticonmutatividad**: El orden de los factores altera el sentido del vector resultante:
+   $$\mathbf{v} \times \mathbf{u} = -(\mathbf{u} \times \mathbf{v})$$
+   Al superponer ambas normales, se observa que poseen igual magnitud y dirección pero sentidos opuestos.
+
+2. **Distributividad respecto a la suma vectorial**:
+   $$\mathbf{u} \times (\mathbf{v} + \mathbf{w}) = (\mathbf{u} \times \mathbf{v}) + (\mathbf{u} \times \mathbf{w})$$
+
+```crossproduct
+id: cross-properties-demo
+u: [1, 2, 0]
+v: [0, 3, 1]
+w: [1, 0, 2]
+showPlane: true
+showNormal: true
+showArea: true
+showSteps: true
+showRightHand: true
+showAnticommutative: true
+showDistributive: true
+labelU: u
+labelV: v
+labelW: w
+```
+
+Al conmutar las opciones o mover los vectores desde **Personalizar gráfica**, la escena 3D y el procedimiento matemático reflejan inmediatamente la inversión de la normal y la expansión de la suma vectorial a partir de una única fuente de verdad.
+

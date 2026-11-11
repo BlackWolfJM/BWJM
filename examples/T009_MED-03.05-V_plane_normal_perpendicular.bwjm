@@ -1,0 +1,16 @@
+# Normal a dos vectores no paralelos (T009 - MED-03.05-V)
+
+En $\mathbb{R}^3$, dos vectores no paralelos $\mathbf{u}$ y $\mathbf{v}$ generan un plano único a través del origen. El producto cruz $\mathbf{u} \times \mathbf{v}$ genera un vector normal perpendicular a dicho plano, cumpliendo simultáneamente $\mathbf{u} \cdot \mathbf{n} = 0$ y $\mathbf{v} \cdot \mathbf{n} = 0$.
+
+```crossproduct
+id: cross-plane-normal
+u: [2, 3, 1]
+v: [4, 1, 5]
+showPlane: true
+showNormal: true
+showArea: true
+showSteps: true
+```
+
+Si los vectores fuesen paralelos, colineales o nulos, el producto cruz se anula ($\mathbf{u} \times \mathbf{v} = \mathbf{0}$) y el sistema advierte que no existe una normal única determinada por esos vectores.
+

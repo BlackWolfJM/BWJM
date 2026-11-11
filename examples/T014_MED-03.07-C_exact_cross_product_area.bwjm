@@ -1,0 +1,20 @@
+# Área exacta por producto cruz · T014 MED-03.07-C
+
+Los vectores $\mathbf{u}$ y $\mathbf{v}$ son desplazamientos desde el punto común $\mathbf{P}_0$.
+Abre **Ver procedimiento** para seguir la suma de cuadrados de la normal y comprobar
+que el triángulo conserva exactamente la mitad del área del paralelogramo.
+
+```crossproduct
+id: cross-exact-area
+u: [2, 0, 1]
+v: [0, 3, 2]
+origin: [1, 1, 0]
+showPlane: true
+showTriangle: true
+showArea: true
+showSteps: true
+```
+
+Con los valores iniciales, la normal es $(-3,-4,6)$ y las áreas exactas son
+$\sqrt{61}$ y $\sqrt{61}/2$. Si trasladas el origen, al restarlo de cada extremo
+recuperas los mismos desplazamientos.

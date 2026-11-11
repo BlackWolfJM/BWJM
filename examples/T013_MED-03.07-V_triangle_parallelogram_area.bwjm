@@ -1,0 +1,27 @@
+# Área de paralelogramo y triángulo sobre dos vectores (T013 - MED-03.07-V)
+
+Dos vectores tridimensionales $\mathbf{u}$ y $\mathbf{v}$ que concurren en un vértice común $\mathbf{P}_0$ determinan simultáneamente dos figuras fundamentales en el espacio euclídeo $\mathbb{R}^3$:
+
+1. **Paralelogramo sustentado**: sustentado por los cuatro vértices $\{\mathbf{P}_0, \mathbf{P}_0 + \mathbf{u}, \mathbf{P}_0 + \mathbf{u} + \mathbf{v}, \mathbf{P}_0 + \mathbf{v}\}$, con área:
+   $$\text{Área}(\text{paralelogramo}) = \|\mathbf{u} \times \mathbf{v}\| = \|\mathbf{u}\| \|\mathbf{v}\| \sin\theta$$
+
+2. **Triángulo sustentado**: formado por los tres vértices $\{\mathbf{P}_0, \mathbf{P}_0 + \mathbf{u}, \mathbf{P}_0 + \mathbf{v}\}$, con área:
+   $$\text{Área}(\text{triángulo}) = \frac{1}{2} \|\mathbf{u} \times \mathbf{v}\| = \frac{1}{2} \text{Área}(\text{paralelogramo})$$
+
+Esta relación métrica es invariante bajo cualquier traslación del vértice común $\mathbf{P}_0 = (x_0, y_0, z_0)$.
+
+```crossproduct
+id: cross-area-triangle-demo
+u: [2, 0, 1]
+v: [0, 3, 2]
+origin: [1, 1, 0]
+showPlane: true
+showTriangle: true
+showNormal: true
+showArea: true
+showSteps: true
+labelU: u
+labelV: v
+```
+
+En la visualización interactiva se aprecian ambas figuras sombreadas sobre el plano generado, con sus respectivas etiquetas métricas ubicadas en sus centroides y el factor exacto de un medio verificado en el procedimiento analítico.

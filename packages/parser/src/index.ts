@@ -13,6 +13,7 @@ import {
   surface3dSchema,
   vector2dSchema,
   vector3dSchema,
+  crossProductSchema,
   curve3dSchema,
   vectorfield2dSchema,
   gradientSchema,
@@ -59,6 +60,7 @@ const SUPPORTED_MATHMD_TYPES = new Set([
   "surface3d",
   "vector2d",
   "vector3d",
+  "crossproduct",
   "curve3d",
   "vectorfield2d",
   "gradient",
@@ -333,6 +335,23 @@ function buildMathMDNode(
         return null;
       }
       return result.data;
+    }
+
+    case "crossproduct": {
+      const result = crossProductSchema.safeParse({ ...data, ...base });
+      if (result.success) return result.data;
+      for (const issue of result.error.issues) {
+        diagnostics.push({
+          severity: "error",
+          code: "MATHMD_SCHEMA_INVALID",
+          message: issue.message,
+          range,
+          blockType: type,
+          blockId: id,
+          path: issue.path,
+        });
+      }
+      return null;
     }
 
     case "curve3d": {

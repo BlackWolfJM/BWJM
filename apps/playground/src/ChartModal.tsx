@@ -8,7 +8,7 @@ interface ChartModalProps {
   onInsert: (codeBlock: string) => void;
 }
 
-type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider" | "parametric2d" | "experiment" | "flow2d" | "calculus";
+type ChartKind = "plot2d" | "surface3d" | "curve3d" | "vectorfield2d" | "slider" | "parametric2d" | "experiment" | "flow2d" | "calculus" | "crossproduct";
 
 export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInsert }) => {
   const [kind, setKind] = useState<ChartKind>("plot2d");
@@ -83,6 +83,8 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
       "animated: "+curveAnimated,"showVectors: "+curveVectors,"showTNB: "+curveTNB,
       "showLegend: "+curveLegend,"showInfo: "+curveInfo,fence,
     ].join("\n");
+  } else if (kind === "crossproduct") {
+    generatedCode = ["```crossproduct", "u: [1, 0, 0]", "v: [0, 1, 0]", "```"].join("\n");
   } else if (kind === "flow2d") {
     generatedCode = [
       "```slider", "name: t", "min: 0", "max: 6.28",
@@ -166,6 +168,12 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
               Líneas de corriente
             </button>
             <button
+              className={`bwjm-tab-item ${kind === "crossproduct" ? "active" : ""}`}
+              onClick={() => setKind("crossproduct")}
+            >
+              Producto cruz 3D
+            </button>
+            <button
               className={`bwjm-tab-item ${kind === "parametric2d" ? "active" : ""}`}
               onClick={() => setKind("parametric2d")}
             >
@@ -206,6 +214,9 @@ export const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, onInser
                 Inserta un campo rotacional 2D con partículas que siguen sus líneas de corriente mediante RK4. Edita después el campo y las semillas directamente en el archivo.
               </p>
             </div>
+          )}
+          {kind === "crossproduct" && (
+            <p>Después de insertar, abre Personalizar gráfica para mover los vectores y cambiar las capas.</p>
           )}
           {kind === "parametric2d" && (
             <div className="bwjm-modal-grid">

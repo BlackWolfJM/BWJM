@@ -1,0 +1,24 @@
+# Producto cruz en ℝ³ · T001 MED-03.01-V
+
+Abre **Personalizar gráfica** para arrastrar los extremos en XY, XZ o YZ.
+Al arrastrar se conserva la tercera coordenada. También puedes editar las coordenadas numéricamente.
+
+```crossproduct
+id: cross1
+u: [1, 0, 0]
+v: [0, 1, 0]
+showPlane: true
+showNormal: true
+showArea: true
+colorU: "#0284c7"
+colorNormal: "#10b981"
+colorPlane: "#cbd5e1"
+planeOpacity: 0.4
+labelU: "u"
+labelV: "v"
+labelNormal: "u × v"
+```
+
+La orientación de la normal sigue la regla de la mano derecha. Su magnitud
+coincide con el área del paralelogramo. Si los vectores son paralelos o alguno
+es nulo, desaparecen el paralelogramo y la flecha normal.

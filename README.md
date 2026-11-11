@@ -3,9 +3,18 @@
 Autor y Creador del Formato: BlackWolfJM
 Repositorio Oficial (web): https://github.com/BlackWolfJM/BWJM-WEB-
 
+[Abrir BWJM Studio en GitHub Pages](https://blackwolfjm.github.io/BWJM-WEB-/)
+
 BWJM es un formato de documento cientifico interactivo de codigo abierto, disenado para superar las limitaciones estaticas del PDF tradicional y erradicar la dependencia de archivos HTML intermedios o dispersos. Permite que formulas matematicas, graficas 2D, superficies 3D, curvas espaciales, campos vectoriales, simulaciones parametricas y deducciones analiticas coexistan como objetos vivos, verificables y reproducibles en tiempo real.
 
 ---
+
+## Novedades de esta versión
+
+- En pantallas estrechas, **Editor** y **Lector** ocupan el ancho completo. Puedes alternar entre ambos sin perder la selección del editor.
+- Las gráficas SVG se adaptan al ancho de la tarjeta y conservan la descarga vectorial. Las fórmulas largas se desplazan horizontalmente dentro de su caja.
+- Los [ejemplos de vectores](examples/lote-01-vectores-interactivos.bwjm) muestran operaciones, área y orientación. La [guía de integración](docs/GUIA_INTEGRACION_41_08.md) explica cuándo aplicar Green y enlaza un ejemplo que compara las dos integrales.
+- Para probar producto cruz, determinantes y volumen, abre un ejemplo de [la carpeta de documentos BWJM](examples/) y cambia las capas en **Personalizar gráfica**.
 
 ## Tabla de Contenidos
 
@@ -828,20 +837,20 @@ BWJM/
 
 ### Requisitos Previos
 
-- Node.js version 20 o superior
-- pnpm version 11.15 o superior
+- Node.js 22, como en GitHub Actions
+- pnpm 11.15.0, la versión indicada en package.json
 
 ### Clonar el Repositorio
 
 ```bash
-git clone https://github.com/BlackWolfJM/BWJM.git
-cd BWJM
+git clone https://github.com/BlackWolfJM/BWJM-WEB-.git
+cd BWJM-WEB-
 ```
 
 ### Instalar Dependencias
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 ### Iniciar BWJM Studio en Desarrollo

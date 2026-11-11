@@ -1,0 +1,22 @@
+# Medidor de módulo y explicación del caso paralelo · T008 MED-03.04-C
+
+La calculadora de producto cruz desglosa el cálculo geométrico del módulo
+y lo compara analíticamente con el producto de las normas por el seno del ángulo:
+
+$$\|\mathbf{u} \times \mathbf{v}\| = \|\mathbf{u}\| \|\mathbf{v}\| \sin\theta$$
+
+```crossproduct
+id: cross-areasteps
+u: [2, 3, 1]
+v: [4, 1, 5]
+showSteps: true
+showArea: true
+```
+
+Al desplegar **Ver procedimiento**, el paso **Módulo y área del paralelogramo**
+presenta el medidor de módulo comparando la norma directa del vector resultante
+$\|\mathbf{u} \times \mathbf{v}\| = \sqrt{14^2 + (-6)^2 + (-10)^2} \approx 18.2209$
+con la evaluación trigonométrica $\|\mathbf{u}\| \|\mathbf{v}\| \sin\theta = \sqrt{14}\sqrt{42}\sin(48.71^\circ) \approx 18.2209$.
+En el caso de vectores paralelos ($\mathbf{v} = k\mathbf{u}$), el ángulo es $\theta = 0^\circ$,
+por lo que $\sin\theta = 0$ y el área se anula exactamente a 0.
+

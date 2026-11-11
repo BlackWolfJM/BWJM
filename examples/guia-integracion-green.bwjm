@@ -1,0 +1,24 @@
+# Elegir Green para una circulación plana
+
+La curva unitaria $C(t)=(\cos t,\sin t)$ recorre la frontera del disco en sentido
+antihorario. El campo $F=(-y/2,x/2)$ es suave en todo el plano. En el asistente
+**Áreas e integrales → Guía para elegir un método de integración**, elige
+**Circulación sobre un contorno plano cerrado** y confirma las tres hipótesis.
+
+El rotacional escalar es $1$. La circulación y la integral doble deben
+aproximarse al área del disco, $\pi$.
+
+```calculusviz
+mode: green
+domain: [0, 6.283185307179586]
+samples: 160
+paramX: "cos(t)"
+paramY: "sin(t)"
+fieldP: "-y/2"
+fieldQ: "x/2"
+```
+
+Para ensayar un caso que incumple las hipótesis, considera
+$F=(-y/(x^2+y^2),x/(x^2+y^2))$ sobre el mismo contorno. La circulación sigue
+definida sobre la circunferencia y vale $2\pi$, pero el campo tiene una
+singularidad dentro del disco. En la guía, deja sin marcar la regularidad.

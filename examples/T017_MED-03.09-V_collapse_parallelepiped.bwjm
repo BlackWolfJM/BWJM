@@ -1,0 +1,69 @@
+# Paralelepípedo deformable hasta colapsar (T017 - MED-03.09-V)
+
+Tres vectores $\mathbf{u}$, $\mathbf{v}$, $\mathbf{w} \in \mathbb{R}^3$ generan un **paralelepípedo** cuyo volumen es:
+
+$$V = |\mathbf{u} \cdot (\mathbf{v} \times \mathbf{w})|$$
+
+Al interpolar el vector $\mathbf{w}$ hacia el plano generado por $\mathbf{u}$ y $\mathbf{v}$, el paralelepípedo se **deforma** hasta **colapsar** (volumen → 0).
+
+## Animación de colapso
+
+El parámetro `collapseFactor ∈ [0, 1]` interpola $\mathbf{w}$ hacia su proyección en el plano $(\mathbf{u}, \mathbf{v})$:
+
+- `collapseFactor = 0`: paralelepípedo original
+- `collapseFactor = 1`: $\mathbf{w}$ coplanar con $\mathbf{u}, \mathbf{v}$ → volumen = 0
+
+```crossproduct
+id: triple-product-collapse
+u: [1, 0, 0]
+v: [0, 1, 0]
+w: [0, 0, 1]
+origin: [0, 0, 0]
+showPlane: true
+showNormal: true
+showArea: true
+showVolume: true
+showCollapse: true
+collapseFactor: 0.0
+collapseTarget: coplanar
+colorU: "#0284c7"
+colorNormal: "#10b981"
+colorPlane: "#cbd5e1"
+colorVolume: "#8b5cf6"
+planeOpacity: 0.3
+labelU: u
+labelV: v
+labelW: w
+labelNormal: u × v
+```
+
+En la visualización interactiva:
+- Arrastra el slider **Factor de colapso** para ver la deformación en tiempo real
+- El volumen se actualiza con porcentaje del original
+- Al llegar a 100%, aparece **⚠ PARELEPÍPEDO COLAPSADO**
+- El objetivo **coplanar** hace que $\mathbf{w}$ se mueva en el plano $uv$
+- El objetivo **zero** reduce $\mathbf{w} \to \mathbf{0}$
+
+---
+
+## Caso: Colapso hacia vector cero
+
+```crossproduct
+id: collapse-to-zero
+u: [2, 0, 0]
+v: [0, 3, 0]
+w: [0, 0, 4]
+origin: [0, 0, 0]
+showPlane: true
+showNormal: true
+showArea: true
+showVolume: true
+showCollapse: true
+collapseFactor: 0.0
+collapseTarget: zero
+labelU: u
+labelV: v
+labelW: w
+```
+
+Aquí `collapseTarget: zero` interpola $\mathbf{w} \to \mathbf{0}$, reduciendo el paralelepípedo a un paralelogramo plano.

@@ -1,0 +1,23 @@
+# Área del paralelogramo y seno del ángulo · T007 MED-03.04-V
+
+El módulo del producto cruz en ℝ³ coincide numéricamente con el área del
+paralelogramo sustentado por los vectores u y v, dependiente del seno del ángulo θ
+entre ellos:
+
+$$\text{Área} = \|\mathbf{u} \times \mathbf{v}\| = \|\mathbf{u}\| \|\mathbf{v}\| \sin\theta$$
+
+```crossproduct
+id: cross-area
+u: [2, 3, 1]
+v: [4, 1, 5]
+showPlane: true
+showArea: true
+showNormal: true
+showSteps: true
+```
+
+En **Personalizar gráfica**, puedes activar o desactivar **Área del paralelogramo**
+para mostrar u ocultar la etiqueta 3D de área en el centroide del plano generado y
+el desglose en el título. Si los vectores son paralelos o colineales, $\sin\theta = 0$
+y el área se anula limpiamente sin divisiones por cero.
+

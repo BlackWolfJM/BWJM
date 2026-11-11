@@ -66,12 +66,13 @@ const icons = {
 interface Props {
   onAction: (id: RibbonAction) => void;
   activeView: "editor" | "split" | "reader";
+  compactWorkspace: boolean;
   theme: StudioThemeId;
   onThemeChange: (theme: StudioThemeId) => void;
   collapsed: boolean;
   onCollapseChange: (collapsed: boolean) => void;
 }
-export const Ribbon: React.FC<Props> = ({onAction,activeView,theme,onThemeChange,collapsed,onCollapseChange}) => {
+export const Ribbon: React.FC<Props> = ({onAction,activeView,compactWorkspace,theme,onThemeChange,collapsed,onCollapseChange}) => {
   const [tab,setTab] = useState<RibbonTab>("Inicio");
   const toggle = () => onCollapseChange(!collapsed);
   return <section className={"bwjm-ribbon " + (collapsed ? "collapsed" : "")} aria-label="Cinta de herramientas BWJM">
@@ -92,10 +93,12 @@ export const Ribbon: React.FC<Props> = ({onAction,activeView,theme,onThemeChange
       {RIBBON_GROUPS[tab].map(group=><div className="bwjm-ribbon-group" key={group.label}>
         <div className="bwjm-ribbon-buttons">
           {group.actions.map(action=>{
+            if (compactWorkspace && action.id === "view-split") return null;
             const Icon = action.icon ? icons[action.icon] : null;
             const selected=action.id === "view-"+activeView;
             return <button key={action.id} type="button"
               className={"bwjm-ribbon-action " + (selected?"active":"")}
+              aria-pressed={action.id.startsWith("view-") ? selected : undefined}
               title={action.hint? action.label+" · "+action.hint:action.label}
               onClick={()=>onAction(action.id)}>
               {Icon ? <Icon size={17}/> : <span className="bwjm-ribbon-glyph">{action.id==="bold"?"B":action.id==="italic"?"I":action.id.startsWith("h")?action.id.toUpperCase():"∑"}</span>}

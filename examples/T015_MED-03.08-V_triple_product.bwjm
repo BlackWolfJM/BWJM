@@ -1,0 +1,86 @@
+# Producto triple y volumen del paralelepípedo (T015 - MED-03.08-V)
+
+Tres vectores $\mathbf{u}$, $\mathbf{v}$, $\mathbf{w} \in \mathbb{R}^3$ generan un **paralelepípedo** cuyo **volumen firmado** se obtiene mediante el **producto triple escalar**:
+
+$$V_{\text{firmado}} = \mathbf{u} \cdot (\mathbf{v} \times \mathbf{w}) = \det(\mathbf{u}, \mathbf{v}, \mathbf{w})$$
+
+El **volumen geométrico** es el valor absoluto:
+
+$$V_{\text{geométrico}} = |\mathbf{u} \cdot (\mathbf{v} \times \mathbf{w})| = |\det(\mathbf{u}, \mathbf{v}, \mathbf{w})|$$
+
+**Interpretación geométrica:**
+- $V_{\text{firmado}} > 0$: los vectores forman un **triedro dextrógiro** (mano derecha)
+- $V_{\text{firmado}} < 0$: los vectores forman un **triedro latrógiro** (mano izquierda)
+- $V_{\text{firmado}} = 0$: los vectores son **coplanares** (el paralelepípedo colapsa en un plano)
+
+**Permutaciones cíclicas:** $V = \mathbf{u} \cdot (\mathbf{v} \times \mathbf{w}) = \mathbf{v} \cdot (\mathbf{w} \times \mathbf{u}) = \mathbf{w} \cdot (\mathbf{u} \times \mathbf{v})$
+
+**Intercambio de dos vectores:** cambia el signo del volumen.
+
+```crossproduct
+id: triple-product-demo
+u: [1, 0, 0]
+v: [0, 1, 0]
+w: [0, 0, 1]
+origin: [0, 0, 0]
+showPlane: true
+showNormal: true
+showArea: true
+showVolume: true
+showSteps: true
+labelU: u (i)
+labelV: v (j)
+labelW: w (k)
+labelNormal: u × v
+```
+
+En la visualización interactiva se aprecia:
+- Los tres vectores generadores $u$, $v$, $w$
+- El plano base generado por $u$ y $v$
+- La normal $u \times v$
+- El paralelepípedo completo con sus 3 caras visibles
+- La etiqueta del volumen $V = 1$ (triedro dextrógiro)
+
+---
+
+## Caso con volumen negativo (triedro latrógiro)
+
+```crossproduct
+id: triple-product-negative
+u: [1, 0, 0]
+v: [0, 0, 1]
+w: [0, 1, 0]
+origin: [0, 0, 0]
+showPlane: true
+showNormal: true
+showArea: true
+showVolume: true
+labelU: u
+labelV: v
+labelW: w
+labelNormal: u × v
+```
+
+Aquí $u \cdot (v \times w) = (1,0,0) \cdot ((0,0,1) \times (0,1,0)) = (1,0,0) \cdot (-1,0,0) = -1$.
+El volumen geométrico es $|{-1}| = 1$, pero el firmado es $-1$ (triedro latrógiro).
+
+---
+
+## Caso degenerado (coplanares)
+
+```crossproduct
+id: triple-product-degenerate
+u: [1, 0, 0]
+v: [0, 1, 0]
+w: [1, 1, 0]
+origin: [0, 0, 0]
+showPlane: true
+showNormal: true
+showArea: true
+showVolume: true
+labelU: u
+labelV: v
+labelW: w
+```
+
+Los vectores $u$, $v$, $w$ son coplanares (todos en el plano $z=0$), por lo que $V = 0$.

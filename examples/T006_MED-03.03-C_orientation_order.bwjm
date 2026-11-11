@@ -1,0 +1,27 @@
+# Indicador de orden u × v versus v × u y orientación · T006 MED-03.03-C
+
+El producto cruz en ℝ³ es una operación anticonmutativa:
+intercambiar el orden de los vectores invierte el sentido de giro
+y el signo del vector normal resultante:
+
+$$\mathbf{v} \times \mathbf{u} = -(\mathbf{u} \times \mathbf{v})$$
+
+La orientación espacial de la terna ordenada $(\mathbf{u}, \mathbf{v}, \mathbf{u} \times \mathbf{v})$
+es estrictamente dextrógira (sigue la regla de la mano derecha), lo cual
+queda verificado algebraicamente por el determinante del producto triple escalar:
+
+$$\det(\mathbf{u}, \mathbf{v}, \mathbf{u} \times \mathbf{v}) = \|\mathbf{u} \times \mathbf{v}\|^2 > 0$$
+
+```crossproduct
+id: cross-orient
+u: [2, 3, 1]
+v: [4, 1, 5]
+showSteps: true
+showRightHand: true
+showDeterminant: true
+```
+
+Al pulsar el indicador de orden o activar **Invertir orden** en **Personalizar gráfica**,
+se calcula y visualiza de forma interactiva la terna inversa $\mathbf{v} \times \mathbf{u} = (-14, 6, 10)$,
+comprobando numéricamente que $\mathbf{v} \times \mathbf{u} = -(14, -6, -10)$.
+

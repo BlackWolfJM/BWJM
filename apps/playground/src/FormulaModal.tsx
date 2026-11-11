@@ -185,6 +185,9 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
             <label className="bwjm-modal-label">Vista Previa KaTeX</label>
             <div
               className="bwjm-modal-preview-box"
+              role="region"
+              aria-label="Vista previa de la fórmula"
+              tabIndex={0}
               dangerouslySetInnerHTML={{ __html: previewHtml }}
             />
           </div>

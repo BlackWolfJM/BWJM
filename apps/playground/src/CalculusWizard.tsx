@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import type { CalculusVizMode } from "@mathmd/ast";
 import { compileExpression, evaluateExpression } from "@mathmd/math";
+import { IntegrationGuide } from "./IntegrationGuide.js";
 
 type Field = { key: string; label: string; options?: string[] };
 interface Template {
@@ -89,6 +90,13 @@ export const CalculusWizard: React.FC<Props> = ({onInsert}) => {
   const [mode,setMode]=useState<CalculusVizMode>("area-dx");
   const [values,setValues]=useState<Record<string,string>>({...templates[0].values});
   const template=templates.find(option=>option.mode===mode)??templates[0];
+  function selectTemplate(next: string) {
+    if (next === mode) return;
+    const item = templates.find(option => option.mode === next);
+    if (!item) return;
+    setMode(item.mode);
+    setValues({ ...item.values });
+  }
   const aValue=parseConstant(values.a??"");
   const bValue=parseConstant(values.b??"");
   const reverseAValue=parseConstant(values.reverseA??"");
@@ -129,16 +137,13 @@ export const CalculusWizard: React.FC<Props> = ({onInsert}) => {
   return <section className="bwjm-calculus-wizard" aria-label="Asistente de cálculo integral">
     <header className="bwjm-calculus-wizard-header">
       <label htmlFor="bwjm-calculus-method">Método según el tipo de ejercicio</label>
-      <select id="bwjm-calculus-method" value={mode} onChange={event=>{
-        const next=event.target.value as CalculusVizMode;
-        const item=templates.find(option=>option.mode===next);
-        if(item){setMode(next);setValues({...item.values});}
-      }}>
+      <select id="bwjm-calculus-method" value={mode} onChange={event=>selectTemplate(event.target.value)}>
         {templates.map(item=><option key={item.mode} value={item.mode}>{item.label}</option>)}
       </select>
       <p>{template.help}</p>
       <div className="bwjm-calculus-formula">{template.formula}</div>
     </header>
+    <IntegrationGuide onSelectGreen={() => selectTemplate("green")} />
     <div className="bwjm-calculus-fields">
       {template.fields.map(field=><label className="bwjm-calculus-field" key={field.key}>
         <span>{field.label}</span>

@@ -110,6 +110,8 @@ other: [-1, 4]
 
 Al desplazar `k` verás la inversión de sentido para valores negativos y
 el vector nulo cuando k=0.
+En **Ver procedimiento** se comparan los productos y las normas para
+`k = -1`, `k = 0` y `k = 1` a partir del vector de la gráfica.
 
 ```vector2d
 id: lote-0108

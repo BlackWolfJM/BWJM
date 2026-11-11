@@ -123,12 +123,27 @@ export function computeVectorStudy(input:VectorStudyInput):VectorStudyResult {
       explanation="Construcción cabeza-cola y cierre del paralelogramo.";
       verification=input.mode==="sum"?"(u+v)-v = "+vector(a):"(u-v)+v = "+vector(a); break;
     }
-    case "scale":
+    case "scale": {
       result=scale(a,k);primary();arrows.push(arr("k u",o,sum(o,result),"result"));
-      explanation=k===0?"El producto es el vector nulo.":k<0?"El sentido se invierte.":"El sentido se conserva.";
+      const describeEffect = (scalar: number) => {
+        if (scalar === 0 || a.every(component => component === 0)) {
+          return "El producto es el vector nulo y no tiene dirección ni sentido.";
+        }
+        return scalar < 0 ? "El sentido se invierte." : "El sentido se conserva.";
+      };
+      explanation = describeEffect(k);
       steps.push({title:"Multiplicación escalar",expression:num(k)+" · "+vector(a)+" = "+vector(result),
         explanation:"Multiplica cada componente por el mismo número k."});
+      for (const sample of [-1, 0, 1]) {
+        const product = scale(a, sample);
+        steps.push({
+          title: "Comparación con k = " + sample,
+          expression: vector(product) + " · norma " + num(norm(product)),
+          explanation: describeEffect(sample),
+        });
+      }
       verification="||k u|| = "+num(norm(result))+"; |k| ||u|| = "+num(Math.abs(k)*norm(a)); break;
+    }
     case "properties": {
       const v=b(),w=finite(input.third??a,n,"third");result=sum(a,v);
       primary();arrows.push(arr("v",sum(o,a),sum(o,result),"secondary"),arr("u+v",o,sum(o,result),"result"));

@@ -1,11 +1,6 @@
 # Lote 01 — Laboratorio vectorial dentro de documentos `.bwjm`
 
-**Especificaciones consultadas:** `Guia_Maestra_Calculo_Vectorial_Temas_y_Subtemas.md`,
-`BWJM_Mapa_Maestro_1024_Funcionalidades_Calculo_Vectorial.md`,
-`BWJM_Backlog_1024_Funcionalidades.json` y
-`BWJM_Backlog_419_Subtemas.csv`. Los diez IDs son **01.01–01.10**.
-La guía contiene 419 subtemas; el backlog agrupa 1024 *oportunidades*, no
-1024 componentes independientes.
+Este documento describe los modos de estudio vectorial disponibles en BWJM Studio y el ejemplo para probarlos.
 
 ## Auditoría previa
 
@@ -58,7 +53,7 @@ campos opcionales `mode`, `other`, `third`, `factor`,
 | 01.05 | Desplazamiento | B-A y distancia | Vectores A, B y desplazamiento | Editor | Ejemplo | Unitarias | Implementada parcialmente |
 | 01.06 | Igualdad | Comparación de componentes | Superposición de dos flechas | Editor | Ejemplo | Unitarias | Implementada parcialmente |
 | 01.07 | Suma/resta | Operación por componentes | Cabeza-cola y paralelogramo | Editor | Ejemplo | Unitarias | Implementada parcialmente |
-| 01.08 | Escalamiento | k·u y norma | Resultado sobre el vector | Slider k | Ejemplo | Unitarias | Implementada parcialmente |
+| 01.08 | Escalamiento | k·u, norma y tratamiento del vector nulo | Resultado sobre el vector | Slider k y comparación de signo en el procedimiento existente | Ejemplo | Unitarias y lección completa | Incremento implementado |
 | 01.09 | Propiedades | Identidades en datos numéricos | Flechas u, v, suma | Slider k | Ejemplo | Unitarias | Implementada parcialmente |
 | 01.10 | Combinación/colinealidad | ku+mv y producto cruz/determinante | Flechas 2D/3D | Sliders k y m | Ejemplo | Unitarias | Implementada parcialmente |
 
@@ -75,18 +70,16 @@ Los archivos `packages/math/__tests__/vectorStudy.test.ts`,
 `packages/parser/__tests__/vectorStudy.test.ts` y
 `packages/core/__tests__/vectorStudy.test.ts` cubren invariantes básicos,
 errores de esquema, entradas degeneradas, reactividad y compatibilidad.
-Confirmar ejecución de `pnpm test`, `pnpm typecheck` y `pnpm build`
-mediante CI antes de declarar funcionalidades «Implementada y verificada».
-No se debe asumir que tener un test escrito implica que haya pasado.
+GitHub Actions comprueba estas pruebas junto con el tipado y la compilación.
 
-## Trabajo pendiente del lote
+## Incremento de 01.08
 
-1. Pruebas E2E del lector y apertura/exportación/reapertura de documentos.
-2. Arrastre de vectores y puntos en 2D/3D con comprobación matemática.
-3. Ampliar el menú único existente con capas vectoriales adicionales,
-   más allá del nuevo interruptor de procedimiento.
-4. Actividades de clasificación con retroalimentación, editores y tablas.
-5. Pasos simbólicos rigurosos y verificadores formales donde sean posibles.
+El motor compara `k = -1`, `k = 0` y `k = 1` con el vector de la lección.
+Cada paso muestra el producto, su norma y su efecto en el sentido. Un vector
+nulo carece de dirección y sentido para cualquier factor. Se conservan
+el slider de la lección y el interruptor **Ver procedimiento** del menú
+existente. El cambio se concentra en el motor y la lección de ejemplo,
+con pruebas para un vector 3D y para el caso nulo.
 
-Todos los módulos se incorporan al repositorio web original; no se fusiona
-automáticamente la rama de trabajo a `main`.
+Para la ampliación de los subtemas avanzados, consulta
+[la guía 41.08](GUIA_INTEGRACION_41_08.md).
