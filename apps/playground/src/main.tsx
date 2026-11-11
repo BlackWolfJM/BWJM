@@ -5,7 +5,7 @@ import { isSafeEmbeddedRasterUrl, MAX_LOCAL_IMAGE_BYTES, portableImageMarkdown, 
 import { compactImageEditor } from "./compactImageEditor.js";
 import type { DocumentInsertSnapshot } from "./workspaceDocuments.js";
 import type { MdastNode } from "@mathmd/parser";
-import { MathMDCore } from "@mathmd/core";
+import { MathMDCore, prepareCrossProductNodeData } from "@mathmd/core";
 import { SVGRenderer } from "@mathmd/renderer-svg";
 import { PlotlyRenderer } from "@mathmd/renderer-plotly";
 import {
@@ -15,9 +15,6 @@ import {
   computeRevolutionVolume,
   computeCrossSection,
   computeKinematics,
-  computeCrossProductScene,
-  computeCrossProductStudy,
-  describeCrossProductDeterminant,
   sampleVectorField2D,
   expressionToLatex,
   serializeScientificTable,
@@ -28,7 +25,7 @@ import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
 import { createAdaptiveParameterEditor } from "./AdaptiveParameterEditor.js";
-import { createCrossProductDeterminant, createCrossProductEditor, createCrossProductReport } from "./CrossProductEditor.js";
+import { createCrossProductDeterminant, createCrossProductEditor, createCrossProductReport, createCrossProductSummary } from "./CrossProductEditor.js";
 import {
   supportsAdaptiveParameters, writeGraphParameterControls,
 } from "./adaptiveGraphParameters.js";
@@ -1382,6 +1379,7 @@ export function BWJMStudio() {
 
         const cardBody = document.createElement("div");
         cardBody.className = "bwjm-node-body";
+        const crossSummary = node.type === "crossproduct" ? createCrossProductSummary() : undefined;
         const crossStepsKey = activeId + ":" + node.range.start.offset;
         const crossReport = node.type === "crossproduct" && node.showSteps !== undefined
           ? createCrossProductReport(
@@ -1587,13 +1585,13 @@ export function BWJMStudio() {
           if (node.type === "crossproduct") {
             controls.appendChild(createCrossProductEditor(node, {
               preview: (u, v) => {
-                const study = crossReport
-                  ? computeCrossProductStudy(u, v, node.reverseOrder, node.showSteps && node.showDeterminant, node.w, node.showIdentities, node.origin)
-                  : undefined;
-                const crossScene = study?.scene ?? computeCrossProductScene(u, v, node.reverseOrder, node.w, node.origin);
-                plotlyRenderersRef.current.get(node.id)?.render({ ...node, u, v, crossScene });
-                if (study) crossReport?.update(study);
-                determinant?.update(describeCrossProductDeterminant(u, v, crossScene, node.reverseOrder));
+                // The live preview and committed document use the same engine
+                // calculations. Never recalculate areas or volumes in the DOM.
+                const previewData = prepareCrossProductNodeData({ ...node, u, v });
+                plotlyRenderersRef.current.get(node.id)?.render(previewData);
+                crossSummary?.update(previewData);
+                if (previewData.crossStudy) crossReport?.update(previewData.crossStudy);
+                if (previewData.crossDeterminant) determinant?.update(previewData.crossDeterminant);
               },
               save: (key, value) => {
                 openGraphSettingsRef.current.add(settingsKey);
@@ -2184,6 +2182,10 @@ export function BWJMStudio() {
           const nodeData = coreRef.current.getNodeData(node.id);
           if (nodeData) {
             renderer.render(nodeData);
+            if (crossSummary) {
+              crossSummary.update(nodeData);
+              cardBody.appendChild(crossSummary.element);
+            }
             if (crossReport && nodeData.crossStudy) {
               crossReport.update(nodeData.crossStudy);
               cardBody.appendChild(crossReport.element);
