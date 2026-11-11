@@ -25,6 +25,7 @@ export function supportsInlinePlayback(node: { type: string; animated?: boolean 
 export interface InlinePlaybackController {
   element: HTMLDivElement;
   dispose: () => void;
+  updateTimelines: (timelines: readonly TimelineNode[]) => void;
 }
 
 /**
@@ -37,7 +38,8 @@ export function createInlinePlayback(
   readVariables: () => Record<string, number>,
   writeVariable: (name: string, value: number) => void,
 ): InlinePlaybackController {
-  const timeline = timelines[0];
+  let liveTimelines = timelines;
+  let timeline = liveTimelines[0];
   if (!timeline) throw new Error("Inline playback requires a timeline");
 
   const element = document.createElement("div");
@@ -91,7 +93,7 @@ export function createInlinePlayback(
     }
   };
   const synchronize = (fraction: number) => {
-    timelines.forEach(item => writeVariable(item.name, fractionTime(fraction, item.domain)));
+    liveTimelines.forEach(item => writeVariable(item.name, fractionTime(fraction, item.domain)));
     updateDisplay();
   };
   const frame = (now: number) => {
@@ -123,6 +125,13 @@ export function createInlinePlayback(
 
   return {
     element,
+    updateTimelines: next => {
+      if (disposed || !next.length) return;
+      liveTimelines = next;
+      timeline = next[0];
+      // Reuse the same event subscription and RAF loop; never reset time or play state.
+      updateDisplay();
+    },
     dispose: () => {
       disposed = true;
       setPlaying(false);
