@@ -1,7 +1,7 @@
 import type { CrossProductNode, MathMDNode, Plane3DNode } from "@mathmd/ast";
 import {
-  angleBetweenLines, angleBetweenPlanes, computeCrossProductArea, computeCrossProductDistributivity,
-  computeCrossProductScene, computeKinematics, computeParallelepipedVolume, computePlaneFromPoints,
+  angleBetweenLines, angleBetweenPlanes, computeCrossProductDistributivity,
+  computeCrossProductScene, computeKinematics, computePlaneFromPoints,
   computePlaneFromVectors, identifyConicFromMode, isFiniteVector, linePlaneAngle, linesDistance,
   pointLineDistance, pointPlaneDistance, sampleParametricTrajectory, sampleSurface,
 } from "@mathmd/math";
@@ -2261,8 +2261,8 @@ export class PlotlyRenderer {
     collapseInfo?: CollapseStudy,
     effectiveW?: Vector3
   }): void {
-    const { u, v, w, origin = [0, 0, 0], showPlane = true, showNormal = true, showArea = true, showTriangle = false, showVolume = false,
-      showCollapse = false, collapseFactor = 0, collapseTarget = "coplanar",
+    const { u, v, w, origin = [0, 0, 0], showPlane = true, showNormal = true, showTriangle = false, showVolume = false,
+      showCollapse = false,
       colorU = "#0284c7", colorNormal = "#10b981", colorPlane = "#cbd5e1", colorTriangle = "#f59e0b", colorVolume = "#8b5cf6",
       planeOpacity = 0.4, labelU = "u", labelV = "v", labelW = "w", labelNormal, reverseOrder = false,
       showRightHand = false, showAnticommutative = false, showDistributive = false } = node;
