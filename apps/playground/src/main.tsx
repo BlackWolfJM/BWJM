@@ -17,6 +17,8 @@ import {
   computeKinematics,
   computeCrossProductScene,
   computeCrossProductStudy,
+  computeCollapseStudy,
+  computeParallelepipedVolume,
   describeCrossProductDeterminant,
   sampleVectorField2D,
   expressionToLatex,
@@ -730,6 +732,9 @@ export function BWJMStudio() {
   const coreRef = useRef<MathMDCore | null>(null);
   const activeTimersRef = useRef<Map<string, number>>(new Map());
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
+  const collapseFramesRef = useRef<Map<string, number>>(new Map());
+  const collapseCameraRef = useRef<Map<string, Record<string, unknown>>>(new Map());
+  const renderedDocumentRef = useRef<string | null>(null);
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
   const openGraphSettingsRef = useRef<Set<string>>(new Set());
   const openCrossProductStepsRef = useRef<Set<string>>(new Set());
@@ -776,6 +781,8 @@ export function BWJMStudio() {
   };
 
   const clearRenderers = () => {
+    collapseFramesRef.current.forEach(frame => window.cancelAnimationFrame(frame));
+    collapseFramesRef.current.clear();
     parameterEditorDisposersRef.current.forEach(dispose => dispose());
     parameterEditorDisposersRef.current = [];
     playbackRef.current?.dispose();
@@ -1210,6 +1217,16 @@ export function BWJMStudio() {
   ];
 
   useEffect(() => {
+    // A saved collapse factor rebuilds the Markdown view. Keep the user's real
+    // 3D camera/zoom per document and block before destroying old Plotly nodes.
+    const previousDocument = renderedDocumentRef.current;
+    if (previousDocument) {
+      plotlyRenderersRef.current.forEach((renderer, id) => {
+        const camera = renderer.getSceneCamera();
+        if (camera) collapseCameraRef.current.set(previousDocument + ":" + id, camera);
+      });
+    }
+    renderedDocumentRef.current = activeId;
     clearTimers();
     clearRenderers();
 
@@ -1498,13 +1515,50 @@ export function BWJMStudio() {
             collapseRange.setAttribute("aria-label", "Factor de colapso del paralelepípedo");
             const collapseValue = document.createElement("output");
             collapseValue.textContent = `${Math.round((node.collapseFactor ?? 0) * 100)}%`;
-            collapseRange.oninput = () => { 
-              collapseValue.textContent = `${Math.round(Number(collapseRange.value) * 100)}%`; 
+            const collapseFrameKey = activeId + ":" + node.id;
+            const cancelCollapsePreview = () => {
+              const pending = collapseFramesRef.current.get(collapseFrameKey);
+              if (pending !== undefined) window.cancelAnimationFrame(pending);
+              collapseFramesRef.current.delete(collapseFrameKey);
+            };
+            const renderCollapsePreview = (factor: number) => {
+              const renderer = plotlyRenderersRef.current.get(node.id);
+              if (!renderer || !node.w || !collapseRange.isConnected) return;
+              const collapseInfo = computeCollapseStudy(
+                node.u, node.v, node.w, factor, node.collapseTarget ?? "coplanar");
+              const effectiveW = collapseInfo.currentW;
+              const data = coreRef.current?.getNodeData(node.id);
+              if (!data || data.type !== "crossproduct") return;
+              renderer.render({
+                ...data,
+                collapseFactor: factor,
+                collapseInfo,
+                effectiveW,
+                crossScene: computeCrossProductScene(
+                  node.u, node.v, node.reverseOrder, effectiveW, node.origin),
+                volumeInfo: node.showVolume !== false
+                  ? computeParallelepipedVolume(node.u, node.v, effectiveW)
+                  : undefined,
+              });
+            };
+            collapseRange.oninput = () => {
+              const factor = Number(collapseRange.value);
+              collapseValue.textContent = `${Math.round(factor * 100)}%`;
+              cancelCollapsePreview();
+              const frame = window.requestAnimationFrame(() => {
+                collapseFramesRef.current.delete(collapseFrameKey);
+                renderCollapsePreview(factor);
+              });
+              collapseFramesRef.current.set(collapseFrameKey, frame);
             };
             collapseRange.onchange = () => {
+              // No outdated RAF may run after the commit replaces this document.
+              cancelCollapsePreview();
+              const factor = Number(collapseRange.value);
+              renderCollapsePreview(factor);
               openGraphSettingsRef.current.add(settingsKey);
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, "collapseFactor", Number(collapseRange.value)));
+                previous, node.range, node.type, "collapseFactor", factor));
             };
             collapseRow.append(textLabel, collapseRange, collapseValue);
             controls.appendChild(collapseRow);
@@ -2179,6 +2233,9 @@ export function BWJMStudio() {
           cardBody.appendChild(mount);
 
           const renderer = new PlotlyRenderer(mount);
+          const savedCamera = node.type === "crossproduct"
+            ? collapseCameraRef.current.get(activeId + ":" + node.id) : undefined;
+          if (savedCamera) renderer.setSceneCamera(savedCamera);
           plotlyRenderersRef.current.set(node.id, renderer);
 
           const nodeData = coreRef.current.getNodeData(node.id);
