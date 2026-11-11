@@ -43,7 +43,7 @@ async function getClock(page) {
 async function capture(page) {
   return page.evaluate(() => {
     const find = type => [...document.querySelectorAll(".bwjm-node-card")].find(item =>
-      item.querySelector(".bwjm-node-tag")?.textContent?.startsWith(type));
+      item.querySelector(".bwjm-node-tag")?.textContent?.includes(type));
     const curve = find("CURVE3D");
     const param = find("PARAMETRIC2D");
     if (!curve || !param) throw new Error("Faltan tarjetas científicas");
@@ -59,7 +59,7 @@ async function capture(page) {
 async function refs(page, curveExpected = true) {
   const status = await page.evaluate(() => {
     const find = type => [...document.querySelectorAll(".bwjm-node-card")].find(item =>
-      item.querySelector(".bwjm-node-tag")?.textContent?.startsWith(type));
+      item.querySelector(".bwjm-node-tag")?.textContent?.includes(type));
     const old = window.__vis11;
     const curve = find("CURVE3D"), param = find("PARAMETRIC2D");
     return {
