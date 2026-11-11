@@ -14,8 +14,13 @@ function renderer() {
   const renderToString = vi.fn((tex: string, options: {
     displayMode: boolean; throwOnError: true; trust: false;
   }) => {
-    if (!tex || tex.includes("\\frac{") && !tex.includes("}")) throw new Error("invalid TeX");
-    if (tex.includes("\\tag{{")) throw new Error("invalid label");
+    // Mimic KaTeX's strict validation of the final assembled TeX.
+    let depth = 0;
+    for (const char of tex) {
+      if (char === "{") depth++;
+      if (char === "}" && --depth < 0) throw new Error("unexpected closing brace");
+    }
+    if (!tex || depth !== 0) throw new Error("unbalanced TeX");
     return '<span class="katex"><span class="katex-mathml">' +
       tex + "</span></span>";
   });
@@ -102,7 +107,7 @@ describe("VIS-09: palette placement and caret", () => {
       latex: "\\pi ab", cursor: 4,
     });
     expect(insertFormulaSnippet("ab", 2, 2, "\\pi")).toEqual({
-      latex: "ab\\pi", cursor: 6,
+      latex: "ab\\pi", cursor: 5,
     });
     expect(insertFormulaSnippet("a+b", 1, 1, "\\sqrt{x}")).toEqual({
       latex: "a\\sqrt{x}+b", cursor: 9,
