@@ -93,6 +93,7 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
   };
 
   const handleConfirm = (): void => {
+    console.log("VIS09 handleConfirm entered", { isOpen, submitted: submittedRef.current });
     if (!isOpen || submittedRef.current) return;
     // Re-evaluate synchronously. Never trust a hasError value produced by an
     // earlier effect if the user just changed TeX, mode or equation number.
