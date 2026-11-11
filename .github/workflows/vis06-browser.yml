@@ -1,0 +1,36 @@
+name: VIS-06 browser portability
+
+on:
+  push:
+    branches:
+      - codex/vis-06-markdown-lector
+  workflow_dispatch:
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install isolated browser runner
+        run: |
+          mkdir -p /tmp/bwjm-browser
+          npm install --prefix /tmp/bwjm-browser --no-save --no-package-lock playwright@1.58.2
+          /tmp/bwjm-browser/node_modules/.bin/playwright install --with-deps chromium
+      - name: Test VIS-06 in Chromium
+        run: node scripts/vis06-browser.mjs
+      - name: Browser screenshots for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vis06-responsive-screenshots
+          path: /tmp/vis06-screens/*.png
+          if-no-files-found: ignore
