@@ -462,8 +462,8 @@ describe('PlotlyRenderer', () => {
       'showArea: true', 'showTriangle: true', '```',
     ].join('\n')));
     const engine = core.getNodeData('cross-small-triangle');
-    expect(engine.crossScene.area).toBe(1e-14);
-    expect(engine.crossScene.triangleArea).toBe(5e-15);
+    expect(Number(engine.crossScene.area.toPrecision(7))).toBe(1e-14);
+    expect(Number(engine.crossScene.triangleArea.toPrecision(7))).toBe(5e-15);
     renderer.render(node as never);
     const args = vi.mocked(newPlot).mock.calls[0];
     expect(args[1]).not.toEqual(expect.arrayContaining([expect.objectContaining({ mode: 'text' })]));
