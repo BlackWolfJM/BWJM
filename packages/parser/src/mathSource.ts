@@ -122,18 +122,23 @@ export function prepareRemarkMath(source: string): PreparedRemarkMath {
     },
   };
 }
-export function originalSourcePosition(
+/** Precompute original LF/CRLF line starts once; needed for large VIS-06 image documents. */
+export function sourcePositionLocator(
   source: string,
-  offset: number,
-): { line: number; column: number; offset: number } {
-  const bounded = Math.max(0, Math.min(source.length, offset));
-  let line = 1;
-  let lineStart = 0;
-  for (let i = 0; i < bounded; i++) {
-    if (source[i] === "\n") {
-      line++;
-      lineStart = i + 1;
-    }
+): (offset: number) => { line: number; column: number; offset: number } {
+  const lineStarts = [0];
+  for (let i = 0; i < source.length; i++) {
+    if (source.charCodeAt(i) === 10) lineStarts.push(i + 1);
   }
-  return { line, column: bounded - lineStart + 1, offset: bounded };
+  return (offset: number) => {
+    const bounded = Math.max(0, Math.min(source.length, offset));
+    let low = 0;
+    let high = lineStarts.length - 1;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if (lineStarts[mid] <= bounded) low = mid;
+      else high = mid - 1;
+    }
+    return { line: low + 1, column: bounded - lineStarts[low] + 1, offset: bounded };
+  };
 }
