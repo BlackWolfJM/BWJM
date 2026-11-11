@@ -32,7 +32,7 @@ async function visit(page) {
 }
 async function timeOf(transport) {
   const value = await transport.locator(".bwjm-inline-playback-value").textContent();
-  const match = /\b=\s*(-?\d+(?:\.\d+)?)/.exec(value ?? "");
+  const match = /=\s*(-?\d+(?:\.\d+)?)/.exec(value ?? "");
   if (!match) throw new Error("Instante ilegible: " + value);
   return Number(match[1]);
 }
@@ -140,6 +140,7 @@ try {
   await toggle.click();
   const beforeSwitch = await timeOf(transport);
   await waitForTimeAfter(page, "#node-particula-circular " + playbackSelector, beforeSwitch);
+  const timeAtSwitch = await timeOf(transport);
   await page.getByRole("button", { name: "Nuevo documento" }).click();
   assert.equal(await page.locator(playbackSelector).count(), 0, "Documento estático mostró reproductor");
   const eventsAfterSwitch = await page.evaluate(() => window.__vis14Events.length);
@@ -153,14 +154,18 @@ try {
   await checkOne(second, page);
   assert(Math.abs(await timeOf(second) - 4) < 0.01, "La segunda pestaña heredó el tiempo ajeno");
   const secondSeek = second.locator(".bwjm-inline-playback-seek");
-  await secondSeek.fill("0.75");
+  await secondSeek.evaluate(el => {
+    el.value = "0.75";
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
   assert(Math.abs(await timeOf(second) - 7.5) < 0.01, "La segunda pestaña no conserva sus variables");
 
   await page.getByRole("tab", { name: filename }).click();
   await transport.waitFor();
   await checkOne(transport, page);
   assert.equal(await toggle.getAttribute("aria-label"), "Reproducir animación");
-  assert(Math.abs(await timeOf(transport) - (await timeOf(transport))) < 0.001);
+  assert(Math.abs(await timeOf(transport) - timeAtSwitch) < 0.35,
+    "La primera pestaña no conservó su propio instante");
   assert(Math.abs(await timeOf(transport) - 7.5) > 0.5, "El tiempo de otra pestaña contaminó la primera");
 
   // A single transport advances the shared timeline at its original 1x speed.
