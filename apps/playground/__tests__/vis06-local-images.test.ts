@@ -77,7 +77,7 @@ describe("VIS-06: local raster validation and portable Markdown", () => {
       expect(parseMathMD(reopened.documents[0].content).children.some(node => node.type === "plot2d")).toBe(true);
       const tree = parseProseMarkdown(reopened.documents[0].content);
       expect(JSON.stringify(tree)).toContain('"type":"image"');
-      expect(JSON.stringify(tree)).toContain('"type":"math"');
+      expect(JSON.stringify(tree)).toContain('"type":"inlineMath"');
       expect(reopened.documents[0].content).toContain("Texto después.");
     }
   );
