@@ -117,24 +117,28 @@ async function commit(page,slider,spec,factor,volume,effectiveW) {
   verifyScene(await readPlot(page,spec.id),spec,factor,volume,effectiveW);
 }
 async function rotateCamera(page,id) {
+  const before = JSON.stringify((await readPlot(page,id)).camera);
   const changed=await page.evaluate(async id=>{
     const plot=document.querySelector("#mount-"+id+" .js-plotly-plot");
-    const before=JSON.stringify(plot._fullLayout.scene.camera);
+    const old=JSON.stringify(plot._fullLayout.scene.camera);
     if (window.Plotly?.relayout) {
       await window.Plotly.relayout(plot, {"scene.camera.eye":{x:1.9,y:0.55,z:2.25}});
-      return JSON.stringify(plot._fullLayout.scene.camera)!==before;
+      return JSON.stringify(plot._fullLayout.scene.camera)!==old;
     }
     return false;
   },id);
-  if (changed) return;
-  const canvas=page.locator("#mount-"+id+" .gl-container canvas").first();
-  const box=await canvas.boundingBox();
-  if (!box) throw new Error("3D canvas unavailable for camera rotation");
-  const x=box.x+box.width*.52,y=box.y+box.height*.48;
-  await page.mouse.move(x,y);
-  await page.mouse.down();
-  await page.mouse.move(x+90,y+45,{steps:10});
-  await page.mouse.up();
+  if (!changed) {
+    const canvas=page.locator("#mount-"+id+" .gl-container canvas").first();
+    const box=await canvas.boundingBox();
+    if (!box) throw new Error("3D canvas unavailable for camera rotation");
+    const x=box.x+box.width*.52,y=box.y+box.height*.48;
+    await page.mouse.move(x,y);
+    await page.mouse.down();
+    await page.mouse.move(x+90,y+45,{steps:10});
+    await page.mouse.up();
+  }
+  const after=JSON.stringify((await readPlot(page,id)).camera);
+  assert.notEqual(after,before,"The camera did not actually rotate before preview");
 }
 
 try {
