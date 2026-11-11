@@ -97,6 +97,11 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
     // Re-evaluate synchronously. Never trust a hasError value produced by an
     // earlier effect if the user just changed TeX, mode or equation number.
     const current = evaluateFormula(draftRef.current, getRenderer());
+    console.log("VIS09 confirmation diagnostic", {
+      isOpen, submitted: submittedRef.current, mode: draftRef.current.mode,
+      latex: draftRef.current.latex, label: draftRef.current.label,
+      status: current.status, previewStatus: evaluation.status,
+    });
     if (!current.valid) return;
     submittedRef.current = true;
     onInsert(current.source);
