@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { IconX, IconCheck, IconFunction } from "./icons.js";
+import { evaluateFormula, insertFormulaSnippet } from "./formulaDraft.js";
+import type { FormulaDraft, FormulaMode } from "./formulaDraft.js";
 
 interface FormulaModalProps {
   isOpen: boolean;
@@ -29,71 +31,90 @@ const TEMPLATES: Array<{ label: string; snippet: string; description: string }> 
 
 export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onInsert }) => {
   const [latex, setLatex] = useState<string>("\\int_{0}^{1} (x - x^2)\\,dx = \\frac{1}{6}");
-  const [mode, setMode] = useState<"inline" | "block" | "numbered">("block");
+  const [mode, setMode] = useState<FormulaMode>("block");
   const [label, setLabel] = useState<string>("1");
-  const [previewHtml, setPreviewHtml] = useState<string>("");
-  const [hasError, setHasError] = useState<boolean>(false);
+  const [rendererRevision, setRendererRevision] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const pendingCursorRef = useRef<number | null>(null);
+  const submittedRef = useRef(false);
+  // Updated in each input/change event before React schedules a render.
+  // Keyboard shortcuts therefore validate even the newest keystroke/label.
+  const draftRef = useRef<FormulaDraft>({ latex, mode, label });
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const timeout = setTimeout(() => {
-      inputRef.current?.focus();
-    }, 50);
-    return () => clearTimeout(timeout);
-  }, [isOpen]);
+  const getRenderer = () => typeof window === "undefined" ? null : window.katex;
+  const evaluation = useMemo(
+    () => evaluateFormula({ latex, mode, label }, getRenderer()),
+    [latex, mode, label, rendererRevision],
+  );
 
-  useEffect(() => {
-    if (!isOpen) return;
-    if (typeof window !== "undefined" && window.katex) {
-      try {
-        const rendered = window.katex.renderToString(latex.trim() || "\\text{...}", {
-          displayMode: mode !== "inline",
-          throwOnError: true,
-        });
-        setPreviewHtml(rendered);
-        setHasError(false);
-      } catch {
-        setHasError(true);
-        setPreviewHtml(`<span class="bwjm-modal-error">Error de sintaxis LaTeX</span>`);
-      }
-    } else {
-      setPreviewHtml(`<code>${latex}</code>`);
-      setHasError(false);
-    }
-  }, [latex, mode, isOpen]);
-
-  if (!isOpen) return null;
-
-  const handleApplyTemplate = (snippet: string) => {
-    setLatex((prev) => (prev.trim().length === 0 ? snippet : `${prev} ${snippet}`));
-    inputRef.current?.focus();
+  const changeLatex = (next: string): void => {
+    draftRef.current = { ...draftRef.current, latex: next };
+    setLatex(next);
+  };
+  const changeMode = (next: FormulaMode): void => {
+    draftRef.current = { ...draftRef.current, mode: next };
+    setMode(next);
+  };
+  const changeLabel = (next: string): void => {
+    draftRef.current = { ...draftRef.current, label: next };
+    setLabel(next);
   };
 
-  const handleConfirm = () => {
-    const trimmed = latex.trim();
-    if (!trimmed) return;
+  useEffect(() => {
+    if (!isOpen) return;
+    submittedRef.current = false;
+    const timeout = setTimeout(() => inputRef.current?.focus(), 50);
+    const refreshRenderer = () => setRendererRevision(previous => previous + 1);
+    // The base branch can still load KaTeX via a deferred script. Do not
+    // treat its absence as a valid formula while the script is unavailable.
+    window.addEventListener("load", refreshRenderer);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener("load", refreshRenderer);
+    };
+  }, [isOpen]);
 
-    let output = "";
-    if (mode === "inline") {
-      output = `$${trimmed}$`;
-    } else if (mode === "block") {
-      output = `\n$$\n${trimmed}\n$$\n`;
-    } else {
-      output = `\n$$\n${trimmed} \\tag{${label || "1"}}\n$$\n`;
-    }
+  useLayoutEffect(() => {
+    const cursor = pendingCursorRef.current;
+    if (cursor === null || !inputRef.current) return;
+    pendingCursorRef.current = null;
+    inputRef.current.focus();
+    inputRef.current.setSelectionRange(cursor, cursor);
+  }, [latex]);
 
-    onInsert(output);
+  const handleApplyTemplate = (snippet: string): void => {
+    const textarea = inputRef.current;
+    const current = draftRef.current.latex;
+    const start = textarea?.selectionStart ?? current.length;
+    const end = textarea?.selectionEnd ?? start;
+    const insertion = insertFormulaSnippet(current, start, end, snippet);
+    pendingCursorRef.current = insertion.cursor;
+    changeLatex(insertion.latex);
+  };
+
+  const handleConfirm = (): void => {
+    if (!isOpen || submittedRef.current) return;
+    // Re-evaluate synchronously. Never trust a hasError value produced by an
+    // earlier effect if the user just changed TeX, mode or equation number.
+    const current = evaluateFormula(draftRef.current, getRenderer());
+    if (!current.valid) return;
+    submittedRef.current = true;
+    onInsert(current.source);
     onClose();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === "Escape") {
+      event.preventDefault();
       onClose();
-    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      event.stopPropagation();
       handleConfirm();
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="bwjm-modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
@@ -118,6 +139,7 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
                   type="button"
                   className="bwjm-template-chip"
                   title={tmpl.description}
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => handleApplyTemplate(tmpl.snippet)}
                 >
                   {tmpl.label}
@@ -130,10 +152,10 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
             <label className="bwjm-modal-label">Código LaTeX</label>
             <textarea
               ref={inputRef}
-              className={`bwjm-modal-textarea ${hasError ? "has-error" : ""}`}
+              className={`bwjm-modal-textarea ${evaluation.status === "invalid" ? "has-error" : ""}`}
               rows={3}
               value={latex}
-              onChange={(e) => setLatex(e.target.value)}
+              onChange={(e) => changeLatex(e.target.value)}
               placeholder="Escribe la expresión en notación LaTeX, p. ej. \\frac{a}{b}"
             />
           </div>
@@ -146,7 +168,7 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
                   type="radio"
                   name="formula-mode"
                   checked={mode === "inline"}
-                  onChange={() => setMode("inline")}
+                  onChange={() => changeMode("inline")}
                 />
                 <span>En línea ($ ... $)</span>
               </label>
@@ -155,7 +177,7 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
                   type="radio"
                   name="formula-mode"
                   checked={mode === "block"}
-                  onChange={() => setMode("block")}
+                  onChange={() => changeMode("block")}
                 />
                 <span>En bloque ($$ ... $$)</span>
               </label>
@@ -164,7 +186,7 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
                   type="radio"
                   name="formula-mode"
                   checked={mode === "numbered"}
-                  onChange={() => setMode("numbered")}
+                  onChange={() => changeMode("numbered")}
                 />
                 <span>Ecuación numerada</span>
               </label>
@@ -173,7 +195,7 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
                   type="text"
                   className="bwjm-modal-tag-input"
                   value={label}
-                  onChange={(e) => setLabel(e.target.value)}
+                  onChange={(e) => changeLabel(e.target.value)}
                   placeholder="Ej. 1"
                   style={{ width: "60px", marginLeft: "0.5rem" }}
                 />
@@ -188,8 +210,23 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
               role="region"
               aria-label="Vista previa de la fórmula"
               tabIndex={0}
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
+            >
+              {evaluation.valid
+                ? <div dangerouslySetInnerHTML={{ __html: evaluation.previewHtml }} />
+                : <span className="bwjm-modal-error" role="status">
+                    {evaluation.status === "empty"
+                      ? "Escribe una fórmula para previsualizarla."
+                      : evaluation.status === "unavailable"
+                        ? "KaTeX aún no está disponible. La fórmula no se puede validar."
+                        : "Error de sintaxis LaTeX en la fórmula o su etiqueta."}
+                  </span>}
+              {evaluation.status === "invalid" && <code>{evaluation.tex}</code>}
+            </div>
+            {mode === "numbered" && evaluation.existingTag && (
+              <p className="bwjm-modal-label">
+                La fórmula ya contiene una etiqueta \tag; se conserva la del código LaTeX.
+              </p>
+            )}
           </div>
         </div>
 
@@ -197,7 +234,7 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
           <button className="bwjm-btn-secondary" onClick={onClose}>
             Cancelar
           </button>
-          <button className="bwjm-btn-primary" onClick={handleConfirm} disabled={hasError}>
+          <button className="bwjm-btn-primary" onClick={handleConfirm} disabled={!evaluation.valid}>
             <IconCheck size={14} />
             <span>Insertar Fórmula</span>
           </button>
