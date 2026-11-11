@@ -58,6 +58,7 @@ export function createCrossProductReport(
   open: boolean,
   onToggle: (open: boolean) => void,
   onToggleOrder?: () => void,
+  openIdentities: Set<string> = new Set(),
 ) {
   const element = document.createElement("section");
   element.className = "bwjm-calculus-report bwjm-cross-report";
@@ -106,7 +107,14 @@ export function createCrossProductReport(
     error.hidden = study.scene.error === undefined;
     error.textContent = study.scene.error ?? "";
     element.classList.toggle("has-error", !error.hidden);
-    list.replaceChildren(...study.steps.map(step => {
+    // Preserve the existing interactive disclosures during live recalculation.
+    const previousIdentities = new Map<string, HTMLDetailsElement>();
+    list.querySelectorAll<HTMLElement>(".bwjm-identity-item").forEach(card => {
+      const id = card.dataset.identityId;
+      const disclosure = card.querySelector<HTMLDetailsElement>(".bwjm-identity-steps");
+      if (id && disclosure) previousIdentities.set(id, disclosure);
+    });
+    const nextSteps = study.steps.map(step => {
       const item = document.createElement("li");
       const title = document.createElement("strong");
       title.textContent = step.title;
@@ -406,6 +414,11 @@ export function createCrossProductReport(
 
           const stepsDetails = document.createElement("details");
           stepsDetails.className = "bwjm-identity-steps";
+          stepsDetails.open = openIdentities.has(identity.id);
+          stepsDetails.addEventListener("toggle", () => {
+            if (stepsDetails.open) openIdentities.add(identity.id);
+            else openIdentities.delete(identity.id);
+          });
           const stepsSummary = document.createElement("summary");
           stepsSummary.textContent = "Ver demostración guiada paso a paso";
           const stepsOl = document.createElement("ol");
@@ -469,7 +482,21 @@ export function createCrossProductReport(
         item.appendChild(cofactorsList);
       }
       return item;
-    }));
+    });
+    nextSteps.forEach(step => {
+      step.querySelectorAll<HTMLElement>(".bwjm-identity-item").forEach(card => {
+        const id = card.dataset.identityId;
+        const existing = id && previousIdentities.get(id);
+        const fresh = card.querySelector<HTMLDetailsElement>(".bwjm-identity-steps");
+        if (!existing || !fresh) return;
+        // Update expressions, explanations and checks while retaining focus/open.
+        const oldList = existing.querySelector("ol");
+        const newList = fresh.querySelector("ol");
+        if (oldList && newList) oldList.replaceChildren(...Array.from(newList.childNodes));
+        fresh.replaceWith(existing);
+      });
+    });
+    list.replaceChildren(...nextSteps);
   }
   return { element, update };
 }
@@ -489,7 +516,7 @@ function svgElement<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTag
 export function createCrossProductEditor(
   node: CrossProductNode,
   handlers: {
-    preview(u: Vector3, v: Vector3): void;
+    preview(u: Vector3, v: Vector3, w?: Vector3): void;
     save(key: VectorKey | "w", vector: Vector3): void;
   },
 ): HTMLElement {
@@ -549,6 +576,7 @@ export function createCrossProductEditor(
 
   const vectors: Record<VectorKey, Vector3> = { u: [...node.u], v: [...node.v] };
   const inputs: Record<VectorKey, HTMLInputElement[]> = { u: [], v: [] };
+  const previewW: Vector3 | undefined = node.w ? [...node.w] : undefined;
   const traces = { u: svgElement("line"), v: svgElement("line") };
   const handles = { u: svgElement("circle"), v: svgElement("circle") };
   let drag: { key: VectorKey; pointerId: number; original: Vector3; scale: number; start: DOMPoint } | undefined;
@@ -558,7 +586,7 @@ export function createCrossProductEditor(
     if (previewFrame !== undefined) return;
     previewFrame = requestAnimationFrame(() => {
       previewFrame = undefined;
-      if (editor.isConnected) handlers.preview(vectors.u, vectors.v);
+      if (editor.isConnected) handlers.preview(vectors.u, vectors.v, previewW);
     });
   }
 
@@ -660,7 +688,7 @@ export function createCrossProductEditor(
     components.appendChild(fields);
   }
   if (node.showDistributive || node.w) {
-    const vecW: Vector3 = [...(node.w ?? [0, 1, 1])];
+    const vecW: Vector3 = previewW ?? [0, 1, 1];
     const fieldsW = document.createElement("fieldset");
     const legendW = document.createElement("legend");
     legendW.textContent = node.labelW ?? "w (distributividad)";
