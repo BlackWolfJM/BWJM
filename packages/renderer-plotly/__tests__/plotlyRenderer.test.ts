@@ -90,7 +90,7 @@ describe('PlotlyRenderer', () => {
       expect.objectContaining({ type: 'cone', x: [1], y: [0], z: [0] }),
       expect.objectContaining({ type: 'cone', x: [0], y: [1], z: [0] }),
       expect.objectContaining({ type: 'cone', x: [0], y: [0], z: [1] }),
-    ]), expect.objectContaining({ uirevision: 'cross', title: { text: expect.stringContaining('= 1') } }),
+    ]), expect.objectContaining({ uirevision: 'cross', title: expect.objectContaining({ text: 'Producto cruz' }) }),
     expect.anything());
   });
 
@@ -107,7 +107,7 @@ describe('PlotlyRenderer', () => {
     renderer.render({ ...node, v: [2, 0, 0] });
     expect(plotly.react).toHaveBeenCalledWith(
       expect.anything(), expect.not.arrayContaining([expect.objectContaining({ name: 'u × v' })]),
-      expect.objectContaining({ title: { text: expect.stringContaining('paralelos o nulos') } }), expect.anything(),
+      expect.objectContaining({ title: expect.objectContaining({ text: 'Producto cruz' }) }), expect.anything(),
     );
   });
 
@@ -283,51 +283,32 @@ describe('PlotlyRenderer', () => {
     expect(plotly.Plots.resize).toHaveBeenCalledOnce();
   });
 
-  it('renders parallelogram area depending on sine of angle and toggles correctly', () => {
-    // With showArea: true
+  it('keeps numerical area results out of the 3D scene, even when showArea is true without a plane', () => {
     renderer.render({
-      type: 'crossproduct',
-      id: 'cross-test-area',
-      u: [2, 3, 1],
-      v: [4, 1, 5],
-      showPlane: true,
-      showArea: true,
+      type: 'crossproduct', id: 'cross-no-plane',
+      u: [2, 3, 1], v: [4, 1, 5],
+      showPlane: false, showArea: true,
     } as never);
-    expect(newPlot).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.arrayContaining([expect.objectContaining({ name: 'Etiqueta de área' })]),
-      expect.objectContaining({ title: { text: expect.stringMatching(/sen\(θ\).*θ ≈ 48\.7°/) } }),
-      expect.anything(),
-    );
+    const args = vi.mocked(newPlot).mock.calls[0];
+    expect(args[1]).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'mesh3d', name: 'Plano generado' }),
+    ]));
+    expect(args[1]).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ mode: 'text' }),
+    ]));
+    expect(args[2]).toEqual(expect.objectContaining({
+      title: expect.objectContaining({ text: 'Producto cruz' }),
+    }));
 
-    // With showArea: false
     renderer.render({
-      type: 'crossproduct',
-      id: 'cross-test-no-area',
-      u: [2, 3, 1],
-      v: [4, 1, 5],
-      showPlane: true,
-      showArea: false,
-    } as never);
-    expect(plotly.react).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.not.arrayContaining([expect.objectContaining({ name: 'Etiqueta de área' })]),
-      expect.objectContaining({ title: { text: expect.not.stringContaining('Área:') } }),
-      expect.anything(),
-    );
-
-    // Parallel vectors: zero area without division by zero
-    renderer.render({
-      type: 'crossproduct',
-      id: 'cross-test-parallel',
-      u: [1, 2, 3],
-      v: [2, 4, 6],
+      type: 'crossproduct', id: 'cross-parallel',
+      u: [1, 2, 3], v: [2, 4, 6],
       showArea: true,
     } as never);
     expect(plotly.react).toHaveBeenCalledWith(
       expect.anything(),
-      expect.not.arrayContaining([expect.objectContaining({ name: 'Etiqueta de área' })]),
-      expect.objectContaining({ title: { text: expect.stringContaining('Área: ‖u×v‖ = 0 (vectores paralelos, sen(θ) = 0)') } }),
+      expect.not.arrayContaining([expect.objectContaining({ mode: 'text' })]),
+      expect.objectContaining({ title: expect.objectContaining({ text: 'Producto cruz' }) }),
       expect.anything(),
     );
   });
@@ -372,7 +353,7 @@ describe('PlotlyRenderer', () => {
       expect.anything(),
       expect.not.arrayContaining([expect.objectContaining({ name: 'u × v' })]),
       expect.objectContaining({
-        title: { text: expect.stringContaining('no hay normal única por esos vectores') },
+        title: expect.objectContaining({ text: 'Producto cruz' }),
       }),
       expect.anything(),
     );
@@ -444,186 +425,109 @@ describe('PlotlyRenderer', () => {
     );
   });
 
-  it('T013 MED-03.07-V: renders shaded triangle and parallelogram with translated origin and area labels', () => {
+  it('T013 retains shaded triangle and parallelogram geometry with translated origin but no text overlays', () => {
     renderer.render({
-      type: 'crossproduct',
-      id: 'cross-triangle-test',
-      u: [2, 0, 1],
-      v: [0, 3, 2],
-      origin: [1, 1, 0],
-      showPlane: true,
-      showTriangle: true,
-      showNormal: true,
-      showArea: true,
-      colorTriangle: '#f59e0b',
+      type: 'crossproduct', id: 'cross-triangle-test',
+      u: [2, 0, 1], v: [0, 3, 2], origin: [1, 1, 0],
+      showPlane: true, showTriangle: true, showNormal: true,
+      showArea: true, colorTriangle: '#f59e0b',
     } as never);
-
-    expect(newPlot).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.arrayContaining([
-        // Translated vectors starting at origin [1, 1, 0]
-        expect.objectContaining({
-          type: 'scatter3d',
-          name: 'u',
-          x: [1, 3],
-          y: [1, 1],
-          z: [0, 1],
-        }),
-        expect.objectContaining({
-          type: 'scatter3d',
-          name: 'v',
-          x: [1, 1],
-          y: [1, 4],
-          z: [0, 2],
-        }),
-        // Parallelogram mesh
-        expect.objectContaining({
-          type: 'mesh3d',
-          name: 'Plano generado',
-          x: [1, 3, 3, 1],
-          y: [1, 1, 4, 4],
-          z: [0, 1, 3, 2],
-        }),
-        // Shaded triangle mesh
-        expect.objectContaining({
-          type: 'mesh3d',
-          name: 'Triángulo sustentado',
-          x: [1, 3, 1],
-          y: [1, 1, 4],
-          z: [0, 1, 2],
-          color: '#f59e0b',
-          i: [0],
-        }),
-        // Parallelogram area label
-        expect.objectContaining({
-          type: 'scatter3d',
-          name: 'Etiqueta de área',
-          text: [expect.stringContaining('Área = ')],
-        }),
-        // Triangle area label
-        expect.objectContaining({
-          type: 'scatter3d',
-          name: 'Etiqueta área triángulo',
-          text: [expect.stringContaining('Área triángulo = ')],
-        }),
-      ]),
-      expect.anything(),
-      expect.anything(),
-    );
-  });
-
-  it('T013 uses the same nonzero areas in the title and both labels at small scales', () => {
-    renderer.render({
-      type: 'crossproduct',
-      id: 'cross-small-triangle',
-      u: [1e-7, 0, 0],
-      v: [0, 1e-7, 0],
-      origin: [1, 1, 0],
-      showTriangle: true,
-    } as never);
-
-    expect(newPlot).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.arrayContaining([
-        expect.objectContaining({ name: 'Etiqueta de área', text: ['Área = 1e-14'] }),
-        expect.objectContaining({ name: 'Etiqueta área triángulo', text: ['Área triángulo = 5e-15'] }),
-      ]),
+    const traces = vi.mocked(newPlot).mock.calls[0][1] as Array<Record<string, unknown>>;
+    expect(traces).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'scatter3d', name: 'u', x: [1, 3], y: [1, 1], z: [0, 1] }),
+      expect.objectContaining({ type: 'scatter3d', name: 'v', x: [1, 1], y: [1, 4], z: [0, 2] }),
       expect.objectContaining({
-        title: { text: expect.stringMatching(/= 1e-14 \(θ ≈ 90\.0°\) \| Área triángulo = 5e-15/) },
+        type: 'mesh3d', name: 'Plano generado',
+        x: [1, 3, 3, 1], y: [1, 1, 4, 4], z: [0, 1, 3, 2],
       }),
-      expect.anything(),
-    );
+      expect.objectContaining({
+        type: 'mesh3d', name: 'Triángulo sustentado',
+        x: [1, 3, 1], y: [1, 1, 4], z: [0, 1, 2],
+        color: '#f59e0b', i: [0],
+      }),
+    ]));
+    expect(traces.some(trace => trace.name === 'Etiqueta de área' ||
+      trace.name === 'Etiqueta área triángulo')).toBe(false);
   });
 
-  it('T015 renders parallelepiped volume when showVolume and w are provided', () => {
-    renderer.render({
-      type: 'crossproduct',
-      id: 'cross-volume',
-      u: [1, 0, 0],
-      v: [0, 1, 0],
-      w: [0, 0, 1],
-      showVolume: true,
-    } as never);
-
-    expect(newPlot).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.arrayContaining([
-        // Parallelepiped faces (3 mesh3d for base + 2 laterals)
-        expect.objectContaining({ type: 'mesh3d', name: 'Base (u,v)' }),
-        expect.objectContaining({ type: 'mesh3d', name: 'Lateral (u,w)' }),
-        expect.objectContaining({ type: 'mesh3d', name: 'Lateral (v,w)' }),
-        // Volume label
-        expect.objectContaining({
-          type: 'scatter3d',
-          name: 'Volumen paralelepípedo',
-          text: [expect.stringContaining('V = ')],
-        }),
-      ]),
-      expect.anything(),
-      expect.anything(),
-    );
+  it('T013 keeps 1e-14 precision in the engine instead of a floating Plotly text label', () => {
+    const node = {
+      type: 'crossproduct', id: 'cross-small-triangle',
+      u: [1e-7, 0, 0], v: [0, 1e-7, 0],
+      showTriangle: true, showArea: true,
+    } as const;
+    const core = new MathMDCore(parseMathMD([
+      '```crossproduct', 'id: cross-small-triangle',
+      'u: [1e-7, 0, 0]', 'v: [0, 1e-7, 0]',
+      'showArea: true', 'showTriangle: true', '```',
+    ].join('\n')));
+    const engine = core.getNodeData('cross-small-triangle');
+    expect(engine.crossScene.area).toBe(1e-14);
+    expect(engine.crossScene.triangleArea).toBe(5e-15);
+    renderer.render(node as never);
+    const args = vi.mocked(newPlot).mock.calls[0];
+    expect(args[1]).not.toEqual(expect.arrayContaining([expect.objectContaining({ mode: 'text' })]));
+    expect(args[2]).toEqual(expect.objectContaining({
+      title: expect.objectContaining({ text: 'Producto cruz' }),
+    }));
   });
 
-  it('T015 shows negative signed volume with correct orientation', () => {
+  it('T015 groups the six volume faces under exactly one Paralelepípedo legend item', () => {
     renderer.render({
-      type: 'crossproduct',
-      id: 'cross-volume-neg',
-      u: [1, 0, 0],
-      v: [0, 0, 1],  // v = k
-      w: [0, 1, 0],  // w = j => v×w = -i, u·(-i) = -1
-      showVolume: true,
+      type: 'crossproduct', id: 'cross-volume',
+      u: [1, 0, 0], v: [0, 1, 0], w: [0, 0, 1], showVolume: true,
+      showPlane: true, showTriangle: true,
     } as never);
-
-    expect(newPlot).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: 'scatter3d',
-          name: 'Volumen paralelepípedo',
-          text: [expect.stringContaining('FIRMADO < 0')],
-        }),
-      ]),
-      expect.anything(),
-      expect.anything(),
-    );
+    const args = vi.mocked(newPlot).mock.calls[0];
+    const traces = args[1] as Array<Record<string, unknown>>;
+    const faces = traces.filter(trace => trace.legendgroup === 'parallelepiped');
+    expect(faces).toHaveLength(6);
+    expect(faces.every(trace => trace.type === 'mesh3d' &&
+      trace.name === 'Paralelepípedo')).toBe(true);
+    expect(faces.filter(trace => trace.showlegend === true)).toHaveLength(1);
+    expect(faces.filter(trace => trace.showlegend === false)).toHaveLength(5);
+    expect(faces.every(trace => typeof trace.hovertemplate === 'string')).toBe(true);
+    expect(traces.filter(trace => trace.name === 'Plano generado')).toHaveLength(1);
+    expect(traces.filter(trace => trace.name === 'Triángulo sustentado')).toHaveLength(1);
+    expect(traces.filter(trace => trace.name === 'u')).toHaveLength(1);
+    expect(traces.filter(trace => trace.name === 'v')).toHaveLength(1);
+    expect(traces.filter(trace => trace.name === 'Plano generado' ||
+      trace.name === 'Triángulo sustentado' || trace.name === 'u' || trace.name === 'v')
+      .every(trace => trace.legendgroup !== 'parallelepiped')).toBe(true);
+    expect(args[2]).toEqual(expect.objectContaining({
+      legend: expect.objectContaining({ groupclick: 'togglegroup' }),
+    }));
   });
 
-  it('T015 does not render volume when showVolume is false or w is missing', () => {
-    // Without showVolume
-    renderer.render({
-      type: 'crossproduct',
-      id: 'cross-no-volume',
-      u: [1, 0, 0],
-      v: [0, 1, 0],
-      w: [0, 0, 1],
-      showVolume: false,
-    } as never);
-
-    expect(newPlot).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.not.arrayContaining([
-        expect.objectContaining({ name: 'Volumen paralelepípedo' }),
-      ]),
-      expect.anything(),
-      expect.anything(),
-    );
-
-    // Without w
-    renderer.render({
-      type: 'crossproduct',
-      id: 'cross-no-w',
-      u: [1, 0, 0],
-      v: [0, 1, 0],
-      showVolume: true,
-    } as never);
-
-    expect(newPlot).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.not.arrayContaining([
-        expect.objectContaining({ name: 'Volumen paralelepípedo' }),
-      ]),
-      expect.anything(),
-      expect.anything(),
-    );
+  it('T015 negative orientation comes from the engine; scene has no signed-volume text', () => {
+    const source = ['```crossproduct', 'id: negative-volume',
+      'u: [1, 0, 0]', 'v: [0, 0, 1]', 'w: [0, 1, 0]',
+      'showVolume: true', '```'].join('\n');
+    const data = new MathMDCore(parseMathMD(source)).getNodeData('negative-volume');
+    expect(data.volumeInfo.volumeSigned).toBe(-1);
+    expect(data.volumeInfo.volumeAbsolute).toBe(1);
+    renderer.render(data);
+    const traces = vi.mocked(newPlot).mock.calls[0][1] as Array<Record<string, unknown>>;
+    expect(traces.filter(trace => trace.legendgroup === 'parallelepiped')).toHaveLength(6);
+    expect(traces.some(trace => trace.mode === 'text')).toBe(false);
   });
+
+  it('T015 hides all six faces when showVolume is false, omitted or w is absent', () => {
+    for (const details of [
+      { showVolume: false, w: [0, 0, 1] },
+      { w: [0, 0, 1] },
+      { showVolume: true },
+    ]) {
+      renderer.render({
+        type: 'crossproduct', id: 'cross-volume-off', u: [1, 0, 0],
+        v: [0, 1, 0], ...details,
+      } as never);
+      const call = vi.mocked(newPlot).mock.calls.length
+        ? vi.mocked(plotly.react).mock.calls.at(-1) ?? vi.mocked(newPlot).mock.calls[0]
+        : vi.mocked(plotly.react).mock.calls.at(-1);
+      const traces = call?.[1] as Array<Record<string, unknown>>;
+      expect(traces.filter(trace => trace.legendgroup === 'parallelepiped')).toHaveLength(0);
+    }
+  });
+
 });
