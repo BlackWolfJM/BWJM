@@ -90,7 +90,7 @@ describe('PlotlyRenderer', () => {
       expect.objectContaining({ type: 'cone', x: [1], y: [0], z: [0] }),
       expect.objectContaining({ type: 'cone', x: [0], y: [1], z: [0] }),
       expect.objectContaining({ type: 'cone', x: [0], y: [0], z: [1] }),
-    ]), expect.objectContaining({ uirevision: 'cross', title: { text: expect.stringContaining('= 1') } }),
+    ]), expect.objectContaining({ uirevision: expect.stringMatching(/^bwjm-mount-/), title: { text: expect.stringContaining('= 1') } }),
     expect.anything());
   });
 
