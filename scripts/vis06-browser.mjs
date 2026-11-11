@@ -229,10 +229,13 @@ async function pickerErrors() {
   await choice.setFiles({ name: "otro.png", mimeType: "image/png", buffer: png });
   await page.getByRole("button", { name: "Nuevo documento" }).click();
   await page.waitForTimeout(1600);
+  console.log("VIS06 cambio de pestaña:", await page.locator(".bwjm-image-notice").allTextContents());
   assert(!(await page.locator(".bwjm-code-textarea").inputValue()).includes("data:image/"),
     "Imagen apareció en la pestaña equivocada");
   await firstTab.click();
-  assert((await page.locator(".bwjm-code-textarea").inputValue()).includes("data:image/"),
+  const originalAfterSwitch = await page.locator(".bwjm-code-textarea").inputValue();
+  console.log("VIS06 pestaña original:", originalAfterSwitch.slice(0, 140));
+  assert(originalAfterSwitch.includes("data:image/"),
     "Imagen no volvió a su pestaña original");
 
   // Editing the captured tab while its image is loading cancels safely.
