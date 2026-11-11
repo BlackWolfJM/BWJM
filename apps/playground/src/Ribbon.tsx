@@ -101,7 +101,7 @@ export const Ribbon: React.FC<Props> = ({onAction,activeView,compactWorkspace,th
               aria-pressed={action.id.startsWith("view-") ? selected : undefined}
               title={action.hint? action.label+" · "+action.hint:action.label}
               onClick={()=>onAction(action.id)}>
-              {Icon ? <Icon size={17}/> : <span className="bwjm-ribbon-glyph">{action.id==="bold"?"B":action.id==="italic"?"I":action.id.startsWith("h")?action.id.toUpperCase():"∑"}</span>}
+              {Icon ? <Icon size={17}/> : <span className="bwjm-ribbon-glyph" aria-hidden="true">{action.id==="bold"?"B":action.id==="italic"?"I":action.id.startsWith("h")?action.id.toUpperCase():"∑"}</span>}
               <span>{action.label}</span>
             </button>;
           })}

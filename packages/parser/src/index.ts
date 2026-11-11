@@ -2,6 +2,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import { prepareRemarkMath, sourcePositionLocator } from "./mathSource.js";
 import YAML from "yaml";
 import {
   MathMDDocument,
@@ -68,13 +69,28 @@ export interface MdastNode {
 /** Keep Markdown, GFM and math parsing identical to the scientific parser. */
 export function parseProseMarkdown(markdown: string, definitions = ""): MdastNode {
   const source = definitions ? markdown + "\n\n" + definitions : markdown;
+  // Parse-only normalization keeps later plot2d blocks visible while
+  // preserving each source range and character offset in .bwjm/.jm.
+  const prepared = prepareRemarkMath(source);
   const root = unified().use(remarkParse).use(remarkGfm).use(remarkMath)
-    .parse(source) as unknown as MdastNode;
+    .parse(prepared.text) as unknown as MdastNode;
   const definitionNodes = new Map<string, MdastNode>();
   const visit = (node: MdastNode, callback: (node: MdastNode) => void): void => {
     callback(node);
     node.children?.forEach(child => visit(child, callback));
   };
+  // Remark offsets refer to the normalized input. Remap all nodes before
+  // any consumer (including graph settings) accesses source ranges.
+  if (prepared.text !== source) {
+    const positionAt = sourcePositionLocator(source);
+    visit(root, node => {
+      if (!node.position) return;
+      node.position.start = positionAt(
+        prepared.toOriginalOffset(node.position.start.offset));
+      node.position.end = positionAt(
+        prepared.toOriginalOffset(node.position.end.offset));
+    });
+  }
   visit(root, node => {
     if (node.type === "definition" && node.identifier) {
       definitionNodes.set(node.identifier.toLowerCase(), node);
