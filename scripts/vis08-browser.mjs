@@ -157,6 +157,23 @@ try {
   assert(await local.locator(".katex-mathml mfrac").count() >= 2);
   assert(await local.locator(".katex-mathml mtable").count() >= 1);
   assert((await local.locator("article.bwjm-sheet").innerText()).includes("Este párrafo y la siguiente gráfica"));
+  const fontDiagnostics = await local.evaluate(() => {
+    const style = document.getElementById("bwjm-katex-offline");
+    const sheets = [...document.styleSheets].map(sheet => {
+      try {
+        return { rules: sheet.cssRules.length,
+          faces: [...sheet.cssRules].filter(rule => rule.type === CSSRule.FONT_FACE_RULE).length,
+          first: sheet.cssRules[0]?.cssText.slice(0, 90) };
+      } catch (error) { return { error: String(error) }; }
+    });
+    return {
+      styleLength: style?.textContent?.length ?? 0,
+      cssStart: style?.textContent?.slice(0, 200),
+      faces: [...document.fonts].slice(0, 8).map(face => ({ family: face.family, status: face.status })),
+      sheets, computedFont: getComputedStyle(document.querySelector(".katex-html") ?? document.body).fontFamily,
+    };
+  });
+  console.log("VIS-08 CSS file:// diagnostics:", JSON.stringify(fontDiagnostics));
   await checkFont(local, "HTML file:// sin red");
   assert.equal(remoteRequests.length, 0, "El HTML descargado solicitó archivos externos");
   await local.screenshot({ path: "/tmp/vis08-screens/html-sin-red-1280.png", fullPage: true });
