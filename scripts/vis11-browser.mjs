@@ -117,6 +117,8 @@ try {
   const canvas = card(page, "curve3d").locator(".gl-container canvas").first();
   const box = await canvas.boundingBox();
   assert(box, "La curva carece de WebGL");
+  const initialCamera = await camera(page);
+  assert(initialCamera, "No se pudo leer la cámara inicial");
   await page.mouse.move(box.x + box.width * 0.54, box.y + box.height * 0.57);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width * 0.72, box.y + box.height * 0.44, { steps: 12 });
@@ -125,6 +127,9 @@ try {
   await page.waitForTimeout(350);
   const rotated = await camera(page);
   assert(rotated && Object.values(rotated).every(Number.isFinite));
+  assert(["x", "y", "z"].some(axis =>
+    Math.abs(rotated[axis] - initialCamera[axis]) > 0.03),
+    "El arrastre no modificó realmente la cámara 3D");
 
   const transportDebug = await page.evaluate(() => ({
     transports: document.querySelectorAll(".bwjm-inline-playback").length,
@@ -176,12 +181,39 @@ try {
     document.querySelector(".bwjm-code-textarea")?.value.includes("showVectors: true"));
   await refs(page);
   await sameCamera(page, rotated);
-  const persisted = await editor.inputValue();
+  let persisted = await editor.inputValue();
   const curveFence = persisted.split(fence + "curve3d")[1]?.split(fence)[0];
   const paramFence = persisted.split(fence + "parametric2d")[1]?.split(fence)[0];
   assert(curveFence?.includes("showLegend: true") && curveFence.includes("showVectors: true"));
   assert(!paramFence?.includes("showLegend: true") && !paramFence?.includes("showVectors: true"));
   console.log("VIS-11 two consecutive implicit-ID edits and focus: OK");
+
+  // A multi-trace curve is needed to test Plotly legend visibility (the base
+  // example contains a static single-trace curve).
+  await curve.getByRole("checkbox", { name: "Animar partícula" }).check();
+  await page.waitForFunction(() => {
+    const curve = [...document.querySelectorAll(".bwjm-node-card")]
+      .find(card => card.querySelector(".bwjm-node-tag")?.textContent?.includes("CURVE3D"));
+    const plot = curve?.querySelector(".js-plotly-plot");
+    return (plot?._fullData?.length ?? 0) >= 3;
+  });
+  const legendEntry = curve.locator(".js-plotly-plot g.legend g.traces").first();
+  await legendEntry.waitFor({ timeout: 15000 });
+  await legendEntry.click();
+  await page.waitForFunction(() => {
+    const curve = [...document.querySelectorAll(".bwjm-node-card")]
+      .find(card => card.querySelector(".bwjm-node-tag")?.textContent?.includes("CURVE3D"));
+    return curve?.querySelector(".js-plotly-plot")?._fullData?.[0]?.visible === "legendonly";
+  });
+  persisted = "Más prosa tras ocultar una traza.\n\n" + await editor.inputValue();
+  editor = await edit(page, persisted);
+  await refs(page);
+  await sameCamera(page, rotated);
+  const traceHidden = await curve.locator(".js-plotly-plot").evaluate(gd =>
+    gd._fullData?.[0]?.visible === "legendonly");
+  assert(traceHidden, "Editar prosa restableció la visibilidad de una traza de la leyenda");
+  await page.screenshot({ path: "/tmp/vis11-screens/leyenda-oculta-1280.png", fullPage: true });
+  console.log("VIS-11 legend visibility survives prose edits: OK");
 
   // Remove and restore only the curve; the original parametric mount survives.
   const withoutCurve = persisted.replace(new RegExp(fence + "curve3d[\\s\\S]*?" + fence), "");
