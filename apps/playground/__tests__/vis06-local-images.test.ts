@@ -17,7 +17,7 @@ import {
   updateActiveContent,
 } from "../src/workspaceDocuments.js";
 
-const pngData = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+const pngData = "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGM0mvaBAQaYGJAAbg4AVjYBwOfWMMcAAAAASUVORK5CYII=";
 const dataUrl = "data:image/png;base64," + pngData;
 const originalMarkdown = "# Informe\n\nTexto antes con $x^2$.\n\n" +
   String.fromCharCode(96).repeat(3) + "plot2d\nid: curva-portable\nequation: x^2\n" +
