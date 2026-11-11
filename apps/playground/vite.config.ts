@@ -29,14 +29,14 @@ function katexOfflineExportPlugin(): Plugin {
       // inside each @font-face. Match each rule separately, never across
       // its closing brace (that would erase every font except the last).
       const css = readFileSync(cssFile, "utf8").replace(
-        /@font-face\\s*\\{([^}]*)\\}/g,
+        /@font-face\s*\{([^}]*)\}/g,
         (rule, declarations: string) => {
-          const src = /src\\s*:\\s*([^;]+)(?=;|$)/.exec(declarations);
+          const src = /src\s*:\s*([^;]+)(?=;|$)/.exec(declarations);
           if (!src) return rule;
-          const woff2 = src[1].match(/url\\(["']?([^)"']+\\.woff2)["']?\\)/);
+          const woff2 = src[1].match(/url\(["']?([^)"']+\.woff2)["']?\)/);
           if (!woff2) return rule;
           const relative = woff2[1];
-          if (!/^fonts\\/[a-zA-Z0-9_-]+\\.woff2$/.test(relative)) {
+          if (!/^fonts\/[a-zA-Z0-9_-]+\.woff2$/.test(relative)) {
             throw new Error("Ruta de fuente KaTeX inesperada: " + relative);
           }
           const bytes = readFileSync(path.resolve(path.dirname(cssFile), relative));
