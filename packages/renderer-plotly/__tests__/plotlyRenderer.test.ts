@@ -72,6 +72,25 @@ describe('PlotlyRenderer', () => {
     renderer.destroy();
   });
 
+  it('VIS-11 keeps camera and legend revision across implicit AST ID changes on one mount', () => {
+    const original = {
+      type: 'curve3d', id: 'curve3d-0-old',
+      x: 'cos(t)', y: 'sin(t)', z: 't/3',
+      tDomain: [0, 6.28], showLegend: true,
+    };
+    renderer.render(original as never);
+    const firstLayout = vi.mocked(newPlot).mock.calls[0][2] as {
+      uirevision?: string; legend?: { uirevision?: string };
+    };
+    expect(firstLayout.uirevision).toMatch(/^bwjm-mount-/);
+    renderer.render({ ...original, id: 'curve3d-0-new', showLegend: false } as never);
+    const nextLayout = vi.mocked(plotly.react).mock.calls[0][2] as typeof firstLayout;
+    expect(nextLayout.uirevision).toBe(firstLayout.uirevision);
+    expect(nextLayout.legend?.uirevision).toBe(firstLayout.uirevision);
+    expect(newPlot).toHaveBeenCalledTimes(1);
+    expect(plotly.react).toHaveBeenCalledTimes(1);
+  });
+
   it('should create a renderer instance', () => {
     expect(renderer).toBeInstanceOf(PlotlyRenderer);
     expect(renderer.getElement()).toBeDefined();
