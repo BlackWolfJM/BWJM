@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    outputs:
+      entry: ${{ steps.verify.outputs.entry }}
     steps:
       - name: Obtener el código de main
         uses: actions/checkout@v4
@@ -35,11 +37,15 @@ jobs:
         env:
           BWJM_BASE_PATH: /BWJM-WEB-/
         run: pnpm --filter @mathmd/playground run build
-      - name: Comprobar que la web publicada contiene el selector de imágenes VIS-06
+      - name: Comprobar que la compilación incluye el selector de imágenes VIS-06
+        id: verify
         run: |
           test -f apps/playground/dist/index.html
           grep -q '/BWJM-WEB-/assets/' apps/playground/dist/index.html
           grep -R -F -q 'Seleccionar imagen local' apps/playground/dist/assets
+          ENTRY=$(grep -oE '/BWJM-WEB-/assets/index-[^"]+\.js' apps/playground/dist/index.html | head -n 1)
+          test -n "$ENTRY"
+          echo "entry=$ENTRY" >> "$GITHUB_OUTPUT"
       - name: Configurar Pages
         uses: actions/configure-pages@v5
       - name: Subir la web compilada
@@ -57,3 +63,17 @@ jobs:
       - name: Publicar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verificar que la URL pública entrega la nueva versión
+        env:
+          ENTRY: ${{ needs.build.outputs.entry }}
+        run: |
+          for n in $(seq 1 24); do
+            HTML=$(curl -fsSL "https://blackwolfjm.github.io/BWJM-WEB-/?version=${{ github.sha }}" || true)
+            if printf '%s' "$HTML" | grep -Fq "$ENTRY"; then
+              echo "GitHub Pages está sirviendo el bundle actualizado: $ENTRY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "GitHub Pages todavía no está entregando el bundle publicado: $ENTRY" >&2
+          exit 1
