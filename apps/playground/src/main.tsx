@@ -23,7 +23,7 @@ import {
   serializeScientificTable,
 } from "@mathmd/math";
 import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode, Parametric2DNode } from "@mathmd/ast";
-import type { VectorStudyResult } from "@mathmd/math";
+import type { VectorStudyResult, CrossProductStudy, CrossProductDeterminant } from "@mathmd/math";
 import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
@@ -691,6 +691,7 @@ type MountedScientificCard = {
   card: HTMLDivElement;
   mountKey: string;
   disposers: Array<() => void>;
+  refreshReports?: (data: { crossStudy?: CrossProductStudy; crossDeterminant?: CrossProductDeterminant }) => void;
 };
 
 /** Keep mount identities separate from document tab IDs and parsed AST IDs. */
@@ -1414,6 +1415,9 @@ export function BWJMStudio() {
         } : {};
         plotly.render({ ...data, scope, currentT, ...extra });
       }
+      if (data.type === "crossproduct") {
+        mountedCardsRef.current.find(record => record.node.id === id)?.refreshReports?.(data);
+      }
       if (data.type === "vector2d" || data.type === "vector3d") {
         const report = sheet.querySelector<HTMLElement>("#node-" + id + " .bwjm-vector-report");
         if (report) updateVectorStudyReport(report, data);
@@ -1558,6 +1562,10 @@ export function BWJMStudio() {
             ) : undefined;
         const determinant = node.type === "crossproduct" && node.showDeterminant
           ? createCrossProductDeterminant() : undefined;
+        record.refreshReports = data => {
+          if (crossReport && data.crossStudy) crossReport.update(data.crossStudy);
+          if (determinant && data.crossDeterminant) determinant.update(data.crossDeterminant);
+        };
 
         // Graph settings persist in the selected code fence, avoiding transient-only UI state.
         if (supportsAdaptiveParameters(node) || node.type === "crossproduct" ||
@@ -1748,13 +1756,16 @@ export function BWJMStudio() {
           if (node.type === "crossproduct") {
             controls.appendChild(createCrossProductEditor(node, {
               preview: (u, v) => {
+                const live = resolveLiveNode(node);
                 const study = crossReport
-                  ? computeCrossProductStudy(u, v, node.reverseOrder, node.showSteps && node.showDeterminant, node.w, node.showIdentities, node.origin)
+                  ? computeCrossProductStudy(u, v, live.reverseOrder, live.showSteps && live.showDeterminant,
+                    live.w, live.showIdentities, live.origin)
                   : undefined;
-                const crossScene = study?.scene ?? computeCrossProductScene(u, v, node.reverseOrder, node.w, node.origin);
-                plotlyRenderersRef.current.get(node.id)?.render({ ...node, u, v, crossScene });
+                const crossScene = study?.scene ??
+                  computeCrossProductScene(u, v, live.reverseOrder, live.w, live.origin);
+                plotlyRenderersRef.current.get(live.id)?.render({ ...live, u, v, crossScene });
                 if (study) crossReport?.update(study);
-                determinant?.update(describeCrossProductDeterminant(u, v, crossScene, node.reverseOrder));
+                determinant?.update(describeCrossProductDeterminant(u, v, crossScene, live.reverseOrder));
               },
               save: (key, value) => {
                 openGraphSettingsRef.current.add(settingsKey);
