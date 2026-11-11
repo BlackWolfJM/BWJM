@@ -28,6 +28,7 @@ import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
 import { createAdaptiveParameterEditor } from "./AdaptiveParameterEditor.js";
+import { GraphSettingsSession } from "./graphSettingsSession.js";
 import { createCrossProductDeterminant, createCrossProductEditor, createCrossProductReport } from "./CrossProductEditor.js";
 import {
   supportsAdaptiveParameters, writeGraphParameterControls,
@@ -731,7 +732,10 @@ export function BWJMStudio() {
   const activeTimersRef = useRef<Map<string, number>>(new Map());
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
-  const openGraphSettingsRef = useRef<Set<string>>(new Set());
+  const graphSettingsSessionRef = useRef<GraphSettingsSession | null>(null);
+  if (!graphSettingsSessionRef.current) graphSettingsSessionRef.current = new GraphSettingsSession();
+  const activeDocumentIdRef = useRef(activeId);
+  activeDocumentIdRef.current = activeId;
   const openCrossProductStepsRef = useRef<Set<string>>(new Set());
   const parameterEditorDisposersRef = useRef<Array<() => void>>([]);
   const playbackRef = useRef<InlinePlaybackController | null>(null);
@@ -1010,6 +1014,7 @@ export function BWJMStudio() {
     const target = documents.find(item => item.id === id);
     if (target?.content !== target?.savedContent &&
       !window.confirm("El documento tiene cambios sin guardar. ¿Cerrar esta pestaña?")) return;
+    graphSettingsSessionRef.current?.removeDocument(id);
     closeDocument(id);
   };
 
@@ -1210,6 +1215,10 @@ export function BWJMStudio() {
   ];
 
   useEffect(() => {
+    graphSettingsSessionRef.current?.prune(new Set(documents.map(document => document.id)));
+  }, [documents]);
+
+  useEffect(() => {
     clearTimers();
     clearRenderers();
 
@@ -1241,6 +1250,8 @@ export function BWJMStudio() {
     sheet.className = "bwjm-sheet";
 
     const segments = parseDocumentSegments(markdown, doc.children, doc.diagnostics);
+    const settingsSession = graphSettingsSessionRef.current!;
+    const settingsIdentities = settingsSession.reconcile(activeId, markdown, doc.children);
     let inlinePlaybackMounted = false;
 
     const svgSizeHandlers = new Map<Element, (width: number) => void>();
@@ -1451,8 +1462,15 @@ export function BWJMStudio() {
           ] : [];
           const details = document.createElement("details");
           details.className = "bwjm-graph-settings";
-          const settingsKey = node.type + ":" + node.range.start.offset;
-          details.open = openGraphSettingsRef.current.has(settingsKey);
+          const settingsIdentity = settingsIdentities.get(node)!;
+          const settingsKey = settingsIdentity.key;
+          const settingsGeneration = settingsIdentity.generation;
+          details.open = settingsIdentity.open;
+          const keepSettingsOpen = () => {
+            if (activeDocumentIdRef.current === activeId) {
+              settingsSession.setOpen(activeId, settingsKey, settingsGeneration, true);
+            }
+          };
           const summary = document.createElement("summary");
           summary.textContent = "Personalizar gráfica";
           details.appendChild(summary);
@@ -1472,7 +1490,7 @@ export function BWJMStudio() {
                 node.type !== "parametric2d" && node.type !== "vector2d" &&
                 node.type !== "vector3d" && node.type !== "crossproduct" &&
                 node.type !== "line3d" && node.type !== "plane3d") return;
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, key, checkbox.checked));
             };
@@ -1480,8 +1498,10 @@ export function BWJMStudio() {
             controls.appendChild(wrapper);
           });
           details.addEventListener("toggle", () => {
-            if (details.open) openGraphSettingsRef.current.add(settingsKey);
-            else openGraphSettingsRef.current.delete(settingsKey);
+            // toggle is asynchronous. Old disconnected panels, old tab IDs and
+            // older render generations cannot overwrite the current disclosure.
+            if (!details.isConnected || activeDocumentIdRef.current !== activeId) return;
+            settingsSession.setOpen(activeId, settingsKey, settingsGeneration, details.open);
           });
           // Slider para collapseFactor en crossproduct (animación de colapso T017)
           if (node.type === "crossproduct" && node.showCollapse) {
@@ -1502,7 +1522,7 @@ export function BWJMStudio() {
               collapseValue.textContent = `${Math.round(Number(collapseRange.value) * 100)}%`; 
             };
             collapseRange.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "collapseFactor", Number(collapseRange.value)));
             };
@@ -1528,7 +1548,7 @@ export function BWJMStudio() {
             });
             targetSelect.value = node.collapseTarget ?? "coplanar";
             targetSelect.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "collapseTarget", targetSelect.value));
             };
@@ -1557,7 +1577,7 @@ export function BWJMStudio() {
             });
             modeSelect.value = node.signChallengeMode ?? "random";
             modeSelect.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "signChallengeMode", modeSelect.value));
             };
@@ -1577,7 +1597,7 @@ export function BWJMStudio() {
             seedInput.value = String(node.signChallengeSeed ?? Math.floor(Math.random() * 1000000));
             seedInput.setAttribute("aria-label", "Semilla para generación aleatoria");
             seedInput.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "signChallengeSeed", Number(seedInput.value)));
             };
@@ -1596,7 +1616,7 @@ export function BWJMStudio() {
                 determinant?.update(describeCrossProductDeterminant(u, v, crossScene, node.reverseOrder));
               },
               save: (key, value) => {
-                openGraphSettingsRef.current.add(settingsKey);
+                keepSettingsOpen();
                 setMarkdown(previous => updateCrossProductVector(previous, node.range, key, value));
               },
             }));
@@ -1624,7 +1644,7 @@ export function BWJMStudio() {
             });
             modeSelect.value = node.mode ?? "point-normal";
             modeSelect.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "mode", modeSelect.value));
             };
@@ -1649,7 +1669,7 @@ export function BWJMStudio() {
                 input.placeholder = "x, y, z";
                 input.setAttribute("aria-label", labelText);
                 input.onchange = () => {
-                  openGraphSettingsRef.current.add(settingsKey);
+                  keepSettingsOpen();
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
@@ -1673,7 +1693,7 @@ export function BWJMStudio() {
                 input.placeholder = "x, y, z";
                 input.setAttribute("aria-label", labelText);
                 input.onchange = () => {
-                  openGraphSettingsRef.current.add(settingsKey);
+                  keepSettingsOpen();
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
@@ -1698,7 +1718,7 @@ export function BWJMStudio() {
                 input.placeholder = "x, y, z";
                 input.setAttribute("aria-label", labelText);
                 input.onchange = () => {
-                  openGraphSettingsRef.current.add(settingsKey);
+                  keepSettingsOpen();
                   const vals = input.value.split(",").map(v => parseFloat(v.trim()));
                   if (vals.length === 3 && vals.every(Number.isFinite)) {
                     setMarkdown(previous => updateGraphOption(
@@ -1723,7 +1743,7 @@ export function BWJMStudio() {
                 input.value = String(node[key] ?? defaultVal);
                 input.setAttribute("aria-label", labelText);
                 input.onchange = () => {
-                  openGraphSettingsRef.current.add(settingsKey);
+                  keepSettingsOpen();
                   setMarkdown(previous => updateGraphOption(
                     previous, node.range, node.type, key, Number(input.value)));
                 };
@@ -1749,7 +1769,7 @@ export function BWJMStudio() {
             tMinInput.value = String(node.tDomain?.[0] ?? -10);
             tMinInput.setAttribute("aria-label", "Valor mínimo del parámetro t");
             tMinInput.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               const newTDomain = [Number(tMinInput.value), node.tDomain?.[1] ?? 10] as [number, number];
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "tDomain", newTDomain));
@@ -1768,7 +1788,7 @@ export function BWJMStudio() {
             tMaxInput.value = String(node.tDomain?.[1] ?? 10);
             tMaxInput.setAttribute("aria-label", "Valor máximo del parámetro t");
             tMaxInput.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               const newTDomain = [node.tDomain?.[0] ?? -10, Number(tMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "tDomain", newTDomain));
@@ -1787,7 +1807,7 @@ export function BWJMStudio() {
             paramInput.maxLength = 1;
             paramInput.setAttribute("aria-label", "Nombre del parámetro (t, s, u, etc.)");
             paramInput.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "paramName", paramInput.value));
             };
@@ -1808,7 +1828,7 @@ export function BWJMStudio() {
             xMinInput.value = String(node.xDomain?.[0] ?? -5);
             xMinInput.setAttribute("aria-label", "Límite mínimo del dominio x");
             xMinInput.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               const newXDomain = [Number(xMinInput.value), node.xDomain?.[1] ?? 5] as [number, number];
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "xDomain", newXDomain));
@@ -1827,7 +1847,7 @@ export function BWJMStudio() {
             xMaxInput.value = String(node.xDomain?.[1] ?? 5);
             xMaxInput.setAttribute("aria-label", "Límite máximo del dominio x");
             xMaxInput.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               const newXDomain = [node.xDomain?.[0] ?? -5, Number(xMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "xDomain", newXDomain));
@@ -1846,7 +1866,7 @@ export function BWJMStudio() {
             yMinInput.value = String(node.yDomain?.[0] ?? -5);
             yMinInput.setAttribute("aria-label", "Límite mínimo del dominio y");
             yMinInput.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               const newYDomain = [Number(yMinInput.value), node.yDomain?.[1] ?? 5] as [number, number];
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "yDomain", newYDomain));
@@ -1865,7 +1885,7 @@ export function BWJMStudio() {
             yMaxInput.value = String(node.yDomain?.[1] ?? 5);
             yMaxInput.setAttribute("aria-label", "Límite máximo del dominio y");
             yMaxInput.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               const newYDomain = [node.yDomain?.[0] ?? -5, Number(yMaxInput.value)] as [number, number];
               setMarkdown(previous => updateGraphOption(
                 previous, node.range, node.type, "yDomain", newYDomain));
@@ -1893,7 +1913,7 @@ export function BWJMStudio() {
             trailValue.textContent = trailRange.value;
             trailRange.oninput = () => { trailValue.textContent = trailRange.value; };
             trailRange.onchange = () => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => updateGraphNumericOption(
                 previous, node.range, "parametric2d", "trailLength",
                 Number(trailRange.value)));
@@ -1904,7 +1924,7 @@ export function BWJMStudio() {
           if (supportsAdaptiveParameters(node)) {
           const editor = createAdaptiveParameterEditor(node, {
             save: config => {
-              openGraphSettingsRef.current.add(settingsKey);
+              keepSettingsOpen();
               setMarkdown(previous => writeGraphParameterControls(
                 previous, node.range, node.type, config));
             },
