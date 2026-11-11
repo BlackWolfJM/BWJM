@@ -1,4 +1,7 @@
 import { MathMDDocument, MathMDNode, type GraphParameter, type CrossProductNode } from "@mathmd/ast";
+import { prepareCrossProductNodeData } from "./crossProductNodeData.js";
+export { prepareCrossProductNodeData } from "./crossProductNodeData.js";
+export type { CrossProductNodeData } from "./crossProductNodeData.js";
 import { 
   compileExpression, 
   evaluateExpression, 
@@ -12,13 +15,7 @@ import {
   sampleParametric2D,
   sampleFlow2D,
   computeCalculusViz,
-  computeCrossProductScene,
-  computeCrossProductStudy,
-  describeCrossProductDeterminant,
-  computeParallelepipedVolume,
-  computeCollapseStudy,
   interpolateCollapseVector,
-  isFiniteVector,
   extractFreeParameters,
   computeVectorStudy
 } from "@mathmd/math";
@@ -492,33 +489,8 @@ export class MathMDCore {
         }
       }
 
-      case "crossproduct": {
-        const crossNode = node as CrossProductNode;
-        const crossStudy = crossNode.showSteps !== undefined
-          ? computeCrossProductStudy(crossNode.u, crossNode.v, crossNode.reverseOrder, crossNode.showSteps && crossNode.showDeterminant, crossNode.w, crossNode.showIdentities, crossNode.origin)
-          : undefined;
-        
-        // Manejo de animación de colapso
-        let effectiveW = crossNode.w;
-        let collapseInfo: CollapseStudy | undefined;
-        if (crossNode.w && crossNode.showCollapse && crossNode.collapseFactor !== undefined) {
-          const factor = Math.max(0, Math.min(1, crossNode.collapseFactor));
-          const target = crossNode.collapseTarget ?? "coplanar";
-          collapseInfo = computeCollapseStudy(crossNode.u, crossNode.v, crossNode.w, factor, target);
-          effectiveW = collapseInfo.currentW;
-        }
-        
-        const crossScene = crossStudy?.scene ?? computeCrossProductScene(crossNode.u, crossNode.v, crossNode.reverseOrder, effectiveW, crossNode.origin);
-        const crossDeterminant = crossNode.showDeterminant
-          ? describeCrossProductDeterminant(crossNode.u, crossNode.v, crossScene, crossNode.reverseOrder)
-          : undefined;
-        const volumeInfo = effectiveW && crossNode.showVolume !== false
-          ? (isFiniteVector(effectiveW, 3)
-              ? computeParallelepipedVolume(crossNode.u, crossNode.v, effectiveW)
-              : undefined)
-          : undefined;
-        return { ...node, crossScene, crossStudy, crossDeterminant, volumeInfo, collapseInfo, effectiveW };
-      }
+      case "crossproduct":
+        return prepareCrossProductNodeData(node);
 
       case "curve3d": {
         const tCount = 100;

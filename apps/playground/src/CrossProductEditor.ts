@@ -1,5 +1,104 @@
 import type { CrossProductNode } from "@mathmd/ast";
+import type { CrossProductNodeData } from "@mathmd/core";
 import type { CrossProductDeterminant, CrossProductStudy, Vector3 } from "@mathmd/math";
+
+/**
+ * VIS-10: results stay in semantic HTML rather than floating over the 3D
+ * geometry. Values come from the exact data object used by the Plotly scene.
+ * showSteps is intentionally not a prerequisite for this summary.
+ */
+export interface CrossProductMetric {
+  label: string;
+  value: string;
+  expression?: string;
+}
+
+/** Pure view model: uses already-computed core values, never recomputes geometry. */
+export function summarizeCrossProductData(data: CrossProductNodeData): {
+  metrics: CrossProductMetric[];
+  notices: string[];
+} {
+  const metrics: CrossProductMetric[] = [];
+  const notices: string[] = [];
+  const format = (value: number): string =>
+    Number.isFinite(value) ? String(Number(value.toPrecision(7))) : "No determinado";
+  const add = (label: string, value: string, expression?: string) =>
+    metrics.push({ label, value, ...(expression ? { expression } : {}) });
+
+  if (data.crossScene.error !== undefined) {
+    notices.push(data.crossScene.error);
+    return { metrics, notices };
+  }
+  if (data.showArea !== false) {
+    add("Área del paralelogramo", format(data.crossScene.area), "‖u × v‖");
+    if (data.showTriangle === true) {
+      add("Área del triángulo", format(data.crossScene.triangleArea), "½ ‖u × v‖");
+    }
+    if (!data.crossArea.isZero && !data.crossArea.isParallel) {
+      add("Ángulo entre u y v", format(data.crossArea.thetaDeg) + "°", "θ");
+    }
+  }
+  if (data.showVolume === true && data.w && data.volumeInfo) {
+    add("Volumen firmado", format(data.volumeInfo.volumeSigned), "u · (v × w)");
+    add("Volumen geométrico", format(data.volumeInfo.volumeAbsolute), "|u · (v × w)|");
+  }
+  if (data.showCollapse === true && data.collapseInfo) {
+    add("Colapso", format(data.collapseInfo.factor * 100) + "%");
+    if (data.collapseInfo.isCollapsed) notices.push(data.collapseInfo.explanation);
+  }
+  if (data.crossScene.warning) notices.push(data.crossScene.warning);
+  return { metrics, notices };
+}
+
+export function createCrossProductSummary() {
+  const element = document.createElement("section");
+  element.className = "bwjm-cross-summary";
+  element.setAttribute("aria-label", "Resumen del producto cruzado");
+  const heading = document.createElement("h3");
+  heading.textContent = "Resultados del producto cruz";
+  const metrics = document.createElement("dl");
+  metrics.className = "bwjm-cross-summary-grid";
+  const messages = document.createElement("div");
+  messages.className = "bwjm-cross-summary-messages";
+  messages.setAttribute("aria-live", "polite");
+  element.append(heading, metrics, messages);
+
+  function update(data: CrossProductNodeData): void {
+    metrics.replaceChildren();
+    messages.replaceChildren();
+    const summary = summarizeCrossProductData(data);
+    for (const metric of summary.metrics) {
+      const item = document.createElement("div");
+      item.className = "bwjm-cross-summary-metric";
+      const label = document.createElement("dt");
+      label.textContent = metric.label;
+      const result = document.createElement("dd");
+      result.textContent = metric.value;
+      if (metric.expression) {
+        const formula = document.createElement("small");
+        formula.textContent = metric.expression;
+        result.appendChild(formula);
+      }
+      item.append(label, result);
+      metrics.appendChild(item);
+    }
+    for (const warning of summary.notices) {
+      const paragraph = document.createElement("p");
+      paragraph.className = "bwjm-cross-summary-warning";
+      paragraph.setAttribute("role", "status");
+      paragraph.textContent = warning;
+      messages.appendChild(paragraph);
+    }
+    if (!summary.metrics.length && !summary.notices.length) {
+      const hint = document.createElement("p");
+      hint.className = "bwjm-cross-summary-empty";
+      hint.textContent = "Activa Área, Volumen o Colapso para ver los resultados geométricos.";
+      messages.appendChild(hint);
+    }
+  }
+
+  return { element, update };
+}
 
 export function createCrossProductDeterminant() {
   const element = document.createElement("section");
