@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { MAX_IMAGE_DOCUMENT_BYTES } from "./localImages.js";
 import type { SetStateAction } from "react";
 
 export interface WorkspaceDocument {
@@ -11,6 +12,44 @@ export interface WorkspaceDocument {
 export interface WorkspaceState {
   documents: WorkspaceDocument[];
   activeId: string;
+}
+
+/** Snapshot taken before opening the asynchronous OS file picker. */
+export interface DocumentInsertSnapshot {
+  documentId: string;
+  content: string;
+  start: number;
+  end: number;
+}
+
+export type DocumentInsertStatus = "inserted" | "closed" | "edited" | "too-large" | "invalid-range";
+
+export function insertDocumentAtSnapshot(
+  workspace: WorkspaceState,
+  target: DocumentInsertSnapshot,
+  markup: string,
+): { workspace: WorkspaceState; status: DocumentInsertStatus } {
+  const document = workspace.documents.find(item => item.id === target.documentId);
+  if (!document) return { workspace, status: "closed" };
+  // Do not overwrite user edits after file selection; a new try captures a new cursor.
+  if (document.content !== target.content) return { workspace, status: "edited" };
+  if (!Number.isSafeInteger(target.start) || !Number.isSafeInteger(target.end) ||
+      target.start < 0 || target.end < target.start || target.end > document.content.length) {
+    return { workspace, status: "invalid-range" };
+  }
+  const nextContent = document.content.slice(0, target.start) + markup +
+    document.content.slice(target.end);
+  if (new TextEncoder().encode(nextContent).byteLength > MAX_IMAGE_DOCUMENT_BYTES) {
+    return { workspace, status: "too-large" };
+  }
+  return {
+    status: "inserted",
+    workspace: {
+      ...workspace,
+      documents: workspace.documents.map(item => item.id === target.documentId
+        ? { ...item, content: nextContent } : item),
+    },
+  };
 }
 let nextDocumentNumber = 1;
 export function createWorkspaceDocument(filename: string, content: string, lessonKey: string | null = null): WorkspaceDocument {
@@ -70,7 +109,18 @@ export function markDocumentSaved(workspace: WorkspaceState): WorkspaceState {
 }
 export function useDocumentWorkspace(filename: string, content: string, lessonKey: string | null = null) {
   const [workspace, setWorkspace] = useState<WorkspaceState>(() => initialWorkspace(filename, content, lessonKey));
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
   const active = workspace.documents.find(document => document.id === workspace.activeId) ?? workspace.documents[0];
+
+  const insertAtDocumentSnapshot = useCallback((target: DocumentInsertSnapshot, markup: string): DocumentInsertStatus => {
+    const attempt = insertDocumentAtSnapshot(workspaceRef.current, target, markup);
+    if (attempt.status === "inserted") {
+      // Recheck at commit time as well: concurrent edits or a closed tab always win.
+      setWorkspace(previous => insertDocumentAtSnapshot(previous, target, markup).workspace);
+    }
+    return attempt.status;
+  }, []);
   const setMarkdown = useCallback((next: SetStateAction<string>) => {
     setWorkspace(previous => updateActiveContent(previous, next));
   }, []);
@@ -99,5 +149,6 @@ export function useDocumentWorkspace(filename: string, content: string, lessonKe
     markdown: active.content,
     selectedTemplate: active.lessonKey ?? "",
     setMarkdown, openDocument, createDocument, selectDocument, closeDocument, markSaved, renameDocument,
+    insertAtDocumentSnapshot,
   };
 }

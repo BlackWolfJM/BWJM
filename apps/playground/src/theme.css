@@ -3464,3 +3464,38 @@ code.bwjm-property-value {
 @media(max-width:760px) {
   .bwjm-sidebar-left .bwjm-sidebar-tab span { font-size:.76rem; }
 }
+
+/* VIS-06: safe, responsive Markdown inside scientific document sheets. */
+.bwjm-sheet, .bwjm-prose-block { min-width: 0; }
+.bwjm-prose-block { overflow-wrap: break-word; }
+.bwjm-prose-block :is(ul, ol) { padding-left: 1.65rem; margin: 0.8rem 0 1.2rem; }
+.bwjm-prose-block ul { list-style: disc outside; }
+.bwjm-prose-block ol { list-style: decimal outside; }
+.bwjm-prose-block li { display: list-item; margin: 0.25rem 0; }
+.bwjm-prose-block li > p { margin: 0.2rem 0; }
+.bwjm-prose-block li :is(ul, ol) { margin: 0.3rem 0 0.4rem; }
+.bwjm-prose-block a { color: #1d4ed8; text-decoration: underline; overflow-wrap: anywhere; }
+.bwjm-prose-block :not(pre) > code { background: #f1f5f9; border-radius: 4px; padding: 0.12rem 0.35rem; font-family: var(--font-mono); }
+.bwjm-prose-block hr { border: 0; border-top: 1px solid #cbd5e1; margin: 1.75rem 0; }
+.bwjm-markdown-image { display: block; max-width: 100%; margin: 1.25rem 0; }
+.bwjm-markdown-image img { display: block; max-width: 100%; height: auto; object-fit: contain; }
+.bwjm-markdown-image img[hidden], .bwjm-image-error[hidden] { display: none; }
+.bwjm-image-error { display: block; padding: 0.8rem; background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; border-radius: 6px; }
+.bwjm-prose-block p:has(> .bwjm-markdown-image:only-child) { margin: 0; }
+.bwjm-markdown-table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-inline: contain; margin: 1.25rem 0; border: 1px solid #cbd5e1; border-radius: 7px; }
+.bwjm-markdown-table-scroll table { width: max-content; min-width: 100%; border-collapse: collapse; white-space: nowrap; }
+.bwjm-markdown-table-scroll th, .bwjm-markdown-table-scroll td { text-align: left; padding: 0.55rem 0.8rem; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+.bwjm-markdown-table-scroll th { background: #f1f5f9; font-weight: 700; }
+.bwjm-markdown-table-scroll tbody tr:last-child td { border-bottom: 0; }
+.bwjm-markdown-table-scroll:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* VIS-06: accessible feedback for local file insertion and validation. */
+.bwjm-image-notice {
+  flex-shrink: 0;
+  padding: 0.65rem 1rem;
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
