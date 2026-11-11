@@ -224,7 +224,7 @@ export const FormulaModal: React.FC<FormulaModalProps> = ({ isOpen, onClose, onI
             </div>
             {mode === "numbered" && evaluation.existingTag && (
               <p className="bwjm-modal-label">
-                La fórmula ya contiene una etiqueta \\tag; se conserva la del código LaTeX.
+                La fórmula ya contiene una etiqueta \tag; se conserva la del código LaTeX.
               </p>
             )}
           </div>
