@@ -1330,7 +1330,7 @@ export function BWJMStudio() {
     const container = sheetRef.current;
     if (!container) return;
 
-    const sheet = document.createElement("article");
+    let sheet = document.createElement("article");
     sheet.className = "bwjm-sheet";
     const nextCards: MountedScientificCard[] = [];
     const changedCards: MathMDNode[] = [];
@@ -1497,7 +1497,11 @@ export function BWJMStudio() {
             const out = trail.parentElement?.querySelector("output");
             if (out) out.textContent = trail.value;
           }
-          sheet.appendChild(existing.card);
+          // Keep the old card attached to the *connected* sheet. Moving it
+          // into this detached staging tree would blur its focused controls.
+          const slot = document.createElement("span");
+          slot.dataset.mountSlot = existing.mountKey;
+          sheet.appendChild(slot);
           nextCards.push(existing);
           attachPlayback(existing.card, node);
           if (beforeFence !== afterFence) changedCards.push(node);
@@ -2533,9 +2537,30 @@ export function BWJMStudio() {
       playbackRef.current.dispose();
       playbackRef.current = null;
     }
-    // Replacing only the sheet wrapper moves retained cards without replacing
-    // their graph elements, controllers, listeners or the active transport.
-    container.replaceChildren(sheet);
+    // Reconcile in the *connected* old sheet. Remove obsolete prose first,
+    // then insert fresh text around retained cards without ever detaching them.
+    // This also preserves DOM focus and text selection in chart controls.
+    const oldSheet = sameDocument
+      ? container.querySelector<HTMLElement>(":scope > .bwjm-sheet")
+      : null;
+    if (oldSheet) {
+      const byKey = new Map(nextCards.map(record => [record.mountKey, record.card]));
+      const desired = [...sheet.children].map(child => {
+        const slot = (child as HTMLElement).dataset.mountSlot;
+        return slot ? byKey.get(slot) ?? child : child;
+      });
+      const wanted = new Set(desired);
+      for (const child of [...oldSheet.children]) {
+        if (!wanted.has(child)) child.remove();
+      }
+      desired.forEach((element, index) => {
+        const current = oldSheet.children.item(index);
+        if (current !== element) oldSheet.insertBefore(element, current);
+      });
+      sheet = oldSheet;
+    } else {
+      container.replaceChildren(sheet);
+    }
     mountedCardsRef.current = nextCards;
     mountedSourceRef.current = markdown;
     mountedDocumentRef.current = activeId;
