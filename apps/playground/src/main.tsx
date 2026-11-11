@@ -1291,6 +1291,23 @@ export function BWJMStudio() {
       }
     }
 
+    // Rekey all surviving renderers together. Implicit IDs can swap with
+    // previous ordinal IDs, so per-node mutations would overwrite a neighbor.
+    const survivingRenderers = [...reusable.entries()].map(([node, record]) => ({
+      id: node.id,
+      oldId: record.node.id,
+      svg: svgRenderersRef.current.get(record.node.id),
+      plotly: plotlyRenderersRef.current.get(record.node.id),
+    }));
+    for (const renderer of survivingRenderers) {
+      svgRenderersRef.current.delete(renderer.oldId);
+      plotlyRenderersRef.current.delete(renderer.oldId);
+    }
+    for (const renderer of survivingRenderers) {
+      if (renderer.svg) svgRenderersRef.current.set(renderer.id, renderer.svg);
+      if (renderer.plotly) plotlyRenderersRef.current.set(renderer.id, renderer.plotly);
+    }
+
     const previousCore = sameDocument ? coreRef.current : null;
     const previousVariables = previousCore?.getVariables() ?? {};
     coreRef.current = new MathMDCore(doc);
@@ -1450,9 +1467,51 @@ export function BWJMStudio() {
         sheet.appendChild(diagBox);
       } else if (segment.kind === "mathmd" && segment.node) {
         const node = segment.node;
+        const existing = reusable.get(node);
+        if (existing) {
+          const before = existing.node;
+          const beforeFence = mountedSourceRef.current.slice(
+            before.range.start.offset, before.range.end.offset);
+          const afterFence = markdown.slice(node.range.start.offset, node.range.end.offset);
+          existing.node = node;
+          existing.card.id = "node-" + node.id;
+          mountAliasesRef.current.set(node, existing);
+          const plotMount = existing.card.querySelector<HTMLElement>('[id^="mount-"]');
+          if (plotMount) plotMount.id = "mount-" + node.id;
+          const tag = existing.card.querySelector(".bwjm-node-tag");
+          if (tag?.lastChild?.nodeType === Node.TEXT_NODE) {
+            tag.lastChild.textContent = " " + node.type.toUpperCase() + " • " + node.id;
+          }
+          existing.card.querySelectorAll<HTMLInputElement>("input[data-graph-option]").forEach(input => {
+            const key = input.dataset.graphOption ?? "";
+            const value = (node as unknown as Record<string, unknown>)[key];
+            const defaultOn = node.type === "crossproduct"
+              ? ["showPlane", "showNormal", "showArea"].includes(key)
+              : key === "showSteps" || (key === "animated" && node.type === "parametric2d");
+            input.checked = typeof value === "boolean" ? value : defaultOn;
+          });
+          // Update the displayed preference without losing keyboard focus.
+          const trail = existing.card.querySelector<HTMLInputElement>('input[aria-label="Longitud de estela"]');
+          if (trail && node.type === "parametric2d" && document.activeElement !== trail) {
+            trail.value = String(Math.min(Number(trail.max), Math.max(2, node.trailLength ?? 100)));
+            const out = trail.parentElement?.querySelector("output");
+            if (out) out.textContent = trail.value;
+          }
+          sheet.appendChild(existing.card);
+          nextCards.push(existing);
+          attachPlayback(existing.card, node);
+          if (beforeFence !== afterFence) changedCards.push(node);
+          continue;
+        }
         const card = document.createElement("div");
         card.className = "bwjm-node-card";
         card.id = `node-${node.id}`;
+        const record: MountedScientificCard = {
+          node, card, mountKey: activeId + ":" + ++nextMountKeyRef.current,
+          disposers: [],
+        };
+        card.dataset.mountKey = record.mountKey;
+        mountAliasesRef.current.set(node, record);
 
         const cardHeader = document.createElement("div");
         cardHeader.className = "bwjm-node-header";
@@ -2476,8 +2535,21 @@ export function BWJMStudio() {
         }
         card.appendChild(cardBody);
         sheet.appendChild(card);
+        nextCards.push(record);
       }
     }
+
+    if (!inlinePlaybackMounted && playbackRef.current) {
+      playbackRef.current.dispose();
+      playbackRef.current = null;
+    }
+    // Replacing only the sheet wrapper moves retained cards without replacing
+    // their graph elements, controllers, listeners or the active transport.
+    container.replaceChildren(sheet);
+    mountedCardsRef.current = nextCards;
+    mountedSourceRef.current = markdown;
+    mountedDocumentRef.current = activeId;
+    for (const changed of changedCards) refreshParameterizedGraph(changed.id);
 
     const livePanel = document.createElement("div");
     livePanel.className = "bwjm-live-analysis-panel";
@@ -2751,11 +2823,7 @@ export function BWJMStudio() {
     liveAnalysisRef.current = updateLiveScientificAnalysis;
     updateLiveScientificAnalysis();
 
-    container.appendChild(sheet);
-    return () => {
-      svgResizeObserver?.disconnect();
-      if (svgResizeFrame !== undefined) window.cancelAnimationFrame(svgResizeFrame);
-    };
+    // Sheet is already connected, including all retained scientific cards.
   }, [doc, markdown, filename, sliceX, activeId]);
 
   const handleVariableChange = (name: string, value: number) => {
