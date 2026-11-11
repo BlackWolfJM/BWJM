@@ -25,7 +25,7 @@ export function summarizeCrossProductData(data: CrossProductNodeData): {
   const add = (label: string, value: string, expression?: string) =>
     metrics.push({ label, value, ...(expression ? { expression } : {}) });
 
-  if (data.crossScene.error) {
+  if (data.crossScene.error !== undefined) {
     notices.push(data.crossScene.error);
     return { metrics, notices };
   }
