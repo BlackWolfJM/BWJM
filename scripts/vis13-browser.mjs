@@ -69,7 +69,7 @@ try {
   await checkOpen();
   assert((await identity("anticommutativity").locator(".bwjm-identity-eval").innerText()).includes("2"), "Evaluación obsoleta");
   await ux.press("Tab");
-  await page.waitForFunction(() => document.querySelector(".bwjm-code-textarea")?.value.includes("u: [2, 2, 0]"));
+  await page.waitForFunction(() => document.querySelector(".bwjm-code-textarea")?.value.includes("u: [2,2,0]"));
   await checkOpen();
   assert((await report.locator(".bwjm-cross-result").innerText()).includes("2, -2, 6"));
   const reverse = report.locator(".bwjm-order-indicator");
@@ -94,7 +94,7 @@ try {
   const wx = card.locator('.bwjm-cross-editor input[aria-label="w x"]');
   await wx.fill("3");
   await wx.press("Tab");
-  await page.waitForFunction(() => document.querySelector(".bwjm-code-textarea")?.value.includes("w: [3, 0, 2]"));
+  await page.waitForFunction(() => document.querySelector(".bwjm-code-textarea")?.value.includes("w: [3,0,2]"));
   await checkOpen(["anticommutativity"]);
   assert((await identity("distributivity").locator(".bwjm-identity-eval").innerText()).length > 0);
 
