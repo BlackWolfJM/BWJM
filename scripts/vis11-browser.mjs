@@ -200,9 +200,13 @@ try {
   });
   const legendEntry = curve.locator(".js-plotly-plot g.legend g.traces").first();
   await legendEntry.waitFor({ timeout: 15000 });
-  // In a narrow split pane Plotly's camera modebar can overlay the legend.
-  // Dispatch the legend's real click handler without hitting the modebar.
-  await legendEntry.dispatchEvent("click", { bubbles: true, cancelable: true });
+  // In split mode the Plotly camera modebar overlays the first legend row.
+  // Make the modebar transparent to the pointer *in this test only*, then
+  // perform a real mouse click on the legend as the user would.
+  await curve.locator(".js-plotly-plot .modebar-container").evaluate(element => {
+    element.style.pointerEvents = "none";
+  });
+  await legendEntry.click();
   await page.waitForFunction(() => {
     const curve = [...document.querySelectorAll(".bwjm-node-card")]
       .find(card => card.querySelector(".bwjm-node-tag")?.textContent?.includes("CURVE3D"));
