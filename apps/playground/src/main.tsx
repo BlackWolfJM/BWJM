@@ -1499,8 +1499,10 @@ export function BWJMStudio() {
                 node.type !== "vector3d" && node.type !== "crossproduct" &&
                 node.type !== "line3d" && node.type !== "plane3d") return;
               openGraphSettingsRef.current.add(settingsKey);
+              // Persist the user's choice before React re-renders/replaces this DOM control.
+              const checked = checkbox.checked;
               setMarkdown(previous => updateGraphOption(
-                previous, node.range, node.type, key, checkbox.checked));
+                previous, node.range, node.type, key, checked));
             };
             wrapper.append(checkbox, document.createTextNode(label));
             controls.appendChild(wrapper);
