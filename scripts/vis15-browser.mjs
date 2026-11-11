@@ -121,8 +121,11 @@ async function rotateCamera(page,id) {
   const changed=await page.evaluate(async id=>{
     const plot=document.querySelector("#mount-"+id+" .js-plotly-plot");
     const old=JSON.stringify(plot._fullLayout.scene.camera);
-    if (window.Plotly?.relayout) {
-      await window.Plotly.relayout(plot, {"scene.camera.eye":{x:1.9,y:0.55,z:2.25}});
+    const resource = performance.getEntriesByType("resource")
+      .map(entry => entry.name).find(name => name.includes("plotly__js-dist-min"));
+    const plotlyApi = window.Plotly ?? (resource ? (await import(resource)).default : null);
+    if (plotlyApi?.relayout) {
+      await plotlyApi.relayout(plot, {"scene.camera.eye":{x:1.9,y:0.55,z:2.25}});
       return JSON.stringify(plot._fullLayout.scene.camera)!==old;
     }
     return false;
