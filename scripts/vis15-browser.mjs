@@ -179,6 +179,32 @@ try {
     await commit(page,ending.slider,spec,1,0,[0,0,0]);
   }
 
+  // Physical pointer drag: input must update the scene BEFORE pointerup/change.
+  const dragged = cases[0];
+  const draggedSlider = page.locator("#node-"+dragged.id+
+    ' input[aria-label="Factor de colapso del paralelepípedo"]');
+  await draggedSlider.scrollIntoViewIfNeeded();
+  const sourceBeforePointer = await page.locator(".bwjm-code-textarea").inputValue();
+  const bounds = await draggedSlider.boundingBox();
+  if (!bounds) throw new Error("Cannot drag the visible collapse range");
+  const pointerY = bounds.y + bounds.height / 2;
+  await page.mouse.move(bounds.x + bounds.width - 8, pointerY);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width / 2, pointerY, {steps:8});
+  const liveFactor = Number(await draggedSlider.inputValue());
+  assert(Math.abs(liveFactor - .5) <= .05, "Physical drag did not reach 50%");
+  const liveVolume = Number((1 - liveFactor).toFixed(4));
+  await awaitScene(page,dragged,liveFactor,liveVolume);
+  verifyScene(await readPlot(page,dragged.id),dragged,liveFactor,liveVolume,[0,0,1-liveFactor]);
+  assert.equal(await page.locator(".bwjm-code-textarea").inputValue(),sourceBeforePointer,
+    "Mouse drag wrote Markdown before pointerup");
+  await page.mouse.up();
+  await page.waitForFunction(factor=>
+    document.querySelector(".bwjm-code-textarea")?.value.includes("collapseFactor: "+factor),
+    liveFactor, {timeout:10000});
+  await awaitScene(page,dragged,liveFactor,liveVolume);
+  verifyScene(await readPlot(page,dragged.id),dragged,liveFactor,liveVolume,[0,0,1-liveFactor]);
+
   // Distinguish coplanar from zero when both results have volume zero.
   const sample=["# Metas independientes","",
     ...["coplanar","zero"].map(target=>[
