@@ -11,7 +11,7 @@ import path from "node:path";
 const require = createRequire("/tmp/bwjm-browser/runner.cjs");
 const { chromium } = require("playwright");
 const png = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+IpocAAAAASUVORK5CYII=", "base64"
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=", "base64"
 );
 const fence = String.fromCharCode(96).repeat(3);
 const markdown = [
