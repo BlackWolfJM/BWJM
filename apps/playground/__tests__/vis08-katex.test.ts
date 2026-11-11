@@ -14,7 +14,7 @@ describe("VIS-08 local KaTeX rendering", () => {
     expect(fraction.html).toContain("katex-display");
     const matrix = renderMath("\\begin{bmatrix}1 & 2 \\\\ 3 & 4\\end{bmatrix}", true);
     expect(matrix.valid).toBe(true);
-    expect(matrix.html).toContain("<mtable>");
+    expect(matrix.html).toContain("<mtable ");
   });
 
   it("preserves invalid TeX with all backslashes, escaping unsafe content", () => {
