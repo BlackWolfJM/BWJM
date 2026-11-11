@@ -46,7 +46,9 @@ function katexOfflineExportPlugin(): Plugin {
           return "@font-face{" + declarations.replace(src[0], embedded) + "}";
         },
       );
-      if (fontCount < 15 || /url\((?!["']?data:)/.test(css)) {
+      const faceCount = (css.match(/@font-face/g) ?? []).length;
+      if (fontCount < 15 || faceCount !== fontCount ||
+          /url\((?!["']?data:)/.test(css)) {
         throw new Error("CSS KaTeX exportado sin fuentes WOFF2 completamente embebidas");
       }
       return "export default " + JSON.stringify(css) + ";";
