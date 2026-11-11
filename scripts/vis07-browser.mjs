@@ -216,6 +216,8 @@ async function graphCustomizationTest() {
   await card.waitFor({ timeout: 16000 });
   await card.locator(".bwjm-graph-settings summary").click();
   const checkbox = card.getByRole("checkbox", { name: "Velocidad" });
+  // Force a genuine change even if the graph schema enables this by default.
+  if (await checkbox.isChecked()) await checkbox.uncheck();
   await checkbox.check();
   await page.waitForTimeout(850);
   const edited = await page.locator(".bwjm-code-textarea").inputValue();
