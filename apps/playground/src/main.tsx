@@ -733,6 +733,7 @@ export function BWJMStudio() {
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
   const openGraphSettingsRef = useRef<Set<string>>(new Set());
   const openCrossProductStepsRef = useRef<Set<string>>(new Set());
+  const openCrossProductIdentitiesRef = useRef<Map<string, Set<string>>>(new Map());
   const parameterEditorDisposersRef = useRef<Array<() => void>>([]);
   const playbackRef = useRef<InlinePlaybackController | null>(null);
   const liveAnalysisRef = useRef<(() => void) | null>(null);
@@ -1235,6 +1236,24 @@ export function BWJMStudio() {
     const container = sheetRef.current;
     if (!container) return;
 
+    // Only recover focus if this render actually removed the focused control.
+    // Never steal focus from a control reached via Tab or pointer navigation.
+    const focused = document.activeElement;
+    const focusedCard = focused instanceof Element ? focused.closest(".bwjm-node-card") : null;
+    const focusKey = focusedCard?.id;
+    const focusSelector = focused instanceof HTMLElement && focused.matches(".bwjm-order-indicator")
+      ? ".bwjm-order-indicator"
+      : focused instanceof HTMLElement && focused.matches(".bwjm-identity-steps > summary")
+        ? '.bwjm-identity-item[data-identity-id="' +
+          focused.closest<HTMLElement>(".bwjm-identity-item")?.dataset.identityId + '"] .bwjm-identity-steps > summary'
+        : focused instanceof HTMLElement && focused.matches(".bwjm-cross-steps > summary")
+          ? ".bwjm-cross-steps > summary"
+          : focused instanceof HTMLInputElement && focused.closest(".bwjm-cross-editor")
+            ? 'input[aria-label="' + focused.getAttribute("aria-label") + '"]'
+            : undefined;
+    const restoreCrossFocus = focusKey && focusSelector &&
+      focusedCard?.querySelector(".bwjm-cross-report, .bwjm-cross-editor");
+
     container.replaceChildren();
 
     const sheet = document.createElement("article");
@@ -1382,7 +1401,14 @@ export function BWJMStudio() {
 
         const cardBody = document.createElement("div");
         cardBody.className = "bwjm-node-body";
-        const crossStepsKey = activeId + ":" + node.range.start.offset;
+        // Explicit graph ids remain stable when previous vector coordinates are edited.
+        // Include document id to isolate equally named identities across documents.
+        const crossStepsKey = activeId + ":" + (node.id || node.range.start.offset);
+        let crossIdentityState = openCrossProductIdentitiesRef.current.get(crossStepsKey);
+        if (!crossIdentityState) {
+          crossIdentityState = new Set<string>();
+          openCrossProductIdentitiesRef.current.set(crossStepsKey, crossIdentityState);
+        }
         const crossReport = node.type === "crossproduct" && node.showSteps !== undefined
           ? createCrossProductReport(
               node.showSteps,
@@ -1395,6 +1421,7 @@ export function BWJMStudio() {
                 setMarkdown(previous => updateGraphOption(
                   previous, node.range, node.type, "reverseOrder", !node.reverseOrder));
               },
+              crossIdentityState,
             ) : undefined;
         const determinant = node.type === "crossproduct" && node.showDeterminant
           ? createCrossProductDeterminant() : undefined;
@@ -1586,11 +1613,11 @@ export function BWJMStudio() {
           }
           if (node.type === "crossproduct") {
             controls.appendChild(createCrossProductEditor(node, {
-              preview: (u, v) => {
+              preview: (u, v, w) => {
                 const study = crossReport
-                  ? computeCrossProductStudy(u, v, node.reverseOrder, node.showSteps && node.showDeterminant, node.w, node.showIdentities, node.origin)
+                  ? computeCrossProductStudy(u, v, node.reverseOrder, node.showSteps && node.showDeterminant, w, node.showIdentities, node.origin)
                   : undefined;
-                const crossScene = study?.scene ?? computeCrossProductScene(u, v, node.reverseOrder, node.w, node.origin);
+                const crossScene = study?.scene ?? computeCrossProductScene(u, v, node.reverseOrder, w, node.origin);
                 plotlyRenderersRef.current.get(node.id)?.render({ ...node, u, v, crossScene });
                 if (study) crossReport?.update(study);
                 determinant?.update(describeCrossProductDeterminant(u, v, crossScene, node.reverseOrder));
@@ -2655,6 +2682,14 @@ export function BWJMStudio() {
     updateLiveScientificAnalysis();
 
     container.appendChild(sheet);
+    if (restoreCrossFocus && focusKey && focusSelector &&
+        (!document.activeElement || document.activeElement === document.body ||
+          document.activeElement === focused)) {
+      const replacement = sheet.querySelector<HTMLElement>(
+        "#" + CSS.escape(focusKey) + " " + focusSelector,
+      );
+      replacement?.focus({ preventScroll: true });
+    }
     return () => {
       svgResizeObserver?.disconnect();
       if (svgResizeFrame !== undefined) window.cancelAnimationFrame(svgResizeFrame);
