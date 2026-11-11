@@ -37,7 +37,7 @@ const card = (page, type) => page.locator(".bwjm-node-card").filter({
   has: page.locator(".bwjm-node-tag").filter({ hasText: type.toUpperCase() }),
 }).first();
 async function getClock(page) {
-  const text = await page.locator(".bwjm-inline-playback-value").first().innerText();
+  const text = await page.locator(".bwjm-inline-playback-value").first().textContent();
   return Number(text.split("=").at(-1).trim());
 }
 async function capture(page) {
@@ -133,6 +133,9 @@ try {
   }));
   console.log("VIS11 transport diagnostics:", JSON.stringify(transportDebug));
   assert.equal(transportDebug.transports, 1, "No se montó el transporte de la línea temporal");
+  // The compact transport intentionally lives inside Personalizar gráfica.
+  // Open its existing details so the accessible play button can be clicked.
+  await card(page, "parametric2d").locator(".bwjm-graph-settings > summary").click();
   await page.getByRole("button", { name: "Reproducir animación" }).click();
   await page.waitForTimeout(380);
   const tBefore = await getClock(page);
