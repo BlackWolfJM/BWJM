@@ -33,11 +33,11 @@ const makeData = (u: Vector3, v: Vector3, w: Vector3, target: "coplanar" | "zero
 };
 
 function plot() {
-  const newPlot = vi.fn<PlotlyApi["newPlot"]>().mockResolvedValue(undefined);
-  const react = vi.fn<PlotlyApi["react"]>().mockResolvedValue(undefined);
+  const newPlot = vi.fn(async (_element: HTMLElement, _data: unknown[], _layout: object, _config: object) => undefined);
+  const react = vi.fn(async (_element: HTMLElement, _data: unknown[], _layout: object, _config: object) => undefined);
   const api: PlotlyApi = {
     newPlot, react,
-    relayout: vi.fn<PlotlyApi["relayout"]>().mockResolvedValue(undefined),
+    relayout: vi.fn(async (_element: HTMLElement, _update: object) => undefined),
     purge: vi.fn(), Plots: { resize: vi.fn() },
   };
   const renderer = new PlotlyRenderer(makeElement(), api);
