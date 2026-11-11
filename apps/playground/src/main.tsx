@@ -735,6 +735,9 @@ export function BWJMStudio() {
   const openCrossProductStepsRef = useRef<Set<string>>(new Set());
   const parameterEditorDisposersRef = useRef<Array<() => void>>([]);
   const playbackRef = useRef<InlinePlaybackController | null>(null);
+  // Rebuilds may reuse the active document's time, but never another tab's.
+  const renderedDocumentIdRef = useRef<string | null>(null);
+  const variablesByDocumentRef = useRef<Map<string, Record<string, number>>>(new Map());
   const liveAnalysisRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1213,8 +1216,11 @@ export function BWJMStudio() {
     clearTimers();
     clearRenderers();
 
-    const previousVariables = coreRef.current?.getVariables() ?? {};
     const previousCore = coreRef.current;
+    if (previousCore && renderedDocumentIdRef.current) {
+      variablesByDocumentRef.current.set(renderedDocumentIdRef.current, previousCore.getVariables());
+    }
+    renderedDocumentIdRef.current = activeId;
     coreRef.current = new MathMDCore(doc);
     // Keep local values after unrelated text edits when the chart ID stays stable.
     doc.children.forEach(node => {
@@ -1227,7 +1233,7 @@ export function BWJMStudio() {
         }
       });
     });
-    Object.entries(previousVariables).forEach(([name, value]) => {
+    Object.entries(variablesByDocumentRef.current.get(activeId) ?? {}).forEach(([name, value]) => {
       if (coreRef.current?.getVariable(name) !== undefined && Number.isFinite(value)) {
         coreRef.current.setVariable(name, value);
       }
@@ -2339,9 +2345,8 @@ export function BWJMStudio() {
             () => coreRef.current?.getVariables() ?? {},
             (name, value) => handleVariableChange(name, value),
           );
-          const settingsControls = cardBody.querySelector(".bwjm-graph-settings-controls");
-          if (settingsControls) settingsControls.appendChild(transport.element);
-          else cardBody.appendChild(transport.element);
+          // Keep transport beside the scene, not inside collapsible graph settings.
+          cardBody.appendChild(transport.element);
           playbackRef.current = transport;
           inlinePlaybackMounted = true;
         }
