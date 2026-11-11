@@ -2277,10 +2277,15 @@ export class PlotlyRenderer {
     this.layout.scene.aspectmode = "data";
     this.layout.uirevision = node.id;
     this.layout.showlegend = true;
-    if (scene.error !== undefined) {
-      this.layout.title = { text: scene.error };
-      return;
-    }
+    this.layout.title = { text: "Producto cruz", x: 0.06, font: { size: 15 } };
+    this.layout.margin = { l: 8, r: 8, t: 35, b: 65 };
+    // A horizontal legend below the scene leaves the camera controls and
+    // short vector labels unobstructed, including on narrow reader panels.
+    this.layout.legend = {
+      orientation: "h", x: 0, y: -0.12, xanchor: "left", yanchor: "top",
+      groupclick: "togglegroup", font: { size: 11 },
+    };
+    if (scene.error !== undefined) return;
 
     const arrows: Array<{ end: Vector3; color: string; label: string }> = [
       { end: u, color: colorU, label: labelU },
@@ -2416,17 +2421,7 @@ export class PlotlyRenderer {
         name: "Plano generado", showlegend: true,
       });
 
-      if (showArea && scene.area > 0) {
-        this.data.push({
-          type: "scatter3d", mode: "text",
-          x: [ox + x / 2], y: [oy + y / 2], z: [oz + z / 2],
-          text: [`Área = ${Number(scene.area.toPrecision(5))}`],
-          textposition: "middle center",
-          name: "Etiqueta de área",
-          showlegend: false,
-          hoverinfo: "text",
-        });
-      }
+
     }
 
     if (showTriangle && scene.opposite) {
@@ -2438,18 +2433,7 @@ export class PlotlyRenderer {
         name: "Triángulo sustentado", showlegend: true,
       });
 
-      if (showArea && scene.area > 0) {
-        const triArea = Number(scene.triangleArea.toPrecision(5));
-        this.data.push({
-          type: "scatter3d", mode: "text",
-          x: [ox + (u[0] + v[0]) / 3], y: [oy + (u[1] + v[1]) / 3], z: [oz + (u[2] + v[2]) / 3],
-          text: [`Área triángulo = ${triArea}`],
-          textposition: "middle center",
-          name: "Etiqueta área triángulo",
-          showlegend: false,
-          hoverinfo: "text",
-        });
-      }
+
     }
 
     // Visualización del paralelepípedo con el tercer vector w
@@ -2482,56 +2466,34 @@ export class PlotlyRenderer {
         { x: [px, sx, ux, tx], y: [py, sy, uy, ty], z: [pz, sz, uz, tz], name: "Lateral (v,w)+u" },
       ];
 
-      for (const face of faces) {
-        const faceVertices: number[] = [];
-        face.x.forEach((xi, i) => faceVertices.push(xi));
+      faces.forEach((face, index) => {
         this.data.push({
           type: "mesh3d",
           x: face.x, y: face.y, z: face.z,
           i: [0, 0], j: [1, 2], k: [2, 3],
           color: colorVolume, opacity: 0.25, flatshading: true,
-          name: face.name, showlegend: true,
+          legendgroup: "parallelepiped",
+          name: "Paralelepípedo",
+          showlegend: index === 0,
+          hovertemplate: face.name + "<extra>Paralelepípedo</extra>",
         });
-      }
-
-      // El renderizador también admite nodos directos sin los datos precalculados de Core.
-      const volInfo = node.volumeInfo ?? computeParallelepipedVolume(u, v, w);
-      const centroidX = (ox + px + qx + rx + tx + ux + sx) / 7;
-      const centroidY = (oy + py + qy + ry + ty + uy + sy) / 7;
-      const centroidZ = (oz + pz + qz + rz + tz + uz + sz) / 7;
-      const volText = volInfo.orientation === "positive"
-        ? `V = ${Number(volInfo.volumeAbsolute.toPrecision(5))} (FIRMADO > 0)`
-        : volInfo.orientation === "negative"
-          ? `V = ${Number(volInfo.volumeAbsolute.toPrecision(5))} (FIRMADO < 0)`
-          : `V = 0 (degenerado)`;
-      this.data.push({
-        type: "scatter3d", mode: "text",
-        x: [centroidX], y: [centroidY], z: [centroidZ],
-        text: [volText],
-        textposition: "middle center",
-        name: "Volumen paralelepípedo",
-        showlegend: false,
-        hoverinfo: "text",
       });
     }
 
     // Visualización de animación de colapso (T017)
     if (showCollapse && node.collapseInfo && effectiveW && scene.opposite) {
       const collapseInfo: CollapseStudy = node.collapseInfo;
-      const percent = collapseInfo.volumeOriginal > 0 
-        ? (collapseInfo.volumeAtFactor / collapseInfo.volumeOriginal * 100).toFixed(1)
-        : "0";
-      
+
       // Flecha del vector w interpolado (mostrar estado actual)
       const wExtent = Math.max(Math.abs(effectiveW[0]), Math.abs(effectiveW[1]), Math.abs(effectiveW[2]));
       if (wExtent > 1e-12) {
         this.data.push({
           type: "scatter3d", mode: "lines+markers+text",
           x: [ox, ox + effectiveW[0]], y: [oy, oy + effectiveW[1]], z: [oz, oz + effectiveW[2]],
-          text: ["", `${labelW} (${(collapseInfo.factor * 100).toFixed(0)}%)`], textposition: "top center",
-          hovertext: [`(${ox}, ${oy}, ${oz})`, `w interpolado: (${effectiveW[0].toFixed(3)}, ${effectiveW[1].toFixed(3)}, ${effectiveW[2].toFixed(3)})`],
+          text: ["", labelW], textposition: "top center",
+          hovertext: [`(${ox}, ${oy}, ${oz})`, `w interpolado: (${effectiveW[0].toFixed(3)}, ${effectiveW[1].toFixed(3)}, ${effectiveW[2].toFixed(3)}), colapso ${(collapseInfo.factor * 100).toFixed(1)}%`],
           hoverinfo: "text",
-          line: { color: "#f59e0b", width: 4, dash: "dash" }, marker: { color: "#f59e0b", size: 3 }, name: `w (${(collapseInfo.factor * 100).toFixed(0)}%)`,
+          line: { color: "#f59e0b", width: 4, dash: "dash" }, marker: { color: "#f59e0b", size: 3 }, name: labelW + " (colapso)",
         });
         this.data.push({
           type: "cone", x: [ox + effectiveW[0]], y: [oy + effectiveW[1]], z: [oz + effectiveW[2]],
@@ -2542,34 +2504,7 @@ export class PlotlyRenderer {
         });
       }
       
-      // Etiqueta de estado de colapso
-      const centroidX = (ox + (ox + u[0] + v[0] + effectiveW[0]) / 2) / 2;
-      const centroidY = (oy + (oy + u[1] + v[1] + effectiveW[1]) / 2) / 2;
-      const centroidZ = (oz + (oz + u[2] + v[2] + effectiveW[2]) / 2) / 2;
-      this.data.push({
-        type: "scatter3d", mode: "text",
-        x: [centroidX], y: [centroidY], z: [centroidZ],
-        text: [`Colapso: ${(collapseInfo.factor * 100).toFixed(1)}% | Vol: ${collapseInfo.volumeAtFactor.toFixed(4)} (${percent}%)`],
-        textposition: "middle center",
-        name: "Estado colapso",
-        showlegend: false,
-        hoverinfo: "text",
-        textfont: { color: collapseInfo.isCollapsed ? "#ef4444" : "#f59e0b", size: 12 },
-      });
 
-      // Si está colapsado, mostrar mensaje
-      if (collapseInfo.isCollapsed) {
-        this.data.push({
-          type: "scatter3d", mode: "text",
-          x: [ox], y: [oy], z: [oz + 1],
-          text: ["⚠ PARELEPÍPEDO COLAPSADO: Volumen = 0 (coplanar)"],
-          textposition: "middle center",
-          name: "Advertencia colapso",
-          showlegend: false,
-          hoverinfo: "text",
-          textfont: { color: "#ef4444", size: 14 },
-        });
-      }
     }
 
     if (showRightHand && scene.opposite) {
@@ -2654,28 +2589,7 @@ export class PlotlyRenderer {
       }
     }
 
-    let areaSubtitle = "";
-    if (showArea) {
-      const area = computeCrossProductArea(u, v, origin, scene);
-      if (area.isZero) {
-        areaSubtitle = "<br>Área: ‖u×v‖ = 0 (magnitud nula)";
-      } else if (area.isParallel) {
-        areaSubtitle = "<br>Área: ‖u×v‖ = 0 (vectores paralelos, sen(θ) = 0): no hay normal única por esos vectores";
-      } else {
-        areaSubtitle = `<br>Área: ‖u×v‖ = ‖u‖·‖v‖·sen(θ) = ${Number(area.area.toPrecision(7))} (θ ≈ ${area.thetaDeg.toFixed(1)}°)`;
-        if (showTriangle) {
-          areaSubtitle += ` | Área triángulo = ${Number(area.triangleArea.toPrecision(7))}`;
-        }
-      }
-    }
 
-    const warningText = scene.warning ?? `Los vectores son paralelos o nulos (${operation} = 0): no hay normal única por esos vectores`;
-    const title = scene.opposite
-      ? (node.showSteps || reverseOrder ? `Producto cruz (${operation})` : "Producto cruz")
-      : warningText;
-    this.layout.title = {
-      text: showArea ? `${title}${areaSubtitle}` : title,
-    };
   }
 
 
