@@ -43,6 +43,8 @@ jobs:
           test -f apps/playground/dist/index.html
           grep -q '/BWJM-WEB-/assets/' apps/playground/dist/index.html
           grep -R -F -q 'Seleccionar imagen local' apps/playground/dist/assets
+          # Require the compact editor shipped with PR #9, not just the old VIS-06 picker.
+          grep -R -F -q 'imagen-integrada-' apps/playground/dist/assets
           ENTRY=$(grep -oE '/BWJM-WEB-/assets/index-[^"]+\.js' apps/playground/dist/index.html | head -n 1)
           test -n "$ENTRY"
           echo "entry=$ENTRY" >> "$GITHUB_OUTPUT"
