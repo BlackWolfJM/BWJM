@@ -65,8 +65,6 @@ async function screenshot(page, name) {
 async function numberedButton() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 850 } });
   const page = await ctx.newPage();
-  page.on("console", msg => { if (msg.text().includes("VIS09")) console.log(msg.text()); });
-  page.on("pageerror", error => console.log("VIS09 page error", error.message));
   await visit(page);
   await openText(page, "numero-vis09.bwjm", "# Número VIS-09\n\nTexto previo.");
   const editor = page.locator(".bwjm-code-textarea");
@@ -83,17 +81,9 @@ async function numberedButton() {
   assert(!(await preview.innerText()).includes("(7)"), "Stale (7) preview");
   assert((await preview.innerText()).includes("(8)"), "Preview missing (8)");
   await screenshot(page, "preview-8");
-  const submit = page.getByRole("button", { name: "Insertar Fórmula" });
-  console.log("VIS09 clickable button", await submit.evaluate(el => el.outerHTML.slice(0, 450)));
-  await submit.click();
-  await page.waitForTimeout(500);
-  console.log("VIS09 after button:", JSON.stringify({
-    source: (await editor.inputValue()).slice(0, 380),
-    modalVisible: await latex.isVisible(),
-    activeTabs: await page.locator('[role="tab"][aria-selected="true"]').allTextContents(),
-  }));
-  assert((await editor.inputValue()).includes("\\tag{8}"),
-    "Click did not insert numbered formula into editor");
+  await page.getByRole("button", { name: "Insertar Fórmula" }).click();
+  await page.waitForFunction(() =>
+    document.querySelector(".bwjm-code-textarea")?.value.includes("\\tag{8}"));
   assert.equal((await editor.inputValue()).match(/\\tag\{8\}/g)?.length, 1);
   const tag = page.locator("#bwjm-reader-panel .math-display-box .tag").last();
   await tag.waitFor({ timeout: 12000 });
