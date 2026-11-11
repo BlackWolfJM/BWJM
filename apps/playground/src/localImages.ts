@@ -25,8 +25,10 @@ export function detectRasterMime(bytes: Uint8Array): RasterImageMime | null {
     [137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte) &&
     ascii(bytes, 12, 4) === "IHDR") return "image/png";
 
+  // Camera JPEGs may contain metadata/padding after EOI. The browser decoder
+  // verifies the complete file after this format-signature check.
   if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8 &&
-      bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9) {
+      bytes[2] === 0xff) {
     return "image/jpeg";
   }
 
