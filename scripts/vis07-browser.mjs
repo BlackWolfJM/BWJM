@@ -97,8 +97,9 @@ async function acceptanceTest() {
   assert(html.includes("vis07-curva"), "Exportar HTML perdió la gráfica");
 
   // VIS-05: very long math must scroll *inside* its own keyboard-focusable box.
+  const pair = String.fromCharCode(36).repeat(2);
   await openText(page, "vis07-formula-larga.bwjm",
-    "# Fórmula larga\\n\\n$\\n" + "x^2 + ".repeat(220) + "1\\n$");
+    ["# Fórmula larga", "", pair, "x^2 + ".repeat(220) + "1", pair].join("\n"));
   const formula = page.locator(".math-display-box").last();
   await formula.waitFor();
   const longLayout = await formula.evaluate(element => ({
