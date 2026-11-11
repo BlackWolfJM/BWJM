@@ -144,11 +144,11 @@ export class GraphSettingsSession {
 
     const generation = (prior?.generation ?? 0) + 1;
     this.documents.set(documentId, { entries: next, generation });
-    return new Map(nodes.map((node, index) => [node, {
+    return new Map<GraphBlock, GraphSettingsIdentity>(nodes.map((node, index) => [node, {
       key: next[index].key,
       open: next[index].open,
       generation,
-    }]));
+    }] as const));
   }
 
   /** Prevent pending toggle callbacks from older trees from changing state. */
