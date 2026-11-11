@@ -92,11 +92,20 @@ try {
   await page.mouse.up();
   await checkOpen(["anticommutativity"]);
   const wx = card.locator('.bwjm-cross-editor input[aria-label="w x"]');
+  const evalBeforeW = await identity("distributivity").locator(".bwjm-identity-eval").innerText();
   await wx.fill("3");
+  await page.waitForFunction(({ id, before }) => {
+    const evaluation = document.querySelector("#node-" + id +
+      ' .bwjm-identity-item[data-identity-id="distributivity"] .bwjm-identity-eval');
+    return !!evaluation && evaluation.textContent !== before;
+  }, { id: firstId, before: evalBeforeW });
+  assert(await wx.evaluate(el => document.activeElement === el), "El campo w perdió foco en vista previa");
+  const evalPreviewW = await identity("distributivity").locator(".bwjm-identity-eval").innerText();
   await wx.press("Tab");
   await page.waitForFunction(() => document.querySelector(".bwjm-code-textarea")?.value.includes("w: [3,0,2]"));
   await checkOpen(["anticommutativity"]);
-  assert((await identity("distributivity").locator(".bwjm-identity-eval").innerText()).length > 0);
+  assert.equal(await identity("distributivity").locator(".bwjm-identity-eval").innerText(), evalPreviewW,
+    "La evaluación de w no sobrevivió al guardado");
 
   const updated = await editor.inputValue();
   await editor.fill(updated + "\n" + block(secondId) + "\n");
@@ -105,11 +114,13 @@ try {
   await second.locator(".bwjm-cross-steps > summary").click();
   const secondAnti = second.locator('.bwjm-identity-item[data-identity-id="anticommutativity"] details');
   assert.equal(await secondAnti.evaluate(el => el.open), false, "Se filtró estado a otro bloque");
+  const sourceBeforeToggle = await editor.inputValue();
   await secondAnti.locator("summary").click();
   assert.equal(await secondAnti.evaluate(el => el.open), true);
   await disclosure("anticommutativity").locator("summary").click();
   assert.equal(await disclosure("anticommutativity").evaluate(el => el.open), false);
   assert.equal(await secondAnti.evaluate(el => el.open), true);
+  assert.equal(await editor.inputValue(), sourceBeforeToggle, "Abrir/cerrar identidad modificó Markdown");
   console.log("VIS-13 navegador: OK (estado, evaluaciones, preview, guardar, invertir, foco, arrastre, w, bloques independientes).");
 } finally {
   if (browser) await browser.close();
