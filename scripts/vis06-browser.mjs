@@ -256,6 +256,16 @@ async function pickerErrors() {
   await page.waitForTimeout(1600);
   assert(!(await page.locator(".bwjm-code-textarea").inputValue()).includes("no-reabrir"),
     "La imagen terminó en otra pestaña tras cerrar la original");
+
+  // Resetting input.value lets the user select the exact same local file twice.
+  choice = await picker(page);
+  await choice.setFiles({ name: "repetida.png", mimeType: "image/png", buffer: png });
+  await page.waitForFunction(() => document.querySelector(".bwjm-code-textarea")?.value.includes("![repetida]("));
+  choice = await picker(page);
+  await choice.setFiles({ name: "repetida.png", mimeType: "image/png", buffer: png });
+  await page.waitForFunction(() =>
+    (document.querySelector(".bwjm-code-textarea")?.value.match(/!\[repetida\]\(data:image\/png;base64,/g) ?? []).length === 2
+  );
   await ctx.close();
 }
 
