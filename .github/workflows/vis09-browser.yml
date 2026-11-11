@@ -1,0 +1,42 @@
+name: VIS-09 formula modal browser
+
+on:
+  push:
+    branches: [codex/vis-09-editor-formulas]
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/playground/src/FormulaModal.tsx
+      - apps/playground/src/formulaDraft.ts
+      - apps/playground/__tests__/vis09-formula-modal.test.ts
+      - scripts/vis09-browser.mjs
+      - .github/workflows/vis09-browser.yml
+
+jobs:
+  chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install isolated Playwright Chromium
+        run: |
+          mkdir -p /tmp/bwjm-browser
+          npm install --prefix /tmp/bwjm-browser --no-save --no-package-lock playwright@1.58.2
+          /tmp/bwjm-browser/node_modules/.bin/playwright install chromium
+      - name: Test real formula modal in Chromium
+        run: node scripts/vis09-browser.mjs
+      - name: Save VIS-09 screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vis09-formula-modal-screenshots
+          path: /tmp/vis09-screens/*.png
+          if-no-files-found: ignore
