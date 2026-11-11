@@ -36,7 +36,7 @@ jobs:
       - name: Compilar Studio para el prefijo de GitHub Pages
         env:
           BWJM_BASE_PATH: /BWJM-WEB-/
-        run: pnpm --filter @mathmd/playground run build
+        run: pnpm build
       - name: Comprobar que la compilación incluye el selector de imágenes VIS-06
         id: verify
         run: |
