@@ -22,12 +22,14 @@ import {
   expressionToLatex,
   serializeScientificTable,
 } from "@mathmd/math";
-import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode, Parametric2DNode } from "@mathmd/ast";
+import type { CheckboxNode, MathMDDiagnostic, MathMDNode, SliderNode, TimelineNode, DataTableNode, FunctionTableNode, Parametric2DNode, MathMDDocument } from "@mathmd/ast";
 import type { VectorStudyResult } from "@mathmd/math";
 import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
 import { createAdaptiveParameterEditor } from "./AdaptiveParameterEditor.js";
+import { captureDocumentRuntime, restoreDocumentRuntime } from "./documentRuntimeValues.js";
+import type { DocumentRuntimeValues } from "./documentRuntimeValues.js";
 import { createCrossProductDeterminant, createCrossProductEditor, createCrossProductReport } from "./CrossProductEditor.js";
 import {
   supportsAdaptiveParameters, writeGraphParameterControls,
@@ -728,6 +730,8 @@ export function BWJMStudio() {
   const workspaceLayoutRef = useRef<HTMLDivElement>(null);
   const compactViewRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<MathMDCore | null>(null);
+  const runtimeValuesRef = useRef<Map<string, DocumentRuntimeValues>>(new Map());
+  const renderedCoreDocumentRef = useRef<{ id: string; document: MathMDDocument } | null>(null);
   const activeTimersRef = useRef<Map<string, number>>(new Map());
   const plotlyRenderersRef = useRef<Map<string, PlotlyRenderer>>(new Map());
   const svgRenderersRef = useRef<Map<string, SVGRenderer>>(new Map());
@@ -1010,6 +1014,8 @@ export function BWJMStudio() {
     const target = documents.find(item => item.id === id);
     if (target?.content !== target?.savedContent &&
       !window.confirm("El documento tiene cambios sin guardar. ¿Cerrar esta pestaña?")) return;
+    // Closing discards the session state even if an identical file is opened again.
+    runtimeValuesRef.current.delete(id);
     closeDocument(id);
   };
 
@@ -1213,25 +1219,26 @@ export function BWJMStudio() {
     clearTimers();
     clearRenderers();
 
-    const previousVariables = coreRef.current?.getVariables() ?? {};
-    const previousCore = coreRef.current;
-    coreRef.current = new MathMDCore(doc);
-    // Keep local values after unrelated text edits when the chart ID stays stable.
-    doc.children.forEach(node => {
-      if (!supportsAdaptiveParameters(node) || !node.paramControls?.enabled) return;
-      const previous = previousCore?.getGraphParameters(node.id) ?? {};
-      node.paramControls.parameters.forEach(parameter => {
-        const value = previous[parameter.name];
-        if (value !== undefined && value >= parameter.min && value <= parameter.max) {
-          coreRef.current?.setGraphParameter(node.id, parameter.name, value);
-        }
-      });
+    // Snapshot values under the stable WORKSPACE DOCUMENT ID, never under a shared
+    // variable name or graph ID. A rename retains the ID; a closed tab does not.
+    const currentDocumentIds = new Set(documents.map(item => item.id));
+    const previous = renderedCoreDocumentRef.current;
+    if (previous && currentDocumentIds.has(previous.id) && coreRef.current) {
+      runtimeValuesRef.current.set(previous.id,
+        captureDocumentRuntime(coreRef.current, previous.document));
+    }
+    runtimeValuesRef.current.forEach((_values, id) => {
+      if (!currentDocumentIds.has(id)) runtimeValuesRef.current.delete(id);
     });
-    Object.entries(previousVariables).forEach(([name, value]) => {
-      if (coreRef.current?.getVariable(name) !== undefined && Number.isFinite(value)) {
-        coreRef.current.setVariable(name, value);
-      }
-    });
+    const nextCore = new MathMDCore(doc);
+    restoreDocumentRuntime(nextCore, doc, runtimeValuesRef.current.get(activeId));
+    coreRef.current = nextCore;
+    renderedCoreDocumentRef.current = { id: activeId, document: doc };
+
+    // Old animation callbacks must not write into the core of a different tab.
+    const updateThisDocument = (name: string, value: number) => {
+      if (renderedCoreDocumentRef.current?.id === activeId) handleVariableChange(name, value);
+    };
     const container = sheetRef.current;
     if (!container) return;
 
@@ -2043,7 +2050,7 @@ export function BWJMStudio() {
                 }
                 rangeInput.value = nextVal.toFixed(2);
                 valBadge.textContent = nextVal.toFixed(2);
-                handleVariableChange(sliderNode.name, nextVal);
+                updateThisDocument(sliderNode.name, nextVal);
               }, 40);
 
               activeTimersRef.current.set(sliderNode.name, timerId);
@@ -2060,17 +2067,17 @@ export function BWJMStudio() {
           rangeInput.min = String(sliderNode.min);
           rangeInput.max = String(sliderNode.max);
           rangeInput.step = String(sliderNode.step);
-          rangeInput.value = String(sliderNode.default);
+          rangeInput.value = String(coreRef.current.getVariable(sliderNode.name) ?? sliderNode.default);
           rangeInput.className = "bwjm-range-input";
 
           const valBadge = document.createElement("span");
           valBadge.className = "bwjm-slider-val";
-          valBadge.textContent = Number(sliderNode.default).toFixed(2);
+          valBadge.textContent = Number(coreRef.current.getVariable(sliderNode.name) ?? sliderNode.default).toFixed(2);
 
           rangeInput.oninput = (e) => {
             const val = parseFloat((e.target as HTMLInputElement).value);
             valBadge.textContent = val.toFixed(2);
-            handleVariableChange(sliderNode.name, val);
+            updateThisDocument(sliderNode.name, val);
           };
 
           row.appendChild(playBtn);
@@ -2088,13 +2095,13 @@ export function BWJMStudio() {
 
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
-          checkbox.checked = Boolean(chkNode.default);
+          checkbox.checked = Boolean(coreRef.current.getVariable(chkNode.name) ?? Number(chkNode.default));
           checkbox.style.width = "18px";
           checkbox.style.height = "18px";
 
           checkbox.onchange = (e) => {
             const checked = (e.target as HTMLInputElement).checked;
-            handleVariableChange(chkNode.name, checked ? 1 : 0);
+            updateThisDocument(chkNode.name, checked ? 1 : 0);
           };
 
           const textSpan = document.createElement("span");
@@ -2337,7 +2344,7 @@ export function BWJMStudio() {
           const transport = createInlinePlayback(
             timelines,
             () => coreRef.current?.getVariables() ?? {},
-            (name, value) => handleVariableChange(name, value),
+            (name, value) => updateThisDocument(name, value),
           );
           const settingsControls = cardBody.querySelector(".bwjm-graph-settings-controls");
           if (settingsControls) settingsControls.appendChild(transport.element);
