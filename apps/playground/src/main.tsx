@@ -28,6 +28,7 @@ import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
 import { createAdaptiveParameterEditor } from "./AdaptiveParameterEditor.js";
+import { formatSliderValue, nextSliderValue } from "./sliderPrecision.js";
 import { createCrossProductDeterminant, createCrossProductEditor, createCrossProductReport } from "./CrossProductEditor.js";
 import {
   supportsAdaptiveParameters, writeGraphParameterControls,
@@ -2036,42 +2037,49 @@ export function BWJMStudio() {
               playBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
 
               const timerId = window.setInterval(() => {
-                const currentVal = coreRef.current?.getVariables()[sliderNode.name] ?? sliderNode.default;
-                let nextVal = currentVal + sliderNode.step;
-                if (nextVal > sliderNode.max) {
-                  nextVal = sliderNode.min;
-                }
-                rangeInput.value = nextVal.toFixed(2);
-                valBadge.textContent = nextVal.toFixed(2);
-                handleVariableChange(sliderNode.name, nextVal);
+                // Advance on the native range grid (min + n * step), not by
+                // rounding the control to two decimal places.
+                rangeInput.value = String(nextSliderValue(
+                  rangeInput.valueAsNumber, sliderNode.min, sliderNode.max, sliderNode.step));
+                updateSlider();
               }, 40);
 
               activeTimersRef.current.set(sliderNode.name, timerId);
             }
           };
 
-          const label = document.createElement("span");
+          const label = document.createElement("label");
           label.style.fontWeight = "600";
           label.style.color = "#0f172a";
-          label.textContent = `${sliderNode.name}:`;
+          label.textContent = sliderNode.name;
 
           const rangeInput = document.createElement("input");
           rangeInput.type = "range";
           rangeInput.min = String(sliderNode.min);
           rangeInput.max = String(sliderNode.max);
           rangeInput.step = String(sliderNode.step);
-          rangeInput.value = String(sliderNode.default);
+          rangeInput.value = String(coreRef.current?.getVariable(sliderNode.name) ?? sliderNode.default);
           rangeInput.className = "bwjm-range-input";
+          rangeInput.id = `bwjm-slider-${node.id}`;
+          label.htmlFor = rangeInput.id;
 
-          const valBadge = document.createElement("span");
+          const valBadge = document.createElement("output");
           valBadge.className = "bwjm-slider-val";
-          valBadge.textContent = Number(sliderNode.default).toFixed(2);
-
-          rangeInput.oninput = (e) => {
-            const val = parseFloat((e.target as HTMLInputElement).value);
-            valBadge.textContent = val.toFixed(2);
-            handleVariableChange(sliderNode.name, val);
+          valBadge.htmlFor = rangeInput.id;
+          const displayValue = (value: number) => {
+            const text = formatSliderValue(value, sliderNode.min, sliderNode.step);
+            valBadge.textContent = text;
+            rangeInput.setAttribute("aria-valuetext", text);
           };
+          const updateSlider = () => {
+            // Always publish the *effective* input value, including browser
+            // clamping and step normalization, to the graph and badge.
+            const effective = rangeInput.valueAsNumber;
+            displayValue(effective);
+            handleVariableChange(sliderNode.name, effective);
+          };
+          displayValue(rangeInput.valueAsNumber);
+          rangeInput.oninput = updateSlider;
 
           row.appendChild(playBtn);
           row.appendChild(label);
