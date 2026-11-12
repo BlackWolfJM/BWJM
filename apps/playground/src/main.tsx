@@ -28,6 +28,7 @@ import { SidebarLeft, OutlineItem, type SidebarTab } from "./SidebarLeft.js";
 import { Ribbon, type RibbonAction } from "./Ribbon.js";
 import { DocumentTabs } from "./DocumentTabs.js";
 import { createAdaptiveParameterEditor } from "./AdaptiveParameterEditor.js";
+import { RIEMANN_LESSON_ID, computeRiemannLesson, updateRiemannLessonReport } from "./riemannLesson.js";
 import { createCrossProductDeterminant, createCrossProductEditor, createCrossProductReport } from "./CrossProductEditor.js";
 import {
   supportsAdaptiveParameters, writeGraphParameterControls,
@@ -185,27 +186,22 @@ function renderStatisticsPanel(report: HTMLElement, data: any): void {
 
 const SAMPLE_LESSONS: Record<string, { title: string; filename: string; content: string }> = {
   riemann: {
-    title: "1. Área entre Curvas & Suma de Riemann (f=x, g=x²)",
+    title: "1. Área entre Curvas & Suma de Riemann",
     filename: "area_riemann.bwjm",
-    content: `# Área entre Curvas y Sumas de Riemann
+    content: `# Área entre curvas y suma de Riemann
 
-> **Teoría Fundamental (Sección 3):** Sean dos funciones continuas $f(x) = x$ y $g(x) = x^2$ definidas en el intervalo $[0, 1]$.
+Consideramos fₐ(x) = a·x y g(x) = x², con a > 0. Las curvas se cruzan en
+(0, 0) y (a, a²); la región encerrada está en [0, a].
 
-La región acotada $R$ viene delimitada por los puntos de intersección calculados automáticamente:
+El área analítica es A(a) = ∫₀ᵃ (a·x − x²) dx = a³/6.
+**Cuando a = 1**, el resultado particular es **1/6**; para otros
+valores de a, la referencia cambia junto con la región.
 
-$$
-x = x^2 \\implies x(1 - x) = 0 \\implies x_1 = 0,\\; x_2 = 1
-$$
-
-En el intervalo $[0, 1]$, se verifica que $x \\ge x^2$. Por tanto, el área exacta bajo la curva es:
-
-$$
-A = \\int_{0}^{1} (x - x^2)\\,dx = \\left[ \\frac{x^2}{2} - \\frac{x^3}{3} \\right]_0^1 = \\frac{1}{6} \\approx 0.16667
-$$
+La suma de punto medio aproxima esta área usando n rectángulos. El valor
+de n determina solo la partición; el muestreo de las curvas se configura
+por separado con \`samples\` dentro de la escena.
 
 ## Parámetros de Riemann
-
-Ajusta el número de particiones rectangulares para observar la convergencia:
 
 \`\`\`slider
 name: n
@@ -218,25 +214,20 @@ default: 10
 \`\`\`slider
 name: a
 min: 0.1
-max: 2.0
+max: 2
 step: 0.1
-default: 1.0
+default: 1
 \`\`\`
 
-## Gráfica de la Curva Superior e Inferior
+## Ambas curvas, cruces y rectángulos en una escena
 
-\`\`\`plot2d
-equation: a * x
-x: [0, 1.2]
-grid: true
-color: "#0284c7"
-\`\`\`
-
-\`\`\`plot2d
-equation: x^2
-x: [0, 1.2]
-grid: true
-color: "#ea580c"
+\`\`\`calculusviz
+id: riemann-interactive
+mode: area-dx
+domain: [0, 2]
+f: a*x
+g: x^2
+samples: 160
 \`\`\`
 `,
   },
@@ -736,6 +727,7 @@ export function BWJMStudio() {
   const parameterEditorDisposersRef = useRef<Array<() => void>>([]);
   const playbackRef = useRef<InlinePlaybackController | null>(null);
   const liveAnalysisRef = useRef<(() => void) | null>(null);
+  const riemannUpdateRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageFileInputRef = useRef<HTMLInputElement | null>(null);
   const imageDestinationRef = useRef<DocumentInsertSnapshot | null>(null);
@@ -1212,6 +1204,7 @@ export function BWJMStudio() {
   useEffect(() => {
     clearTimers();
     clearRenderers();
+    riemannUpdateRef.current = null;
 
     const previousVariables = coreRef.current?.getVariables() ?? {};
     const previousCore = coreRef.current;
@@ -1276,7 +1269,13 @@ export function BWJMStudio() {
         renderedWidth = nextWidth;
         const nextHeight = Math.max(240, Math.round(nextWidth * height / width));
         renderer.resize(nextWidth, nextHeight);
-        renderer.render(coreRef.current?.getNodeData(node.id) ?? initialData);
+        if (node.type === "calculusviz" && node.id === RIEMANN_LESSON_ID) {
+          // Resizing must preserve the current partition, not restore the
+          // generic calculusviz output cached by MathMDCore.
+          riemannUpdateRef.current?.();
+        } else {
+          renderer.render(coreRef.current?.getNodeData(node.id) ?? initialData);
+        }
       });
       svgResizeObserver?.observe(mount);
     };
@@ -2107,6 +2106,22 @@ export function BWJMStudio() {
         } else if (node.type === "flow2d" || node.type === "parametric2d") {
           mountSvg(cardBody, node, 720, 380);
         } else if (node.type === "calculusviz") {
+          if (node.id === RIEMANN_LESSON_ID && node.mode === "area-dx") {
+            const vars = coreRef.current.getVariables();
+            const initial = computeRiemannLesson(node, vars["a"] ?? 1, vars["n"] ?? 10);
+            mountSvg(cardBody, node, 760, 430, initial.scene);
+            const report = document.createElement("section");
+            updateRiemannLessonReport(report, initial.study);
+            cardBody.appendChild(report);
+            riemannUpdateRef.current = () => {
+              const current = coreRef.current?.getVariables();
+              const renderer = svgRenderersRef.current.get(node.id);
+              if (!current || !renderer) return;
+              const view = computeRiemannLesson(node, current["a"] ?? 1, current["n"] ?? 10);
+              renderer.render(view.scene);
+              updateRiemannLessonReport(report, view.study);
+            };
+          } else {
           const data = coreRef.current.getNodeData(node.id);
           if (node.mode === "revolution") {
             const mount = document.createElement("div");
@@ -2148,6 +2163,7 @@ export function BWJMStudio() {
             });
           }
           cardBody.appendChild(report);
+          }
         } else if (node.type === "plot2d") {
           mountSvg(cardBody, node, 720, 360);
         } else if (node.type === "vector2d" || node.type === "vector3d") {
@@ -2729,6 +2745,9 @@ export function BWJMStudio() {
       }
     });
 
+    if (name === "a" || name === "n") {
+      riemannUpdateRef.current?.();
+    }
     if (liveAnalysisRef.current) {
       liveAnalysisRef.current();
     }
