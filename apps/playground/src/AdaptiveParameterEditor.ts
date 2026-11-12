@@ -120,11 +120,9 @@ export function createAdaptiveParameterEditor(
     numericSliders.set(parameter.name, slider);
     slider.oninput = () => setLiveValue(parameter, Number(slider.value));
     slider.onchange = () => {
-      // Save only on release; dragging never reparses the entire source document.
-      const value = snapGraphParameter(Number(slider.value), parameter);
-      const next = configured.parameters.map(p => p.name === parameter.name
-        ? { ...p, default: value } : p);
-      persist({ ...configured, parameters: next });
+      // A slider's current value is session-only. The "Inicial" configuration
+      // field remains the explicit way to persist a new default to Markdown.
+      setLiveValue(parameter, Number(slider.value));
     };
     row.append(header, slider);
 
