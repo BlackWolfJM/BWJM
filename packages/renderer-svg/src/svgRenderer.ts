@@ -107,9 +107,10 @@ export class SVGRenderer {
   
   /** Scientific 2D domains, guides and boundaries for ten calculus insertion modes. */
   private renderCalculusViz(node: Extract<MathMDNode, { type: "calculusviz" }> & {
-    polygons?: Array<{ points: number[][]; fill?: string }>;
-    curves?: Array<{ points: number[][]; color?: string; label?: string }>;
+    polygons?: Array<{ points: number[][]; fill?: string; role?: string }>;
+    curves?: Array<{ points: number[][]; color?: string; label?: string; role?: string }>;
     guides?: Array<{ a: [number, number]; b: [number, number]; label?: string }>;
+    markers?: Array<{ point: [number, number]; color?: string; label: string }>;
     error?: string;
   }): void {
     if (node.error) {
@@ -125,10 +126,12 @@ export class SVGRenderer {
     const polygons = node.polygons ?? [];
     const curves = node.curves ?? [];
     const guides = node.guides ?? [];
+    const markers = node.markers ?? [];
     const points = [
       ...polygons.flatMap(polygon => polygon.points),
       ...curves.flatMap(curve => curve.points),
       ...guides.flatMap(guide => [guide.a, guide.b]),
+      ...markers.map(marker => marker.point),
     ].filter(p => p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]));
     if (points.length === 0) return;
     const xValues = points.map(p => p[0]), yValues = points.map(p => p[1]);
@@ -148,6 +151,7 @@ export class SVGRenderer {
       if (polygon.points.length < 3) continue;
       const item = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
       item.setAttribute("points", polygon.points.map(pointString).join(" "));
+      if (polygon.role === "riemann-rectangle") item.setAttribute("class", "bwjm-riemann-rectangle");
       item.setAttribute("fill", polygon.fill ?? "#93c5fd");
       item.setAttribute("fill-opacity", "0.38");
       item.setAttribute("stroke", "#64748b");
@@ -171,10 +175,29 @@ export class SVGRenderer {
       if (finite.length < 2) continue;
       const path = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
       path.setAttribute("points", finite.map(pointString).join(" "));
+      if (curve.role) path.setAttribute("data-curve", curve.role);
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", curve.color ?? "#2563eb");
       path.setAttribute("stroke-width", "2.6");
       this.svgElement.appendChild(path);
+    }
+    // Mark the two mathematical intersections on top of both curves and the
+    // translucent rectangles. Generic calculusviz nodes need not provide markers.
+    for (const marker of markers) {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("class", "bwjm-riemann-intersection");
+      circle.setAttribute("cx", String(transform.x(marker.point[0])));
+      circle.setAttribute("cy", String(transform.y(marker.point[1])));
+      circle.setAttribute("r", "5");
+      circle.setAttribute("fill", marker.color ?? "#0f766e");
+      circle.setAttribute("stroke", "white");
+      circle.setAttribute("stroke-width", "1.8");
+      circle.setAttribute("data-x", String(marker.point[0]));
+      circle.setAttribute("data-y", String(marker.point[1]));
+      const accessible = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      accessible.textContent = "Cruce " + marker.label;
+      circle.appendChild(accessible);
+      this.svgElement.appendChild(circle);
     }
   }
 
