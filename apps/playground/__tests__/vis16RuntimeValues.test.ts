@@ -17,7 +17,10 @@ const source = (aDefault: number, bDefault: number, aMax = 10) => [
 
 function graph(core: MathMDCore) {
   const points = core.getNodeData("misma").points as number[][];
-  return points[Math.floor(points.length / 2)][1];
+  const right = points.findIndex(([x]) => x >= 0);
+  if (right < 1) throw new Error("The plotted domain does not bracket x=0");
+  const [x0, y0] = points[right - 1], [x1, y1] = points[right];
+  return y0 + (0 - x0) * (y1 - y0) / (x1 - x0);
 }
 
 describe("VIS-16: document-scoped runtime snapshots", () => {
