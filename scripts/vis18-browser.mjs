@@ -69,7 +69,7 @@ async function verify(page, { a, n, sum, exact, crosses, maxError }) {
   assert(Math.abs(rectangleLimits.at(-1)[1] - a) < 1e-9, "Rectangles do not cover [0,a]");
 
   // The curves must render over the fill rather than being obscured by it.
-  const layers = await scene.locator("svg").evaluate(svg => {
+  const layers = await scene.locator(".bwjm-svg-plot svg").evaluate(svg => {
     const children = [...svg.children];
     return {
       lastPolygon: children.findLastIndex(el => el.matches("polygon.bwjm-riemann-rectangle")),
@@ -81,7 +81,7 @@ async function verify(page, { a, n, sum, exact, crosses, maxError }) {
   assert(layers.lastPolygon < layers.firstCurve && layers.lastCurve < layers.firstMarker,
     "SVG layering incorrect: rectangles must be below curves and crosses");
 
-  const geometry = await scene.locator("svg").evaluate(svg => {
+  const geometry = await scene.locator(".bwjm-svg-plot svg").evaluate(svg => {
     const vb = svg.viewBox.baseVal;
     return [...svg.querySelectorAll("circle.bwjm-riemann-intersection")].map(el => ({
       cx: Number(el.getAttribute("cx")), cy: Number(el.getAttribute("cy")),
