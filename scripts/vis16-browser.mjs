@@ -66,8 +66,10 @@ async function graphIntercept(page) {
       value: Number(el.textContent),
     })).filter(t => Math.abs(t.x - tickX) < 0.01 && Number.isFinite(t.value));
     if (ticks.length < 2) throw Error("Insufficient labeled y-axis ticks");
-    const interceptPixel = vertices.reduce((nearest, vertex) =>
-      Math.abs(vertex[0] - axisX) < Math.abs(nearest[0] - axisX) ? vertex : nearest)[1];
+    const right = vertices.findIndex(([x]) => x >= axisX);
+    if (right < 1) throw Error("SVG plot does not bracket x=0");
+    const [x0, y0] = vertices[right - 1], [x1, y1] = vertices[right];
+    const interceptPixel = y0 + (axisX - x0) * (y1 - y0) / (x1 - x0);
     const first = ticks[0], second = ticks[1];
     return first.value + (interceptPixel - first.y) * (second.value - first.value) / (second.y - first.y);
   });
@@ -83,7 +85,6 @@ async function checkGraph(page, a, b, enabled) {
     "Global slider badge differs from core");
   assert.equal(await page.locator("#node-misma .bwjm-adaptive-parameter output").innerText(), String(b),
     "Local slider output differs from core");
-  assert.equal(await page.locator('input[type="checkbox"]').filter({visible:true}).count() >= 0, true);
   const checked = await page.locator(".bwjm-node-body input[type=checkbox]").first().isChecked();
   assert.equal(checked, enabled, "Checkbox leaked between tabs");
   const intercept = await graphIntercept(page);
