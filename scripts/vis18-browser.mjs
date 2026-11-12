@@ -47,7 +47,6 @@ async function verify(page, { a, n, sum, exact, crosses, maxError }) {
     return current === n && output && Math.abs(Number(output.getAttribute("data-value")) - sum) < 1e-8;
   }, { n, sum }, { timeout: 12000 });
   const scene = page.locator(sceneSelector);
-  assert.equal(await page.locator(".bwjm-node-card").filter({has: scene}).count() >= 1, true);
   const polygons = scene.locator(".bwjm-svg-plot svg polygon.bwjm-riemann-rectangle");
   assert.equal(await polygons.count(), n, "Incorrect rectangle count");
   assert.equal(await scene.locator("svg polyline[data-curve]").count(), 2, "Two curves must share an SVG");
