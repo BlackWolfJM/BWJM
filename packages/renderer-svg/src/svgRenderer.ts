@@ -151,7 +151,13 @@ export class SVGRenderer {
       if (polygon.points.length < 3) continue;
       const item = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
       item.setAttribute("points", polygon.points.map(pointString).join(" "));
-      if (polygon.role === "riemann-rectangle") item.setAttribute("class", "bwjm-riemann-rectangle");
+      if (polygon.role === "riemann-rectangle") {
+        item.setAttribute("class", "bwjm-riemann-rectangle");
+        item.setAttribute("data-x0", String(polygon.points[0][0]));
+        item.setAttribute("data-x1", String(polygon.points[1][0]));
+        item.setAttribute("data-y-bottom", String(polygon.points[0][1]));
+        item.setAttribute("data-y-top", String(polygon.points[2][1]));
+      }
       item.setAttribute("fill", polygon.fill ?? "#93c5fd");
       item.setAttribute("fill-opacity", "0.38");
       item.setAttribute("stroke", "#64748b");
