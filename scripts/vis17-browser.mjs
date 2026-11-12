@@ -37,6 +37,12 @@ async function visit(page) {
 
 async function start(page, min, max, step, initial) {
   await visit(page);
+  // The default Riemann lesson declares a=1. main still carries that value
+  // into newly opened tabs (tracked separately by VIS-16). Start from a blank
+  // workspace tab so this regression isolates VIS-17 precision only.
+  await page.getByRole("button", { name: "Nuevo documento" }).click();
+  await page.waitForFunction(() =>
+    document.querySelector(".bwjm-code-textarea")?.value.startsWith("# Nuevo documento BWJM"));
   const content = source(min, max, step, initial);
   await page.locator('input[accept=".bwjm,.jm,.md,.txt"]').setInputFiles({
     name: "VIS17.bwjm", mimeType: "text/plain", buffer: Buffer.from(content),
